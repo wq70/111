@@ -67752,141 +67752,213 @@ if (deleteQuickRepliesBtn) {
 
     const overlay = document.createElement('div');
     overlay.id = 'login-overlay';
-    // 守护甜心风格：红黑格纹背景 + 魔法少女元素
+    
+    // 整体背景：温暖的米白/淡粉色调，无格纹，干净纯粹
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-        background-color: #1a1a1a;
-        background-image: 
-            linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222),
-            linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222);
-        background-size: 40px 40px;
-        background-position: 0 0, 20px 20px;
+        background-color: #fff9fb; /* 极淡的粉白背景 */
         z-index: 99999; 
         display: flex; flex-direction: column; 
         justify-content: center; align-items: center; 
         font-family: 'Georgia', 'Times New Roman', serif;
+        overflow: hidden;
     `;
 
     overlay.innerHTML = `
         <style>
+            /* ====================
+               开场动画：纯白之蛋
+               ==================== */
+            #intro-layer {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: #fff9fb;
+                z-index: 10;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                animation: layerFadeOut 1.5s ease-in-out 3.5s forwards;
+            }
+
+            .pure-egg {
+                width: 120px;
+                height: 160px;
+                background: #fff;
+                /* 蛋形圆角 */
+                border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                box-shadow: 
+                    inset -10px -10px 20px rgba(255, 183, 197, 0.2), /* 内部淡粉阴影 */
+                    0 0 30px rgba(255, 255, 255, 0.8), /* 外部白光 */
+                    0 10px 40px rgba(255, 183, 197, 0.3); /* 底部柔光 */
+                position: relative;
+                animation: eggFloat 3s ease-in-out infinite;
+            }
+
+            /* 蛋的光泽 */
+            .pure-egg::after {
+                content: '';
+                position: absolute;
+                top: 20px;
+                left: 25px;
+                width: 30px;
+                height: 40px;
+                background: rgba(255, 255, 255, 0.8);
+                border-radius: 50%;
+                transform: rotate(-20deg);
+            }
+
+            @keyframes eggFloat {
+                0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 10px 40px rgba(255, 183, 197, 0.3); }
+                50% { transform: translateY(-20px) scale(1.02); box-shadow: 0 30px 60px rgba(255, 183, 197, 0.2); }
+            }
+
+            @keyframes layerFadeOut {
+                0% { opacity: 1; visibility: visible; }
+                100% { opacity: 0; visibility: hidden; pointer-events: none; }
+            }
+
+            /* ====================
+               登录卡片：淡粉治愈风
+               ==================== */
             .sc-card {
                 position: relative;
-                width: 320px;
-                padding: 40px 30px;
+                width: 340px;
+                padding: 50px 40px;
                 background: #fff;
-                border: 4px solid #ff69b4; /* 热粉色边框 */
-                box-shadow: 10px 10px 0px #ff1493; /* 硬阴影 */
+                /* 淡粉色双线边框 */
+                border: 4px double #ffcdd2; 
+                border-radius: 20px;
+                box-shadow: 0 20px 60px rgba(255, 183, 197, 0.2);
                 text-align: center;
-                overflow: hidden;
+                opacity: 0; /* 初始隐藏，等开场结束后显示 */
+                animation: cardFadeIn 1s ease-out 4s forwards;
+            }
+
+            @keyframes cardFadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
             }
             
-            /* 四个角落的扑克牌花色装饰 (SVG Data URI) */
+            /* 四个角落的扑克牌花色 - 淡彩版 */
             .sc-corner {
                 position: absolute;
-                width: 24px;
-                height: 24px;
-                opacity: 0.3;
+                font-size: 24px;
+                opacity: 0.6;
             }
-            .sc-tl { top: 10px; left: 10px; color: #ff1493; } /* 红桃 */
-            .sc-tr { top: 10px; right: 10px; color: #000; }   /* 黑桃 */
-            .sc-bl { bottom: 10px; left: 10px; color: #000; } /* 梅花 */
-            .sc-br { bottom: 10px; right: 10px; color: #ffb700; } /* 方块 */
+            .sc-tl { top: 15px; left: 15px; color: #ffb7c5; } /* 红桃 - 樱花粉 */
+            .sc-tr { top: 15px; right: 15px; color: #b0c4de; } /* 黑桃 - 淡钢蓝 */
+            .sc-bl { bottom: 15px; left: 15px; color: #98fb98; } /* 梅花 - 苍白绿 */
+            .sc-br { bottom: 15px; right: 15px; color: #ffe4b5; } /* 方块 - 鹿皮色 */
 
             .sc-title {
-                font-size: 24px;
-                color: #333;
-                margin-bottom: 5px;
-                font-weight: bold;
+                font-size: 26px;
+                color: #8b4513; /* 暖棕色文字 */
+                margin-bottom: 8px;
+                font-weight: normal;
                 letter-spacing: 2px;
-                text-transform: uppercase;
             }
             .sc-subtitle {
-                font-size: 12px;
-                color: #ff69b4;
-                margin-bottom: 30px;
+                font-size: 13px;
+                color: #bc8f8f; /* 玫瑰褐 */
+                margin-bottom: 40px;
                 font-style: italic;
-                font-family: cursive;
-            }
-
-            .sc-input {
-                width: 100%;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: 2px solid #eee;
-                background: #fff0f5; /* 浅粉色背景 */
-                color: #333;
-                font-family: inherit;
-                font-size: 14px;
-                box-sizing: border-box;
-                outline: none;
-                transition: all 0.3s;
-            }
-            .sc-input:focus {
-                border-color: #ff69b4;
-                background: #fff;
-            }
-            .sc-input::placeholder {
-                color: #aaa;
-            }
-
-            .sc-btn {
-                width: 100%;
-                padding: 12px;
-                background: #ff69b4;
-                color: #fff;
-                border: 2px solid #ff1493;
-                font-family: inherit;
-                font-weight: bold;
-                font-size: 16px;
-                cursor: pointer;
-                position: relative;
-                top: 0;
-                transition: top 0.1s, box-shadow 0.1s;
-                text-transform: uppercase;
                 letter-spacing: 1px;
             }
-            .sc-btn:hover {
-                background: #ff1493;
-            }
-            .sc-btn:active {
-                top: 2px;
-                box-shadow: none;
-            }
-            .sc-btn:disabled {
-                background: #ccc;
-                border-color: #bbb;
-            }
 
-            /* 模拟 Humpty Lock 十字 */
+            /* Humpty Lock 十字 - 柔和版 */
             .lock-cross {
-                width: 40px;
-                height: 40px;
-                background: #ffd700;
-                margin: 0 auto 20px auto;
+                width: 44px;
+                height: 44px;
+                background: #ffe4b5; /* 淡金 */
+                margin: 0 auto 25px auto;
                 position: relative;
                 clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             }
             .lock-cross::after {
                 content: '';
-                width: 30px;
-                height: 30px;
+                width: 32px;
+                height: 32px;
                 background: #fff;
                 clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
             }
             .lock-gem {
                 position: absolute;
-                width: 16px;
-                height: 16px;
-                background: #ff69b4;
+                width: 18px;
+                height: 18px;
+                background: #ffb7c5; /* 樱花粉宝石 */
                 border-radius: 50%;
                 z-index: 2;
+                box-shadow: inset 2px 2px 4px rgba(255,255,255,0.8);
+            }
+
+            .sc-input {
+                width: 100%;
+                padding: 14px;
+                margin-bottom: 18px;
+                border: 1px solid #ffe4e1;
+                background: #fffbfb; 
+                color: #8b4513;
+                border-radius: 12px;
+                font-family: inherit;
+                font-size: 14px;
+                box-sizing: border-box;
+                outline: none;
+                transition: all 0.3s;
+                text-align: center; /* 文字居中更像魔法咒语 */
+            }
+            .sc-input:focus {
+                border-color: #ffb7c5;
+                background: #fff;
+                box-shadow: 0 0 10px rgba(255, 183, 197, 0.1);
+            }
+            .sc-input::placeholder {
+                color: #d8bfd8;
+                font-size: 13px;
+            }
+
+            .sc-btn {
+                width: 100%;
+                padding: 14px;
+                background: #ffb7c5; /* 樱花粉按钮 */
+                color: #fff;
+                border: none;
+                border-radius: 12px;
+                font-family: inherit;
+                font-size: 15px;
+                cursor: pointer;
+                margin-top: 10px;
+                transition: background 0.3s, transform 0.2s;
+                letter-spacing: 1px;
+            }
+            .sc-btn:hover {
+                background: #ff9eb0;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(255, 183, 197, 0.4);
+            }
+            .sc-btn:active {
+                transform: translateY(0);
+            }
+            .sc-btn:disabled {
+                background: #eee;
+                color: #999;
+                cursor: not-allowed;
             }
 
         </style>
 
+        <!-- 开场动画层 -->
+        <div id="intro-layer">
+            <div class="pure-egg"></div>
+        </div>
+
+        <!-- 登录卡片 -->
         <div class="sc-card">
             <!-- 四个角落装饰 -->
             <div class="sc-corner sc-tl">♥</div>
@@ -67894,22 +67966,22 @@ if (deleteQuickRepliesBtn) {
             <div class="sc-corner sc-bl">♣</div>
             <div class="sc-corner sc-br">♦</div>
 
-            <!-- Humpty Lock 装饰 -->
+            <!-- Humpty Lock -->
             <div class="lock-cross">
                 <div class="lock-gem"></div>
             </div>
 
-            <div class="sc-title">Unlock My Heart</div>
-            <div class="sc-subtitle">Would you be my own true self?</div>
+            <div class="sc-title">Unlock</div>
+            <div class="sc-subtitle">My True Self</div>
 
             <input type="text" id="ephone-account" class="sc-input" placeholder="Account Name">
             <input type="password" id="ephone-password" class="sc-input" placeholder="Secret Key">
             
             <button id="ephone-login-btn" class="sc-btn">
-                Character Transform!
+                Open Heart
             </button>
 
-            <p id="login-msg" style="margin-top: 15px; font-size: 12px; min-height: 20px; color: #ff1493;"></p>
+            <p id="login-msg" style="margin-top: 20px; font-size: 12px; min-height: 20px; color: #ff9eb0;"></p>
         </div>
     `;
 
@@ -67920,6 +67992,12 @@ if (deleteQuickRepliesBtn) {
     document.getElementById('ephone-password').onkeypress = function(e) {
         if (e.key === 'Enter') tryLogin();
     };
+
+    // 动画结束后的清理工作 (可选，防止DOM层级问题)
+    setTimeout(() => {
+        const intro = document.getElementById('intro-layer');
+        if (intro) intro.style.display = 'none';
+    }, 5500); // 5.5秒后完全隐藏开场层
   }
 
   // ==========================================
