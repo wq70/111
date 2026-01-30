@@ -8576,10 +8576,11 @@ body.frame-mode-active #phone-screen::after {
     z-index: 1002; 
 }
 
-/* [新增] 当手机外框激活时，等比缩小主屏幕和CPhone内容以适应屏幕 (V3 - 最终布局修复版) */
+/* [新增] 当手机外框激活时，等比缩小主屏幕和CPhone/MYPhone内容以适应屏幕 (V3 - 最终布局修复版) */
 body.frame-mode-active #home-screen-pages-container,
 body.frame-mode-active #char-clock-container,
-body.frame-mode-active #char-app-grid {
+body.frame-mode-active #char-app-grid,
+body.frame-mode-active #myphone-layout-container {
     transform: scale(0.9);
     transform-origin: top center;
     transition: transform 0.3s ease, margin-top 0.3s ease, margin-bottom 0.3s ease; /* 添加过渡效果 */
@@ -8608,6 +8609,13 @@ body.frame-mode-active #char-clock-container {
 body.frame-mode-active #char-app-grid {
     /* 移除之前过于激进的负边距，让它自然排列在时钟下方 */
     margin-top: 0;
+}
+
+/* ▼▼▼ MYPhone 布局的核心修正 ▼▼▼ */
+body.frame-mode-active #myphone-layout-container {
+    /* 适配框内视图的上下边距 */
+    margin-top: 60px;
+    margin-bottom: 50px;
 }
 /* ▲▲▲ 修正结束 ▲▲▲ */
 #dynamic-island-content {
@@ -16542,7 +16550,7 @@ input[type=range] {
     transform: scale(1.2);
 }
 
-#cphone-layout-container, #cphone-page-2-container {
+#cphone-layout-container, #cphone-page-2-container, #myphone-layout-container {
     padding: 0 20px;
     display: flex;
     flex-direction: column;
@@ -18252,6 +18260,7 @@ body.frame-mode-active .cphone-dock-container {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
+    padding-top: calc(15px + env(safe-area-inset-top)); /* iOS 安全区支持 */
     background-color: #1a1a1a;
     border-bottom: 1px solid #333;
     color: #fff;
