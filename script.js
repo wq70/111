@@ -68027,6 +68027,10 @@ if (deleteQuickRepliesBtn) {
                 Open Heart
             </button>
 
+            <div style="margin-top: 15px; font-size: 12px; color: #bc8f8f;">
+                报错和不知道怎么获取的看 <a href="https://discord.com/channels/1379304008157499423/1417316084465270854/1463764186139197563" target="_blank" style="color: #ffb7c5; text-decoration: underline; cursor: pointer;">DC</a>
+            </div>
+
             <p id="login-msg" style="margin-top: 20px; font-size: 12px; min-height: 20px; color: #ff9eb0;"></p>
         </div>
     `;
