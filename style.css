@@ -16517,7 +16517,7 @@ input[type=range] {
 
 /* CPhone 页面指示器 */
 .cphone-pagination {
-    display: flex;
+    display: none; /* 隐藏页面指示器 */
     justify-content: center;
     gap: 8px;
     padding: 10px 0;
