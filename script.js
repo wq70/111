@@ -67752,112 +67752,164 @@ if (deleteQuickRepliesBtn) {
 
     const overlay = document.createElement('div');
     overlay.id = 'login-overlay';
-    // 极简暗黑风格样式
+    // 守护甜心风格：红黑格纹背景 + 魔法少女元素
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-        background: #0a0a0a; z-index: 99999; 
+        background-color: #1a1a1a;
+        background-image: 
+            linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222),
+            linear-gradient(45deg, #222 25%, transparent 25%, transparent 75%, #222 75%, #222);
+        background-size: 40px 40px;
+        background-position: 0 0, 20px 20px;
+        z-index: 99999; 
         display: flex; flex-direction: column; 
         justify-content: center; align-items: center; 
-        color: #ffffff; font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Georgia', 'Times New Roman', serif;
     `;
 
     overlay.innerHTML = `
         <style>
-            /* 内部样式，只作用于登录界面 */
-            .ephone-input-group {
+            .sc-card {
                 position: relative;
-                margin-bottom: 30px;
-                width: 100%;
-            }
-            .ephone-input {
-                width: 100%;
-                padding: 10px 0;
-                font-size: 16px;
-                color: #fff;
-                background: transparent;
-                border: none;
-                border-bottom: 1px solid #333;
-                outline: none;
-                border-radius: 0; /* 移除iOS圆角 */
-                transition: border-color 0.3s ease;
-                font-family: inherit;
-            }
-            .ephone-input:focus {
-                border-bottom-color: #fff;
-            }
-            .ephone-input::placeholder {
-                color: #444;
-                font-size: 14px;
-                letter-spacing: 1px;
-                text-transform: uppercase;
-            }
-            .ephone-btn {
-                width: 100%;
-                padding: 16px;
+                width: 320px;
+                padding: 40px 30px;
                 background: #fff;
-                color: #000;
-                border: none;
-                font-size: 14px;
-                font-weight: 600;
+                border: 4px solid #ff69b4; /* 热粉色边框 */
+                box-shadow: 10px 10px 0px #ff1493; /* 硬阴影 */
+                text-align: center;
+                overflow: hidden;
+            }
+            
+            /* 四个角落的扑克牌花色装饰 (SVG Data URI) */
+            .sc-corner {
+                position: absolute;
+                width: 24px;
+                height: 24px;
+                opacity: 0.3;
+            }
+            .sc-tl { top: 10px; left: 10px; color: #ff1493; } /* 红桃 */
+            .sc-tr { top: 10px; right: 10px; color: #000; }   /* 黑桃 */
+            .sc-bl { bottom: 10px; left: 10px; color: #000; } /* 梅花 */
+            .sc-br { bottom: 10px; right: 10px; color: #ffb700; } /* 方块 */
+
+            .sc-title {
+                font-size: 24px;
+                color: #333;
+                margin-bottom: 5px;
+                font-weight: bold;
                 letter-spacing: 2px;
                 text-transform: uppercase;
+            }
+            .sc-subtitle {
+                font-size: 12px;
+                color: #ff69b4;
+                margin-bottom: 30px;
+                font-style: italic;
+                font-family: cursive;
+            }
+
+            .sc-input {
+                width: 100%;
+                padding: 12px;
+                margin-bottom: 15px;
+                border: 2px solid #eee;
+                background: #fff0f5; /* 浅粉色背景 */
+                color: #333;
+                font-family: inherit;
+                font-size: 14px;
+                box-sizing: border-box;
+                outline: none;
+                transition: all 0.3s;
+            }
+            .sc-input:focus {
+                border-color: #ff69b4;
+                background: #fff;
+            }
+            .sc-input::placeholder {
+                color: #aaa;
+            }
+
+            .sc-btn {
+                width: 100%;
+                padding: 12px;
+                background: #ff69b4;
+                color: #fff;
+                border: 2px solid #ff1493;
+                font-family: inherit;
+                font-weight: bold;
+                font-size: 16px;
                 cursor: pointer;
-                transition: all 0.3s ease;
-                margin-top: 20px;
+                position: relative;
+                top: 0;
+                transition: top 0.1s, box-shadow 0.1s;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             }
-            .ephone-btn:hover {
-                background: #e0e0e0;
-                transform: translateY(-1px);
+            .sc-btn:hover {
+                background: #ff1493;
             }
-            .ephone-btn:active {
-                transform: translateY(0);
+            .sc-btn:active {
+                top: 2px;
+                box-shadow: none;
             }
-            .ephone-btn:disabled {
-                background: #333;
-                color: #666;
-                cursor: not-allowed;
-                transform: none;
+            .sc-btn:disabled {
+                background: #ccc;
+                border-color: #bbb;
             }
-            .fade-in {
-                animation: fadeIn 0.8s ease-out forwards;
-                opacity: 0;
+
+            /* 模拟 Humpty Lock 十字 */
+            .lock-cross {
+                width: 40px;
+                height: 40px;
+                background: #ffd700;
+                margin: 0 auto 20px auto;
+                position: relative;
+                clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
+            .lock-cross::after {
+                content: '';
+                width: 30px;
+                height: 30px;
+                background: #fff;
+                clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
             }
+            .lock-gem {
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                background: #ff69b4;
+                border-radius: 50%;
+                z-index: 2;
+            }
+
         </style>
 
-        <div style="width: 100%; max-width: 340px; padding: 40px; box-sizing: border-box;">
-            <!-- 头部区域 -->
-            <div class="fade-in" style="margin-bottom: 60px; text-align: left;">
-                <div style="font-size: 12px; color: #666; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px;">System Access</div>
-                <h1 style="font-size: 36px; font-weight: 200; margin: 0; letter-spacing: -1px; color: #fff;">EPhone</h1>
+        <div class="sc-card">
+            <!-- 四个角落装饰 -->
+            <div class="sc-corner sc-tl">♥</div>
+            <div class="sc-corner sc-tr">♠</div>
+            <div class="sc-corner sc-bl">♣</div>
+            <div class="sc-corner sc-br">♦</div>
+
+            <!-- Humpty Lock 装饰 -->
+            <div class="lock-cross">
+                <div class="lock-gem"></div>
             </div>
 
-            <!-- 输入区域 -->
-            <div class="fade-in" style="animation-delay: 0.1s;">
-                <div class="ephone-input-group">
-                    <input type="text" id="ephone-account" class="ephone-input" placeholder="Account ID" autocomplete="off">
-                </div>
-                
-                <div class="ephone-input-group">
-                    <input type="password" id="ephone-password" class="ephone-input" placeholder="Password">
-                </div>
+            <div class="sc-title">Unlock My Heart</div>
+            <div class="sc-subtitle">Would you be my own true self?</div>
 
-                <!-- 按钮 -->
-                <button id="ephone-login-btn" class="ephone-btn">
-                    Connect
-                </button>
+            <input type="text" id="ephone-account" class="sc-input" placeholder="Account Name">
+            <input type="password" id="ephone-password" class="sc-input" placeholder="Secret Key">
+            
+            <button id="ephone-login-btn" class="sc-btn">
+                Character Transform!
+            </button>
 
-                <!-- 消息提示 -->
-                <p id="login-msg" style="margin-top: 25px; font-size: 12px; min-height: 20px; color: #666; text-align: left; transition: color 0.3s;"></p>
-            </div>
-        </div>
-
-        <!-- 底部装饰 -->
-        <div class="fade-in" style="position: absolute; bottom: 40px; font-size: 10px; color: #333; letter-spacing: 1px; animation-delay: 0.3s;">
-            SECURE CONNECTION • V2.0
+            <p id="login-msg" style="margin-top: 15px; font-size: 12px; min-height: 20px; color: #ff1493;"></p>
         </div>
     `;
 
