@@ -963,24 +963,6 @@ function getRandomValue(str) {
   return str;
 }
 
-// 创建带CORS支持的fetch配置
-function createFetchOptions(method, headers, body) {
-  const options = {
-    method: method || 'POST',
-    mode: 'cors', // 明确指定CORS模式
-    cache: 'no-cache',
-    headers: headers || {
-      'Content-Type': 'application/json'
-    }
-  };
-  
-  if (body) {
-    options.body = typeof body === 'string' ? body : JSON.stringify(body);
-  }
-  
-  return options;
-}
-
 function isImage(content) {
   if (content.image_url && content.image_url.url) {
     let currentImageData = content.image_url.url
@@ -1321,8 +1303,6 @@ document.getElementById('char-city-search-btn').addEventListener('click', async 
       url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${getRandomValue(apiKey)}`,
       data: {
         method: 'POST',
-        mode: 'cors', // 添加CORS支持
-        cache: 'no-cache',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -56733,98 +56713,16 @@ ${recentHistoryWithUser}
 
       try {
         let isGemini = url === GEMINI_API_URL;
-        
-        // 构建fetch请求配置，添加CORS支持
-        const fetchOptions = {
-          method: 'GET',
-          mode: 'cors', // 明确指定CORS模式
-          cache: 'no-cache',
+        const response = await fetch(isGemini ? `${GEMINI_API_URL}?key=${getRandomValue(key)}` : `${url}/v1/models`, isGemini ? undefined : {
           headers: {
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${key}`
           }
-        };
-        
-        // 为非Gemini API添加Authorization头
-        if (!isGemini) {
-          fetchOptions.headers['Authorization'] = `Bearer ${key}`;
-        }
-        
-        // 构建请求URL
-        const requestUrl = isGemini ? `${GEMINI_API_URL}?key=${getRandomValue(key)}` : `${url}/v1/models`;
-        
-        console.log('正在请求模型列表:', requestUrl);
-        
-        // 添加超时控制
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
-        fetchOptions.signal = controller.signal;
-        
-        let response;
-        try {
-          response = await fetch(requestUrl, fetchOptions);
-          clearTimeout(timeoutId);
-        } catch (fetchError) {
-          clearTimeout(timeoutId);
-          if (fetchError.name === 'AbortError') {
-            throw new Error('请求超时，请检查网络连接或API地址');
-          }
-          // CORS错误通常会显示为TypeError: Failed to fetch
-          if (fetchError.message.includes('Failed to fetch')) {
-            throw new Error('网络请求失败，可能是CORS跨域问题。请确保API反代地址支持CORS，或使用支持CORS的反代服务');
-          }
-          throw fetchError;
-        }
-        
-        // 检查响应状态
-        if (!response.ok) {
-          let errorText = '';
-          try {
-            errorText = await response.text();
-            console.error('API响应错误:', errorText);
-          } catch (e) {
-            console.error('无法读取错误响应');
-          }
-          throw new Error(`无法获取模型列表 (HTTP ${response.status})${errorText ? ': ' + errorText.substring(0, 100) : ''}`);
-        }
-        
-        // 尝试解析JSON
-        let data;
-        try {
-          const responseText = await response.text();
-          console.log('API响应内容:', responseText.substring(0, 500));
-          
-          // 检查是否为空响应
-          if (!responseText || responseText.trim() === '') {
-            throw new Error('服务器返回空响应，请检查API地址和密钥是否正确');
-          }
-          
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('JSON解析失败:', parseError);
-          throw new Error('服务器返回的不是有效的JSON格式，请检查API地址是否正确。如果是反代地址，请确保反代配置正确');
-        }
-        
-        // 检查数据结构
-        let models;
-        if (isGemini) {
-          if (!data.models || !Array.isArray(data.models)) {
-            console.error('Gemini API返回数据:', data);
-            throw new Error('Gemini API返回数据格式错误');
-          }
-          models = data.models.map(model => ({
-            id: model.name.split('/')[1] || model.name
-          }));
-        } else {
-          if (!data.data || !Array.isArray(data.data)) {
-            console.error('OpenAI兼容API返回数据:', data);
-            throw new Error('API返回数据格式错误，请检查API地址是否为OpenAI兼容接口');
-          }
-          models = data.data;
-        }
-        
-        if (models.length === 0) {
-          throw new Error('未找到可用模型');
-        }
+        });
+        if (!response.ok) throw new Error('无法获取模型列表');
+        const data = await response.json();
+        let models = isGemini ? data.models.map(model => ({
+          id: model.name.split('/')[1] || model.name
+        })) : data.data;
 
         const modelSelect = document.getElementById(selectId);
         modelSelect.innerHTML = '';
@@ -56838,13 +56736,9 @@ ${recentHistoryWithUser}
           if (model.id === savedModel) option.selected = true;
           modelSelect.appendChild(option);
         });
-        
-        console.log(`成功加载 ${models.length} 个模型`);
-        alert(`模型列表已更新（共 ${models.length} 个模型）`);
+        alert('模型列表已更新');
       } catch (error) {
-        console.error('拉取模型完整错误:', error);
-        console.error('错误堆栈:', error.stack);
-        alert(`拉取模型失败: ${error.message}\n\n提示：如果部署在GitHub Pages等静态托管上，请确保API反代地址支持CORS跨域请求`);
+        alert(`拉取模型失败: ${error.message}`);
       }
     }
 
