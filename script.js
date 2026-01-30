@@ -67753,10 +67753,10 @@ if (deleteQuickRepliesBtn) {
     const overlay = document.createElement('div');
     overlay.id = 'login-overlay';
     
-    // 整体背景：温暖的米白/淡粉色调，无格纹，干净纯粹
+    // 整体背景：温暖的米白/淡粉色调
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-        background-color: #fff9fb; /* 极淡的粉白背景 */
+        background-color: #fff9fb; 
         z-index: 99999; 
         display: flex; flex-direction: column; 
         justify-content: center; align-items: center; 
@@ -67767,7 +67767,7 @@ if (deleteQuickRepliesBtn) {
     overlay.innerHTML = `
         <style>
             /* ====================
-               开场动画：纯白之蛋
+               开场动画：天使之蛋 (点击消失)
                ==================== */
             #intro-layer {
                 position: absolute;
@@ -67780,21 +67780,31 @@ if (deleteQuickRepliesBtn) {
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                animation: layerFadeOut 1.5s ease-in-out 3.5s forwards;
+                cursor: pointer; /* 提示可点击 */
+                transition: opacity 1s ease, visibility 1s ease;
             }
 
+            /* 蛋的容器，用于整体浮动 */
+            .egg-container {
+                position: relative;
+                animation: eggFloat 3s ease-in-out infinite;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* 纯白蛋体 */
             .pure-egg {
                 width: 120px;
                 height: 160px;
                 background: #fff;
-                /* 蛋形圆角 */
                 border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
                 box-shadow: 
-                    inset -10px -10px 20px rgba(255, 183, 197, 0.2), /* 内部淡粉阴影 */
-                    0 0 30px rgba(255, 255, 255, 0.8), /* 外部白光 */
-                    0 10px 40px rgba(255, 183, 197, 0.3); /* 底部柔光 */
+                    inset -10px -10px 20px rgba(255, 183, 197, 0.2), 
+                    0 0 30px rgba(255, 255, 255, 0.8), 
+                    0 10px 40px rgba(255, 183, 197, 0.3);
                 position: relative;
-                animation: eggFloat 3s ease-in-out infinite;
+                z-index: 2;
             }
 
             /* 蛋的光泽 */
@@ -67810,36 +67820,71 @@ if (deleteQuickRepliesBtn) {
                 transform: rotate(-20deg);
             }
 
-            @keyframes eggFloat {
-                0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 10px 40px rgba(255, 183, 197, 0.3); }
-                50% { transform: translateY(-20px) scale(1.02); box-shadow: 0 30px 60px rgba(255, 183, 197, 0.2); }
+            /* 小翅膀 (CSS绘制) */
+            .wing {
+                position: absolute;
+                width: 60px;
+                height: 40px;
+                background: #fff;
+                z-index: 1;
+                top: 60px; /* 翅膀位置 */
+                border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+                box-shadow: 0 0 15px rgba(255, 183, 197, 0.2);
+            }
+            .wing-left {
+                left: -45px;
+                transform-origin: right center;
+                animation: wingFlapLeft 3s ease-in-out infinite;
+            }
+            .wing-right {
+                right: -45px;
+                transform-origin: left center;
+                animation: wingFlapRight 3s ease-in-out infinite;
             }
 
-            @keyframes layerFadeOut {
-                0% { opacity: 1; visibility: visible; }
-                100% { opacity: 0; visibility: hidden; pointer-events: none; }
+            /* 点击提示文字 */
+            .tap-hint {
+                position: absolute;
+                bottom: 20%;
+                color: #ffb7c5;
+                font-size: 14px;
+                letter-spacing: 2px;
+                opacity: 0.6;
+                animation: pulse 2s infinite;
+            }
+
+            @keyframes eggFloat {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-15px); }
+            }
+            @keyframes wingFlapLeft {
+                0%, 100% { transform: rotate(10deg); }
+                50% { transform: rotate(-10deg); }
+            }
+            @keyframes wingFlapRight {
+                0%, 100% { transform: rotate(-10deg); }
+                50% { transform: rotate(10deg); }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 0.4; }
+                50% { opacity: 0.8; }
             }
 
             /* ====================
-               登录卡片：淡粉治愈风
+               登录卡片
                ==================== */
             .sc-card {
                 position: relative;
                 width: 340px;
                 padding: 50px 40px;
                 background: #fff;
-                /* 淡粉色双线边框 */
                 border: 4px double #ffcdd2; 
                 border-radius: 20px;
                 box-shadow: 0 20px 60px rgba(255, 183, 197, 0.2);
                 text-align: center;
-                opacity: 0; /* 初始隐藏，等开场结束后显示 */
-                animation: cardFadeIn 1s ease-out 4s forwards;
-            }
-
-            @keyframes cardFadeIn {
-                from { opacity: 0; transform: translateY(20px); }
-                to { opacity: 1; transform: translateY(0); }
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all 1s ease-out; /* 由JS控制显示 */
             }
             
             /* 四个角落的扑克牌花色 - 淡彩版 */
@@ -67848,31 +67893,30 @@ if (deleteQuickRepliesBtn) {
                 font-size: 24px;
                 opacity: 0.6;
             }
-            .sc-tl { top: 15px; left: 15px; color: #ffb7c5; } /* 红桃 - 樱花粉 */
-            .sc-tr { top: 15px; right: 15px; color: #b0c4de; } /* 黑桃 - 淡钢蓝 */
-            .sc-bl { bottom: 15px; left: 15px; color: #98fb98; } /* 梅花 - 苍白绿 */
-            .sc-br { bottom: 15px; right: 15px; color: #ffe4b5; } /* 方块 - 鹿皮色 */
+            .sc-tl { top: 15px; left: 15px; color: #ffb7c5; } /* 红桃 */
+            .sc-tr { top: 15px; right: 15px; color: #b0c4de; } /* 黑桃 */
+            .sc-bl { bottom: 15px; left: 15px; color: #98fb98; } /* 梅花 */
+            .sc-br { bottom: 15px; right: 15px; color: #ffe4b5; } /* 方块 */
 
             .sc-title {
                 font-size: 26px;
-                color: #8b4513; /* 暖棕色文字 */
+                color: #8b4513;
                 margin-bottom: 8px;
                 font-weight: normal;
                 letter-spacing: 2px;
             }
             .sc-subtitle {
                 font-size: 13px;
-                color: #bc8f8f; /* 玫瑰褐 */
+                color: #bc8f8f;
                 margin-bottom: 40px;
                 font-style: italic;
                 letter-spacing: 1px;
             }
 
-            /* Humpty Lock 十字 - 柔和版 */
             .lock-cross {
                 width: 44px;
                 height: 44px;
-                background: #ffe4b5; /* 淡金 */
+                background: #ffe4b5;
                 margin: 0 auto 25px auto;
                 position: relative;
                 clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 80%, 80% 100%, 20% 100%, 0% 80%, 0% 20%);
@@ -67892,7 +67936,7 @@ if (deleteQuickRepliesBtn) {
                 position: absolute;
                 width: 18px;
                 height: 18px;
-                background: #ffb7c5; /* 樱花粉宝石 */
+                background: #ffb7c5;
                 border-radius: 50%;
                 z-index: 2;
                 box-shadow: inset 2px 2px 4px rgba(255,255,255,0.8);
@@ -67911,7 +67955,7 @@ if (deleteQuickRepliesBtn) {
                 box-sizing: border-box;
                 outline: none;
                 transition: all 0.3s;
-                text-align: center; /* 文字居中更像魔法咒语 */
+                text-align: center;
             }
             .sc-input:focus {
                 border-color: #ffb7c5;
@@ -67926,7 +67970,7 @@ if (deleteQuickRepliesBtn) {
             .sc-btn {
                 width: 100%;
                 padding: 14px;
-                background: #ffb7c5; /* 樱花粉按钮 */
+                background: #ffb7c5;
                 color: #fff;
                 border: none;
                 border-radius: 12px;
@@ -67942,9 +67986,6 @@ if (deleteQuickRepliesBtn) {
                 transform: translateY(-2px);
                 box-shadow: 0 5px 15px rgba(255, 183, 197, 0.4);
             }
-            .sc-btn:active {
-                transform: translateY(0);
-            }
             .sc-btn:disabled {
                 background: #eee;
                 color: #999;
@@ -67953,13 +67994,18 @@ if (deleteQuickRepliesBtn) {
 
         </style>
 
-        <!-- 开场动画层 -->
+        <!-- 开场动画层 (点击触发) -->
         <div id="intro-layer">
-            <div class="pure-egg"></div>
+            <div class="egg-container">
+                <div class="wing wing-left"></div>
+                <div class="pure-egg"></div>
+                <div class="wing wing-right"></div>
+            </div>
+            <div class="tap-hint">Tap to Unlock</div>
         </div>
 
         <!-- 登录卡片 -->
-        <div class="sc-card">
+        <div class="sc-card" id="login-card">
             <!-- 四个角落装饰 -->
             <div class="sc-corner sc-tl">♥</div>
             <div class="sc-corner sc-tr">♠</div>
@@ -67993,11 +68039,18 @@ if (deleteQuickRepliesBtn) {
         if (e.key === 'Enter') tryLogin();
     };
 
-    // 动画结束后的清理工作 (可选，防止DOM层级问题)
-    setTimeout(() => {
-        const intro = document.getElementById('intro-layer');
-        if (intro) intro.style.display = 'none';
-    }, 5500); // 5.5秒后完全隐藏开场层
+    // 点击开场层 -> 孵化(消失)并显示登录卡片
+    const introLayer = document.getElementById('intro-layer');
+    const loginCard = document.getElementById('login-card');
+    
+    introLayer.onclick = function() {
+        introLayer.style.opacity = '0';
+        introLayer.style.visibility = 'hidden';
+        
+        // 显示卡片
+        loginCard.style.opacity = '1';
+        loginCard.style.transform = 'translateY(0)';
+    };
   }
 
   // ==========================================
