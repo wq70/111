@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>联机功能操作指南</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #007aff;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: #007aff;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+        
+        h3 {
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        p {
+            margin: 15px 0;
+            font-size: 16px;
+        }
+        
+        ul {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .note {
+            background: #f0f8ff;
+            border-left: 4px solid #007aff;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .step {
+            background: #f9f9f9;
+            padding: 15px 20px;
+            margin: 12px 0;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .example {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 12px 0;
+            border: 1px solid #ddd;
+        }
+        
+        strong {
+            color: #007aff;
+        }
+        
+        .qa {
+            background: #f9f9f9;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .qa strong {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>联机功能操作指南</h1>
+        
+        <h2>第一步：获取服务器地址</h2>
+        
+        <h3>方式1：使用朋友的服务器（推荐）</h3>
+        <div class="step">
+            如果你的朋友已经搭建了服务器，直接向TA要服务器地址就可以了。<br>
+            地址通常长这样：<br>
+            <div class="example">wss://chat.example.com</div>
+            或者<br>
+            <div class="example">ws://123.456.789.0:8080</div>
+        </div>
+        
+        <h3>方式2：自己搭建服务器</h3>
+        <div class="step">
+            如果你懂一点技术，可以查看"部署指南.md"文件，里面有详细的搭建教程。<br>
+            不懂也没关系，可以请懂技术的朋友帮忙。
+        </div>
+        
+        <h2>第二步：设置个人信息</h2>
+        
+        <div class="step">
+            <strong>1. 开启联机功能</strong><br>
+            在"联机功能"区域，打开"启用真人联机"开关
+        </div>
+        
+        <div class="step">
+            <strong>2. 设置你的ID</strong><br>
+            在"我的ID"输入框填写一个唯一的ID，比如：<br>
+            <div class="example">xiaoming123</div>
+            <strong>注意：</strong>ID不能和别人重复，建议用英文+数字
+        </div>
+        
+        <div class="step">
+            <strong>3. 设置昵称</strong><br>
+            在"我的昵称"输入框填写你想显示的名字，比如：<br>
+            <div class="example">小明</div>
+            这个名字会显示给你的好友看
+        </div>
+        
+        <div class="step">
+            <strong>4. 上传头像（可选）</strong><br>
+            点击"上传"按钮，选择一张图片作为你的头像
+        </div>
+        
+        <h2>第三步：连接服务器</h2>
+        
+        <div class="step">
+            <strong>1. 填写服务器地址</strong><br>
+            在"服务器地址"输入框粘贴你获取的服务器地址
+        </div>
+        
+        <div class="step">
+            <strong>2. 点击"连接服务器"</strong><br>
+            等待几秒钟，如果连接成功，"连接状态"会显示"已连接"（绿色）
+        </div>
+        
+        <div class="warning">
+            <strong>连接失败？</strong><br>
+            • 检查服务器地址是否正确<br>
+            • 确认服务器是否正常运行<br>
+            • 检查你的网络连接
+        </div>
+        
+        <h2>第四步：添加好友</h2>
+        
+        <h3>方法1：搜索好友ID</h3>
+        <div class="step">
+            <strong>1. 获取好友的ID</strong><br>
+            先问你的朋友，TA设置的ID是什么
+        </div>
+        
+        <div class="step">
+            <strong>2. 搜索好友</strong><br>
+            在"搜索ID"输入框输入好友的ID，点击"搜索并添加好友"
+        </div>
+        
+        <div class="step">
+            <strong>3. 发送好友申请</strong><br>
+            如果找到了好友，会显示TA的信息，点击"添加好友"按钮
+        </div>
+        
+        <h3>方法2：接受好友申请</h3>
+        <div class="step">
+            <strong>1. 查看申请</strong><br>
+            如果有人向你发送好友申请，"好友申请"按钮会显示红色数字提醒
+        </div>
+        
+        <div class="step">
+            <strong>2. 同意或拒绝</strong><br>
+            点击"好友申请"按钮，查看申请列表，点击"同意"或"拒绝"
+        </div>
+        
+        <h2>第五步：开始聊天</h2>
+        
+        <div class="step">
+            <strong>1. 找到好友</strong><br>
+            添加成功后，好友会<strong>自动出现在你的聊天列表</strong>里<br>
+            （就是主界面的QQ聊天列表）
+        </div>
+        
+        <div class="step">
+            <strong>2. 开始聊天</strong><br>
+            点击好友头像，进入聊天界面，就可以发送消息了！<br>
+            消息会实时送达，就像微信一样
+        </div>
+        
+        <h2>常见问题</h2>
+        
+        <div class="qa">
+            <strong>Q: 搜索不到好友？</strong><br>
+            A: 确保你和好友连接到<strong>同一个服务器</strong>，并且好友已经成功连接（状态显示"已连接"）
+        </div>
+        
+        <div class="qa">
+            <strong>Q: 消息发送失败？</strong><br>
+            A: 可能是对方不在线，或者你的网络连接中断了，检查"连接状态"是否显示"已连接"
+        </div>
+        
+        <div class="qa">
+            <strong>Q: 可以和多个朋友聊天吗？</strong><br>
+            A: 可以！只要你们都连接到同一个服务器，就可以互相添加好友
+        </div>
+        
+        <div class="qa">
+            <strong>Q: 换手机后聊天记录还在吗？</strong><br>
+            A: 聊天记录保存在本地，换手机后需要重新添加好友。建议定期导出数据备份
+        </div>
+        
+        <div class="qa">
+            <strong>Q: 服务器会看到我的聊天内容吗？</strong><br>
+            A: 不会！服务器只负责传递消息，不会保存任何聊天内容，就像邮递员只负责送信
+        </div>
+        
+        <div class="note">
+            <strong>小贴士：</strong><br>
+            • 第一次使用建议和朋友一起操作，互相帮助<br>
+            • 记住你的ID，朋友需要用它来找到你<br>
+            • 保持应用在线，才能及时收到消息<br>
+            • 如果遇到问题，可以尝试断开重连
+        </div>
+        
+        <h2>完成！</h2>
+        <p>现在你已经学会如何使用联机功能了，快去和朋友聊天吧！</p>
+    </div>
+</body>
+</html>
