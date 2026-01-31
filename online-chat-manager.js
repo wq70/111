@@ -14,7 +14,48 @@ class OnlineChatManager {
         this.onlineFriends = []; // 联机好友列表
         this.reconnectTimer = null;
         this.heartbeatTimer = null;
+        this.shouldAutoReconnect = false; // 是否应该自动重连
+        this.reconnectAttempts = 0; // 重连尝试次数
+        this.maxReconnectAttempts = 999; // 最大重连次数（几乎无限）
+        this.heartbeatMissed = 0; // 心跳丢失次数
+        this.maxHeartbeatMissed = 3; // 最大心跳丢失次数
+        this.lastHeartbeatTime = null; // 上次心跳时间
     }
+
+    // 等待数据库就绪的辅助函数
+    async waitForDatabase(timeout = 10000) {
+        const startTime = Date.now();
+        
+        // 循环检查数据库是否真正就绪
+        while (Date.now() - startTime < timeout) {
+            // 检查数据库对象和chats表是否存在（注意：此应用不使用独立的messages表）
+            if (window.db && 
+                window.db.chats && 
+                typeof window.db.chats.get === 'function' &&
+                typeof window.db.chats.put === 'function') {
+                console.log('数据库和chats表已就绪');
+                return window.db;
+            }
+            
+            // 如果有 dbReadyPromise 并且还没完成，等待它
+            if (window.dbReadyPromise && !window.dbReady) {
+                try {
+                    await window.dbReadyPromise;
+                    // 等待完成后再检查一次
+                    continue;
+                } catch (err) {
+                    console.error('dbReadyPromise 失败:', err);
+                }
+            }
+            
+            // 等待 50ms 后再检查
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        
+        // 超时后抛出错误
+        throw new Error('数据库初始化超时，请刷新页面重试');
+    }
+
 
     // 初始化UI事件监听
     initUI() {
@@ -85,6 +126,15 @@ class OnlineChatManager {
 
         // 加载保存的设置
         this.loadSettings();
+        
+        // 【新增】监听页面可见性变化
+        this.setupVisibilityListener();
+        
+        // 【新增】监听页面刷新/关闭事件
+        this.setupBeforeUnloadListener();
+        
+        // 【新增】如果之前已连接，自动重连
+        this.autoReconnectIfNeeded();
     }
 
     // 保存设置到localStorage
@@ -94,7 +144,8 @@ class OnlineChatManager {
             userId: document.getElementById('my-online-id')?.value || '',
             nickname: document.getElementById('my-online-nickname')?.value || '',
             avatar: this.avatar || '',
-            serverUrl: document.getElementById('online-server-url')?.value || ''
+            serverUrl: document.getElementById('online-server-url')?.value || '',
+            wasConnected: this.shouldAutoReconnect // 【新增】保存连接状态
         };
         localStorage.setItem('ephone-online-settings', JSON.stringify(settings));
     }
@@ -125,6 +176,11 @@ class OnlineChatManager {
                 if (settings.avatar && avatarPreview) {
                     this.avatar = settings.avatar;
                     avatarPreview.src = settings.avatar;
+                }
+                
+                // 【新增】恢复连接状态标记
+                if (settings.wasConnected) {
+                    this.shouldAutoReconnect = true;
                 }
             } catch (error) {
                 console.error('加载联机设置失败:', error);
@@ -196,7 +252,10 @@ class OnlineChatManager {
 
             this.ws.onclose = () => {
                 console.log('WebSocket连接已关闭');
+                
+                const wasConnectedBefore = this.isConnected || this.shouldAutoReconnect;
                 this.isConnected = false;
+                
                 statusSpan.textContent = '未连接';
                 statusSpan.className = 'disconnected';
                 connectBtn.style.display = 'inline-block';
@@ -208,8 +267,9 @@ class OnlineChatManager {
                     this.heartbeatTimer = null;
                 }
                 
-                // 尝试重连（如果不是主动断开）
-                if (this.isConnected) {
+                // 【优化】如果应该自动重连（不是主动断开），则尝试重连
+                if (this.shouldAutoReconnect && wasConnectedBefore) {
+                    console.log('检测到连接断开，准备自动重连...');
                     this.scheduleReconnect();
                 }
             };
@@ -224,8 +284,17 @@ class OnlineChatManager {
 
     // 断开连接
     disconnect() {
+        // 【关键】标记为主动断开，停止自动重连
+        this.shouldAutoReconnect = false;
+        this.reconnectAttempts = 0;
+        
+        if (this.reconnectTimer) {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = null;
+        }
+        
         if (this.ws) {
-            this.isConnected = false; // 标记为主动断开
+            this.isConnected = false;
             this.ws.close();
             this.ws = null;
         }
@@ -238,6 +307,11 @@ class OnlineChatManager {
         statusSpan.className = 'disconnected';
         connectBtn.style.display = 'inline-block';
         disconnectBtn.style.display = 'none';
+        
+        // 保存断开状态
+        this.saveSettings();
+        
+        console.log('已主动断开连接');
     }
 
     // 发送消息到服务器
@@ -283,7 +357,9 @@ class OnlineChatManager {
                 break;
             
             case 'heartbeat_ack':
-                // 心跳响应
+                // 【优化】心跳响应，重置丢失计数
+                this.heartbeatMissed = 0;
+                this.lastHeartbeatTime = Date.now();
                 break;
             
             default:
@@ -294,6 +370,9 @@ class OnlineChatManager {
     // 注册成功
     onRegisterSuccess() {
         this.isConnected = true;
+        this.shouldAutoReconnect = true; // 【新增】标记为应该自动重连
+        this.reconnectAttempts = 0; // 重置重连次数
+        this.heartbeatMissed = 0; // 重置心跳丢失计数
         
         const statusSpan = document.getElementById('online-connection-status');
         const connectBtn = document.getElementById('connect-online-btn');
@@ -459,12 +538,14 @@ class OnlineChatManager {
             `).join('');
         }
         
-        modal.classList.add('show');
+        modal.classList.add('visible');
     }
 
     // 同意好友申请
     async acceptFriendRequest(index) {
         const request = this.friendRequests[index];
+        
+        console.log('开始处理好友申请:', request);
         
         // 发送同意消息到服务器
         this.send({
@@ -484,9 +565,16 @@ class OnlineChatManager {
         });
         
         this.saveOnlineFriends();
+        console.log('已添加到联机好友列表');
         
         // 【关键】添加到QQ聊天列表
-        await this.addToQQChatList(request);
+        try {
+            await this.addToQQChatList(request);
+            console.log('成功添加到QQ聊天列表');
+        } catch (error) {
+            console.error('添加到QQ聊天列表时出错:', error);
+            alert('添加好友成功，但添加到聊天列表失败，请刷新页面后查看');
+        }
         
         // 从申请列表中移除
         this.friendRequests.splice(index, 1);
@@ -496,51 +584,90 @@ class OnlineChatManager {
         // 刷新弹窗
         this.openFriendRequestsModal();
         
-        alert(`已添加 ${request.nickname} 为好友`);
+        alert(`已添加 ${request.nickname} 为好友，可在聊天列表中找到TA！`);
     }
 
     // 添加联机好友到QQ聊天列表
     async addToQQChatList(friend) {
         try {
+            // 【修复】等待数据库完全就绪
+            console.log('等待数据库初始化...');
+            const db = await this.waitForDatabase();
+            console.log('数据库已就绪');
+            
+            console.log('尝试添加联机好友到聊天列表:', friend);
+            
             // 生成唯一的chatId，使用 'online_' 前缀标识联机好友
             const chatId = `online_${friend.userId}`;
+            console.log('生成的chatId:', chatId);
             
-            // 检查是否已存在
-            const existingChat = await db.chats.get(chatId);
-            if (existingChat) {
-                console.log('该联机好友已在聊天列表中');
-                return;
-            }
-            
-            // 创建聊天记录
-            await db.chats.add({
+            // 创建聊天对象
+            const newChat = {
                 id: chatId,
                 name: friend.nickname,
                 avatar: friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg',
                 lastMessage: '已添加为联机好友',
                 timestamp: Date.now(),
                 unread: 0,
+                unreadCount: 0,
+                isPinned: false,
                 isOnlineFriend: true, // 标记为联机好友
-                onlineUserId: friend.userId // 保存联机用户ID
-            });
+                onlineUserId: friend.userId, // 保存联机用户ID
+                history: [], // 消息历史
+                settings: {} // 聊天设置
+            };
             
-            // 添加系统消息
-            await db.messages.add({
-                id: `${chatId}_welcome_${Date.now()}`,
-                chatId: chatId,
-                content: `你们已成为联机好友，现在可以开始聊天了！`,
-                sender: 'system',
-                timestamp: Date.now()
-            });
+            // 检查是否已存在
+            const existingChat = await db.chats.get(chatId);
+            if (existingChat) {
+                console.log('该联机好友已在聊天列表中，更新信息');
+                await db.chats.update(chatId, {
+                    name: friend.nickname,
+                    avatar: friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg',
+                    lastMessage: '已添加为联机好友',
+                    timestamp: Date.now()
+                });
+                
+                // 【关键】同步更新 state.chats
+                if (typeof window.state !== 'undefined' && window.state && window.state.chats && window.state.chats[chatId]) {
+                    window.state.chats[chatId].name = friend.nickname;
+                    window.state.chats[chatId].avatar = friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                    window.state.chats[chatId].lastMessage = '已添加为联机好友';
+                    window.state.chats[chatId].timestamp = Date.now();
+                }
+            } else {
+                console.log('创建新的聊天记录');
+                
+                // 初始化history数组，添加欢迎消息
+                newChat.history = [{
+                    role: 'system',
+                    content: '你们已成为联机好友，现在可以开始聊天了！',
+                    timestamp: Date.now()
+                }];
+                
+                // 保存到数据库
+                await db.chats.add(newChat);
+                console.log('聊天记录创建成功');
+                
+                // 【关键】同步添加到 state.chats
+                if (typeof window.state !== 'undefined' && window.state && window.state.chats) {
+                    window.state.chats[chatId] = newChat;
+                    console.log('已同步到 state.chats');
+                }
+            }
             
             console.log(`已将联机好友 ${friend.nickname} 添加到QQ聊天列表`);
             
-            // 刷新聊天列表（如果有全局刷新函数）
-            if (typeof loadChatList === 'function') {
-                await loadChatList();
+            // 刷新聊天列表显示
+            if (typeof window.renderChatListProxy === 'function') {
+                await window.renderChatListProxy();
+                console.log('已刷新聊天列表显示');
+            } else {
+                console.warn('renderChatListProxy 函数未找到');
             }
         } catch (error) {
             console.error('添加到QQ聊天列表失败:', error);
+            throw error; // 重新抛出错误以便上层捕获
         }
     }
 
@@ -565,6 +692,8 @@ class OnlineChatManager {
 
     // 好友申请被接受
     async onFriendRequestAccepted(data) {
+        console.log('收到好友申请被接受的通知:', data);
+        
         // 添加到好友列表
         this.onlineFriends.push({
             userId: data.fromUserId,
@@ -574,15 +703,21 @@ class OnlineChatManager {
         });
         
         this.saveOnlineFriends();
+        console.log('已添加到联机好友列表');
         
         // 【关键】添加到QQ聊天列表
-        await this.addToQQChatList({
-            userId: data.fromUserId,
-            nickname: data.fromNickname,
-            avatar: data.fromAvatar
-        });
+        try {
+            await this.addToQQChatList({
+                userId: data.fromUserId,
+                nickname: data.fromNickname,
+                avatar: data.fromAvatar
+            });
+            console.log('成功添加到QQ聊天列表');
+        } catch (error) {
+            console.error('添加到QQ聊天列表时出错:', error);
+        }
         
-        alert(`${data.fromNickname} 接受了你的好友申请`);
+        alert(`${data.fromNickname} 接受了你的好友申请，可在聊天列表中找到TA！`);
     }
 
     // 好友申请被拒绝
@@ -624,7 +759,7 @@ class OnlineChatManager {
             `).join('');
         }
         
-        modal.classList.add('show');
+        modal.classList.add('visible');
     }
 
     // 开始与好友聊天
@@ -637,6 +772,8 @@ class OnlineChatManager {
         // 跳转到聊天界面
         if (typeof openChat === 'function') {
             await openChat(chatId);
+        } else if (typeof window.openChat === 'function') {
+            await window.openChat(chatId);
         } else {
             console.error('openChat 函数未定义');
             alert('无法打开聊天界面');
@@ -656,16 +793,31 @@ class OnlineChatManager {
             
             // 从QQ聊天列表删除
             try {
+                // 【修复】等待数据库完全就绪
+                console.log('等待数据库初始化...');
+                const db = await this.waitForDatabase();
+                console.log('数据库已就绪');
+                
+                // 删除聊天记录（消息历史包含在chat对象中，一起删除）
                 await db.chats.delete(chatId);
-                await db.messages.where('chatId').equals(chatId).delete();
-                console.log(`已从QQ聊天列表删除 ${friend.nickname}`);
+                console.log(`已删除聊天记录: ${chatId}`);
+                
+                // 【关键】同步删除 state.chats
+                if (typeof window.state !== 'undefined' && window.state && window.state.chats && window.state.chats[chatId]) {
+                    delete window.state.chats[chatId];
+                    console.log('已从 state.chats 删除');
+                }
                 
                 // 刷新聊天列表
-                if (typeof loadChatList === 'function') {
-                    await loadChatList();
+                if (typeof window.renderChatListProxy === 'function') {
+                    await window.renderChatListProxy();
+                    console.log('已刷新聊天列表');
                 }
+                
+                alert(`已删除好友 ${friend.nickname}`);
             } catch (error) {
                 console.error('从QQ聊天列表删除失败:', error);
+                alert('删除失败: ' + error.message);
             }
             
             // 刷新好友列表弹窗
@@ -676,13 +828,13 @@ class OnlineChatManager {
     // 关闭好友申请弹窗
     closeFriendRequestsModal() {
         const modal = document.getElementById('friend-requests-modal');
-        modal.classList.remove('show');
+        modal.classList.remove('visible');
     }
 
     // 关闭好友列表弹窗
     closeOnlineFriendsModal() {
         const modal = document.getElementById('online-friends-modal');
-        modal.classList.remove('show');
+        modal.classList.remove('visible');
     }
 
     // 更新好友申请徽章
@@ -735,23 +887,124 @@ class OnlineChatManager {
 
     // 启动心跳
     startHeartbeat() {
+        // 清除已有的心跳定时器
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+        }
+        
+        // 【优化】缩短心跳间隔到15秒，并增加健康检查
         this.heartbeatTimer = setInterval(() => {
-            if (this.isConnected) {
+            if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                // 检查上次心跳是否超时
+                if (this.lastHeartbeatTime && Date.now() - this.lastHeartbeatTime > 45000) {
+                    console.warn('心跳超时，可能连接异常');
+                    this.heartbeatMissed++;
+                    
+                    // 如果连续多次心跳丢失，主动断开重连
+                    if (this.heartbeatMissed >= this.maxHeartbeatMissed) {
+                        console.error('心跳连续丢失，主动关闭连接以触发重连');
+                        if (this.ws) {
+                            this.ws.close();
+                        }
+                        return;
+                    }
+                }
+                
+                // 发送心跳
                 this.send({ type: 'heartbeat' });
+                console.log('发送心跳包');
+            } else if (this.shouldAutoReconnect) {
+                // 如果连接断开但应该保持连接，尝试重连
+                console.log('检测到连接断开，触发重连');
+                this.scheduleReconnect();
             }
-        }, 30000); // 每30秒发送一次心跳
+        }, 15000); // 每15秒发送一次心跳
+        
+        // 初始化心跳时间
+        this.lastHeartbeatTime = Date.now();
     }
 
     // 计划重连
     scheduleReconnect() {
+        // 如果不应该自动重连，直接返回
+        if (!this.shouldAutoReconnect) {
+            return;
+        }
+        
+        // 检查是否超过最大重连次数
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.error('已达到最大重连次数');
+            return;
+        }
+        
+        // 清除已有的重连定时器
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
         }
         
+        // 【优化】使用指数退避算法，但最长不超过30秒
+        this.reconnectAttempts++;
+        const delay = Math.min(3000 + this.reconnectAttempts * 2000, 30000);
+        
+        console.log(`${delay/1000}秒后尝试第${this.reconnectAttempts}次重连...`);
+        
+        const statusSpan = document.getElementById('online-connection-status');
+        if (statusSpan) {
+            statusSpan.textContent = `重连中(${this.reconnectAttempts})...`;
+            statusSpan.className = 'connecting';
+        }
+        
         this.reconnectTimer = setTimeout(() => {
-            console.log('尝试重新连接...');
+            console.log(`执行第${this.reconnectAttempts}次重连`);
             this.connect();
-        }, 5000); // 5秒后重连
+        }, delay);
+    }
+
+    // 【新增】监听页面可见性变化
+    setupVisibilityListener() {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('页面已隐藏（切换到其他应用）');
+            } else {
+                console.log('页面已显示（切换回应用）');
+                
+                // 【关键】如果应该保持连接但当前未连接，立即重连
+                if (this.shouldAutoReconnect && !this.isConnected) {
+                    console.log('检测到页面重新显示，尝试重新连接...');
+                    this.reconnectAttempts = 0; // 重置重连次数
+                    this.connect();
+                } else if (this.isConnected) {
+                    // 即使已连接，也发送一个心跳检查连接健康
+                    this.send({ type: 'heartbeat' });
+                }
+            }
+        });
+    }
+
+    // 【新增】监听页面刷新/关闭前保存状态
+    setupBeforeUnloadListener() {
+        window.addEventListener('beforeunload', () => {
+            // 保存当前连接状态，以便刷新后自动重连
+            this.saveSettings();
+        });
+    }
+
+    // 【新增】如果之前已连接，自动重连
+    autoReconnectIfNeeded() {
+        // 页面加载完成后，检查是否需要自动重连
+        setTimeout(() => {
+            if (this.shouldAutoReconnect && !this.isConnected) {
+                const userIdInput = document.getElementById('my-online-id');
+                const nicknameInput = document.getElementById('my-online-nickname');
+                const serverUrlInput = document.getElementById('online-server-url');
+                
+                // 只有配置完整时才自动重连
+                if (userIdInput?.value && nicknameInput?.value && serverUrlInput?.value) {
+                    console.log('检测到之前已连接，正在自动重连...');
+                    this.connect();
+                }
+            }
+        }, 1000); // 延迟1秒确保页面完全加载
     }
 
     // 格式化时间
@@ -774,44 +1027,136 @@ class OnlineChatManager {
     // 收到消息
     async onReceiveMessage(data) {
         console.log('收到联机消息:', data);
+        console.log('消息内容:', {
+            fromUserId: data.fromUserId,
+            message: data.message,
+            timestamp: data.timestamp
+        });
         
         const chatId = `online_${data.fromUserId}`;
+        console.log('计算的chatId:', chatId);
         
         try {
-            // 保存消息到数据库
-            await db.messages.add({
-                id: `${chatId}_${data.timestamp}`,
-                chatId: chatId,
-                content: data.message,
-                sender: 'ai', // 对方发送的消息
-                timestamp: data.timestamp
-            });
+            // 【修复】等待数据库完全就绪
+            const db = await this.waitForDatabase();
+            console.log('数据库已就绪，准备保存消息');
             
-            // 更新聊天列表的最后消息
-            const chat = await db.chats.get(chatId);
-            if (chat) {
-                await db.chats.update(chatId, {
+            // 获取或创建聊天对象
+            let chat = await db.chats.get(chatId);
+            console.log('获取到的chat对象:', chat ? '存在' : '不存在');
+            
+            if (!chat) {
+                // 如果聊天不存在，创建一个新的
+                console.warn('收到消息但聊天不存在，创建新聊天');
+                const friend = this.onlineFriends.find(f => f.userId === data.fromUserId);
+                chat = {
+                    id: chatId,
+                    name: friend ? friend.nickname : '联机好友',
+                    avatar: friend ? friend.avatar : 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg',
                     lastMessage: data.message,
                     timestamp: data.timestamp,
-                    unread: (chat.unread || 0) + 1
-                });
+                    unread: 1,
+                    unreadCount: 1,
+                    isPinned: false,
+                    isOnlineFriend: true,
+                    onlineUserId: data.fromUserId,
+                    history: [],
+                    settings: {}
+                };
+                console.log('创建了新chat对象');
+            }
+            
+            // 确保 history 数组存在
+            if (!Array.isArray(chat.history)) {
+                chat.history = [];
+                console.log('初始化了history数组');
+            }
+            
+            console.log('添加消息前，history长度:', chat.history.length);
+            
+            // 创建消息对象
+            const msg = {
+                role: 'ai', // 对方发送的消息
+                content: data.message,
+                timestamp: data.timestamp
+            };
+            
+            // 添加消息到 history
+            chat.history.push(msg);
+            
+            console.log('添加消息后，history长度:', chat.history.length);
+            console.log('最后一条消息:', chat.history[chat.history.length - 1]);
+            
+            // 更新最后消息和未读数
+            chat.lastMessage = data.message;
+            chat.timestamp = data.timestamp;
+            chat.unread = (chat.unread || 0) + 1;
+            
+            // 保存到数据库
+            await db.chats.put(chat);
+            console.log('chat对象已保存到数据库');
+            
+            // 【关键】同步更新 state.chats（尝试多种方式）
+            let stateUpdated = false;
+            
+            if (typeof state !== 'undefined' && state && state.chats) {
+                state.chats[chatId] = chat;
+                console.log('已同步更新 state.chats 中的消息');
+                stateUpdated = true;
+            }
+            
+            if (typeof window.state !== 'undefined' && window.state && window.state.chats) {
+                window.state.chats[chatId] = chat;
+                console.log('已同步更新 window.state.chats 中的消息');
+                stateUpdated = true;
+            }
+            
+            if (!stateUpdated) {
+                console.warn('⚠️ 无法同步到 state.chats - state 不存在');
             }
             
             // 刷新聊天列表
-            if (typeof loadChatList === 'function') {
-                await loadChatList();
+            if (typeof window.renderChatListProxy === 'function') {
+                await window.renderChatListProxy();
+                console.log('已刷新聊天列表');
+            } else {
+                console.warn('window.renderChatListProxy 不存在');
             }
             
-            // 如果当前正在与该好友聊天，刷新聊天界面
-            if (typeof currentChatId !== 'undefined' && currentChatId === chatId) {
-                if (typeof loadMessages === 'function') {
-                    await loadMessages(chatId);
+            // 如果当前正在与该好友聊天，使用 appendMessage 立即显示消息
+            let currentChatId = null;
+            if (typeof state !== 'undefined' && state && state.activeChatId) {
+                currentChatId = state.activeChatId;
+            } else if (typeof window.state !== 'undefined' && window.state && window.state.activeChatId) {
+                currentChatId = window.state.activeChatId;
+            }
+            
+            console.log('当前activeChatId:', currentChatId, '期望:', chatId);
+            
+            if (currentChatId === chatId) {
+                console.log('✅ 当前正在与该好友聊天，准备显示消息');
+                
+                // 使用 appendMessage 立即显示消息，而不是重新渲染整个界面
+                if (typeof window.appendMessage === 'function') {
+                    await window.appendMessage(msg, chat);
+                    console.log('✅ 已通过 appendMessage 显示对方的消息');
+                } else {
+                    console.warn('appendMessage 函数不存在，尝试重新渲染界面');
+                    if (typeof window.renderChatInterface === 'function') {
+                        await window.renderChatInterface(chatId);
+                        console.log('已重新渲染聊天界面');
+                    } else {
+                        console.warn('window.renderChatInterface 不存在');
+                    }
                 }
+            } else {
+                console.log('当前未打开该好友的聊天界面');
             }
             
             console.log('联机消息已保存');
         } catch (error) {
             console.error('保存联机消息失败:', error);
+            console.error('错误堆栈:', error.stack);
         }
     }
 

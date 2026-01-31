@@ -1,0 +1,31 @@
+{
+  "name": "online-chat-server",
+  "version": "1.0.0",
+  "description": "真人联机WebSocket服务器 - 为E-phone应用提供实时通信支持",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "pm2:start": "pm2 start server.js --name online-chat",
+    "pm2:stop": "pm2 stop online-chat",
+    "pm2:restart": "pm2 restart online-chat",
+    "pm2:logs": "pm2 logs online-chat",
+    "pm2:status": "pm2 status"
+  },
+  "keywords": [
+    "websocket",
+    "chat",
+    "real-time",
+    "online-chat",
+    "e-phone"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
