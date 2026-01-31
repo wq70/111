@@ -2,7 +2,7 @@
 // 【强制网络优先策略】- 始终从服务器获取最新版本，不使用缓存
 
 // 缓存版本号（强制更新策略）
-const CACHE_VERSION = 'v0.0.4';
+const CACHE_VERSION = 'v0.0.5';
 const CACHE_NAME = `ephone-cache-${CACHE_VERSION}`;
 
 // 需要被缓存的文件列表（仅用于离线访问）

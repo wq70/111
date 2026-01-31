@@ -56,6 +56,77 @@ class OnlineChatManager {
         throw new Error('数据库初始化超时，请刷新页面重试');
     }
 
+    // 压缩图片的辅助函数
+    async compressImage(file, maxWidth = 200, maxHeight = 200, quality = 0.8) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                const img = new Image();
+                
+                img.onload = () => {
+                    // 创建canvas进行压缩
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // 计算缩放比例，保持宽高比
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = height * (maxWidth / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = width * (maxHeight / height);
+                            height = maxHeight;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 转换为base64，使用JPEG格式压缩
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                    
+                    console.log('图片压缩完成，原始大小:', e.target.result.length, '压缩后大小:', compressedBase64.length);
+                    resolve(compressedBase64);
+                };
+                
+                img.onerror = () => {
+                    reject(new Error('图片加载失败'));
+                };
+                
+                img.src = e.target.result;
+            };
+            
+            reader.onerror = () => {
+                reject(new Error('文件读取失败'));
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // 【新增】获取安全的头像（检查大小，过大则返回默认头像）
+    getSafeAvatar() {
+        let avatarToSend = this.avatar || '';
+        
+        // 如果是 base64 格式，检查大小
+        if (avatarToSend && avatarToSend.startsWith('data:image/')) {
+            const avatarSize = avatarToSend.length;
+            if (avatarSize > 500 * 1024) { // 如果头像超过500KB
+                console.warn('头像太大（' + Math.round(avatarSize/1024) + 'KB），使用默认头像');
+                return 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+            }
+        }
+        
+        return avatarToSend;
+    }
+
 
     // 初始化UI事件监听
     initUI() {
@@ -72,6 +143,7 @@ class OnlineChatManager {
 
         // 上传头像按钮
         const uploadAvatarBtn = document.getElementById('upload-online-avatar-btn');
+        const resetAvatarBtn = document.getElementById('reset-online-avatar-btn');
         const avatarInput = document.getElementById('online-avatar-input');
         const avatarPreview = document.getElementById('my-online-avatar-preview');
         
@@ -83,14 +155,56 @@ class OnlineChatManager {
             avatarInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        this.avatar = event.target.result;
+                    try {
+                        // 压缩图片以减小大小
+                        const compressedBase64 = await this.compressImage(file, 200, 200, 0.8);
+                        this.avatar = compressedBase64;
                         avatarPreview.src = this.avatar;
                         this.saveSettings();
-                    };
-                    reader.readAsDataURL(file);
+                        
+                        // 如果已经连接，需要重新连接以更新头像
+                        if (this.isConnected) {
+                            console.log('头像已更新，正在重新注册...');
+                            // 重新发送注册消息更新头像，使用安全的头像
+                            this.send({
+                                type: 'register',
+                                userId: this.userId,
+                                nickname: this.nickname,
+                                avatar: this.getSafeAvatar()
+                            });
+                        }
+                        
+                        console.log('头像上传成功');
+                    } catch (error) {
+                        console.error('头像上传失败:', error);
+                        alert('头像上传失败: ' + error.message);
+                    }
                 }
+                // 清空input，允许重复选择同一个文件
+                e.target.value = '';
+            });
+        }
+        
+        // 重置头像按钮
+        if (resetAvatarBtn) {
+            resetAvatarBtn.addEventListener('click', () => {
+                const defaultAvatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                this.avatar = defaultAvatar;
+                avatarPreview.src = defaultAvatar;
+                this.saveSettings();
+                
+                // 如果已经连接，重新注册以更新头像
+                if (this.isConnected) {
+                    console.log('头像已重置，正在重新注册...');
+                    this.send({
+                        type: 'register',
+                        userId: this.userId,
+                        nickname: this.nickname,
+                        avatar: this.avatar // 默认头像一定是安全的
+                    });
+                }
+                
+                console.log('头像已重置为默认头像');
             });
         }
 
@@ -124,6 +238,12 @@ class OnlineChatManager {
             viewFriendsBtn.addEventListener('click', () => this.openOnlineFriendsModal());
         }
 
+        // 重置联机数据按钮
+        const resetOnlineDataBtn = document.getElementById('reset-online-data-btn');
+        if (resetOnlineDataBtn) {
+            resetOnlineDataBtn.addEventListener('click', () => this.resetOnlineData());
+        }
+
         // 加载保存的设置
         this.loadSettings();
         
@@ -139,15 +259,44 @@ class OnlineChatManager {
 
     // 保存设置到localStorage
     saveSettings() {
-        const settings = {
-            enabled: document.getElementById('enable-online-chat-switch')?.checked || false,
-            userId: document.getElementById('my-online-id')?.value || '',
-            nickname: document.getElementById('my-online-nickname')?.value || '',
-            avatar: this.avatar || '',
-            serverUrl: document.getElementById('online-server-url')?.value || '',
-            wasConnected: this.shouldAutoReconnect // 【新增】保存连接状态
-        };
-        localStorage.setItem('ephone-online-settings', JSON.stringify(settings));
+        try {
+            const settings = {
+                enabled: document.getElementById('enable-online-chat-switch')?.checked || false,
+                userId: document.getElementById('my-online-id')?.value || '',
+                nickname: document.getElementById('my-online-nickname')?.value || '',
+                avatar: this.avatar || '',
+                serverUrl: document.getElementById('online-server-url')?.value || '',
+                wasConnected: this.shouldAutoReconnect // 【新增】保存连接状态
+            };
+            
+            // 【修复】检查localStorage空间，如果头像太大则不保存头像
+            const settingsStr = JSON.stringify(settings);
+            if (settingsStr.length > 5 * 1024 * 1024) { // 如果超过5MB
+                console.warn('设置数据过大，头像将不被保存到localStorage');
+                settings.avatar = ''; // 清空头像，避免localStorage溢出
+            }
+            
+            localStorage.setItem('ephone-online-settings', JSON.stringify(settings));
+            console.log('联机设置已保存');
+        } catch (error) {
+            console.error('保存联机设置失败:', error);
+            // 如果保存失败（可能是localStorage满了），尝试只保存关键信息
+            try {
+                const minimalSettings = {
+                    enabled: document.getElementById('enable-online-chat-switch')?.checked || false,
+                    userId: document.getElementById('my-online-id')?.value || '',
+                    nickname: document.getElementById('my-online-nickname')?.value || '',
+                    avatar: '', // 不保存头像
+                    serverUrl: document.getElementById('online-server-url')?.value || '',
+                    wasConnected: this.shouldAutoReconnect
+                };
+                localStorage.setItem('ephone-online-settings', JSON.stringify(minimalSettings));
+                console.log('已保存简化版设置（不含头像）');
+            } catch (err) {
+                console.error('保存简化版设置也失败:', err);
+                alert('保存设置失败，可能是浏览器存储空间不足');
+            }
+        }
     }
 
     // 加载设置
@@ -173,9 +322,30 @@ class OnlineChatManager {
                 if (nicknameInput) nicknameInput.value = settings.nickname || '';
                 if (serverUrlInput) serverUrlInput.value = settings.serverUrl || '';
                 
+                // 【修复】加载头像时进行验证，如果头像无效则使用默认头像
                 if (settings.avatar && avatarPreview) {
-                    this.avatar = settings.avatar;
-                    avatarPreview.src = settings.avatar;
+                    try {
+                        // 验证头像是否为有效的URL或base64
+                        if (settings.avatar.startsWith('data:image/') || settings.avatar.startsWith('http')) {
+                            this.avatar = settings.avatar;
+                            avatarPreview.src = settings.avatar;
+                        } else {
+                            // 无效格式，使用默认头像
+                            console.warn('保存的头像格式无效，使用默认头像');
+                            this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                            avatarPreview.src = this.avatar;
+                        }
+                    } catch (error) {
+                        console.error('加载头像失败:', error);
+                        this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                        avatarPreview.src = this.avatar;
+                    }
+                } else {
+                    // 没有保存的头像，使用默认头像
+                    this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                    if (avatarPreview) {
+                        avatarPreview.src = this.avatar;
+                    }
                 }
                 
                 // 【新增】恢复连接状态标记
@@ -184,6 +354,19 @@ class OnlineChatManager {
                 }
             } catch (error) {
                 console.error('加载联机设置失败:', error);
+                // 设置默认头像
+                this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                const avatarPreview = document.getElementById('my-online-avatar-preview');
+                if (avatarPreview) {
+                    avatarPreview.src = this.avatar;
+                }
+            }
+        } else {
+            // 首次使用，设置默认头像
+            this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+            const avatarPreview = document.getElementById('my-online-avatar-preview');
+            if (avatarPreview) {
+                avatarPreview.src = this.avatar;
             }
         }
 
@@ -230,12 +413,17 @@ class OnlineChatManager {
             this.ws.onopen = () => {
                 console.log('WebSocket连接已建立');
                 
-                // 发送注册消息
+                // 【修复】发送注册消息时使用安全的头像
+                const avatarToSend = this.getSafeAvatar();
+                if (avatarToSend !== this.avatar && this.avatar.startsWith('data:image/')) {
+                    alert('您上传的头像过大，暂时使用默认头像连接。建议重新上传更小的图片。');
+                }
+                
                 this.send({
                     type: 'register',
                     userId: this.userId,
                     nickname: this.nickname,
-                    avatar: this.avatar || ''
+                    avatar: avatarToSend
                 });
             };
 
@@ -475,12 +663,13 @@ class OnlineChatManager {
             return;
         }
         
+        // 【修复】使用安全的头像
         this.send({
             type: 'friend_request',
             toUserId: friendId,
             fromUserId: this.userId,
             fromNickname: this.nickname,
-            fromAvatar: this.avatar || ''
+            fromAvatar: this.getSafeAvatar()
         });
         
         alert(`已向 ${friendNickname} 发送好友申请`);
@@ -547,13 +736,13 @@ class OnlineChatManager {
         
         console.log('开始处理好友申请:', request);
         
-        // 发送同意消息到服务器
+        // 【修复】使用安全的头像
         this.send({
             type: 'accept_friend_request',
             toUserId: request.userId,
             fromUserId: this.userId,
             fromNickname: this.nickname,
-            fromAvatar: this.avatar || ''
+            fromAvatar: this.getSafeAvatar()
         });
         
         // 添加到好友列表
@@ -1177,6 +1366,121 @@ class OnlineChatManager {
         
         console.log(`已发送消息给 ${friendUserId}`);
     }
+
+    // 重置联机数据
+    async resetOnlineData() {
+        try {
+            // 第1层：确认对话框
+            const confirmed = confirm(
+                '⚠️ 警告：重置联机数据\n\n' +
+                '此操作将永久删除：\n' +
+                '✗ 所有联机好友\n' +
+                '✗ 所有联机聊天记录\n' +
+                '✗ 用户ID、昵称、头像\n' +
+                '✗ 服务器连接信息\n\n' +
+                '确定要继续吗？'
+            );
+            
+            if (!confirmed) return;
+
+            // 第2层：输入验证
+            const verification = prompt('为确认这不是误操作，请输入"重置联机"四个字：');
+            if (verification !== '重置联机') {
+                alert('验证失败，操作已取消。');
+                return;
+            }
+
+            console.log('开始重置联机数据...');
+
+            // 1. 断开WebSocket连接
+            if (this.isConnected && this.ws) {
+                this.shouldAutoReconnect = false; // 禁止自动重连
+                this.ws.close();
+                this.ws = null;
+                this.isConnected = false;
+                console.log('已断开WebSocket连接');
+            }
+
+            // 2. 清除定时器
+            if (this.reconnectTimer) {
+                clearTimeout(this.reconnectTimer);
+                this.reconnectTimer = null;
+            }
+            if (this.heartbeatTimer) {
+                clearInterval(this.heartbeatTimer);
+                this.heartbeatTimer = null;
+            }
+
+            // 3. 等待数据库就绪
+            const db = await this.waitForDatabase();
+
+            // 4. 删除数据库中所有联机好友的聊天记录
+            const allChats = await db.chats.toArray();
+            const onlineChats = allChats.filter(chat => chat.id && chat.id.startsWith('online_'));
+            
+            for (const chat of onlineChats) {
+                await db.chats.delete(chat.id);
+                console.log(`已删除联机聊天: ${chat.id}`);
+                
+                // 同时从 state.chats 中删除
+                if (window.state && window.state.chats && window.state.chats[chat.id]) {
+                    delete window.state.chats[chat.id];
+                }
+            }
+
+            // 5. 清空内存中的数据
+            this.userId = null;
+            this.nickname = null;
+            this.avatar = null;
+            this.serverUrl = null;
+            this.friendRequests = [];
+            this.onlineFriends = [];
+            this.reconnectAttempts = 0;
+            this.heartbeatMissed = 0;
+
+            // 6. 清除localStorage中的联机设置
+            localStorage.removeItem('ephone-online-settings');
+            localStorage.removeItem('ephone-online-friends');
+            console.log('已清除localStorage中的联机数据');
+
+            // 7. 重置UI
+            const enableSwitch = document.getElementById('enable-online-chat-switch');
+            const detailsDiv = document.getElementById('online-chat-details');
+            const myOnlineId = document.getElementById('my-online-id');
+            const myOnlineNickname = document.getElementById('my-online-nickname');
+            const myOnlineAvatarPreview = document.getElementById('my-online-avatar-preview');
+            const onlineServerUrl = document.getElementById('online-server-url');
+            const connectionStatus = document.getElementById('online-connection-status');
+            const connectBtn = document.getElementById('connect-online-btn');
+            const disconnectBtn = document.getElementById('disconnect-online-btn');
+
+            if (enableSwitch) enableSwitch.checked = false;
+            if (detailsDiv) detailsDiv.style.display = 'none';
+            if (myOnlineId) myOnlineId.value = '';
+            if (myOnlineNickname) myOnlineNickname.value = '';
+            if (myOnlineAvatarPreview) myOnlineAvatarPreview.src = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+            if (onlineServerUrl) onlineServerUrl.value = '';
+            if (connectionStatus) {
+                connectionStatus.textContent = '未连接';
+                connectionStatus.style.color = '#999';
+            }
+            if (connectBtn) connectBtn.style.display = 'inline-block';
+            if (disconnectBtn) disconnectBtn.style.display = 'none';
+
+            // 8. 刷新聊天列表
+            if (typeof window.renderChatListProxy === 'function') {
+                await window.renderChatListProxy();
+                console.log('已刷新聊天列表');
+            }
+
+            console.log('联机数据重置完成');
+            alert('✅ 联机数据已完全重置！');
+
+        } catch (error) {
+            console.error('重置联机数据失败:', error);
+            alert('重置失败: ' + error.message);
+        }
+    }
 }
 
 // 创建全局实例
@@ -1203,6 +1507,8 @@ function openOnlineHelpLink(type) {
         url = 'online-help-explain.html';
     } else if (type === 'guide') {
         url = 'online-help-guide.html';
+    } else if (type === 'deploy') {
+        url = 'online-help-deploy.html';
     }
     
     if (url) {

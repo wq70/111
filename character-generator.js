@@ -804,7 +804,11 @@
                     parts: [{
                         text: prompt
                     }]
-                }]
+                }],
+                generationConfig: {
+                    maxOutputTokens: 8000,
+                    temperature: 0.8
+                }
             };
             console.log('使用Gemini格式，请求体:', JSON.stringify(payload, null, 2));
             
@@ -824,7 +828,7 @@
                     content: prompt
                 }],
                 temperature: 0.8,
-                max_tokens: 2000
+                max_tokens: 8000
             };
             console.log('使用OpenAI格式，请求体:', JSON.stringify(payload, null, 2));
             
@@ -863,11 +867,27 @@
             // Gemini响应格式
             if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
                 content = data.candidates[0].content.parts.map(part => part.text).join('');
+                
+                // 检查是否因为长度限制而被截断
+                const finishReason = data.candidates[0].finishReason;
+                console.log('Gemini完成原因:', finishReason);
+                
+                if (finishReason === 'MAX_TOKENS') {
+                    console.warn('警告：生成因达到token限制而被截断');
+                }
             }
         } else {
             // OpenAI响应格式
             if (data.choices && data.choices[0] && data.choices[0].message) {
                 content = data.choices[0].message.content;
+                
+                // 检查是否因为长度限制而被截断
+                const finishReason = data.choices[0].finish_reason;
+                console.log('OpenAI完成原因:', finishReason);
+                
+                if (finishReason === 'length') {
+                    console.warn('警告：生成因达到token限制而被截断');
+                }
             }
         }
 
@@ -875,6 +895,8 @@
             console.error('无法从响应中提取内容，响应数据:', data);
             throw new Error('API返回格式错误，无法提取生成的内容');
         }
+        
+        console.log('成功提取内容，长度:', content.length, '字符');
 
         return {
             id: Date.now() + Math.random(),

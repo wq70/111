@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>联机服务器部署教程</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #007aff;
+            margin-bottom: 20px;
+            font-size: 28px;
+            text-align: center;
+            border-bottom: 3px solid #007aff;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #34c759;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 24px;
+            border-left: 5px solid #34c759;
+            padding-left: 15px;
+        }
+        
+        h3 {
+            color: #555;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 20px;
+            background: #f9f9f9;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+        
+        h4 {
+            color: #666;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        p {
+            margin: 15px 0;
+            font-size: 17px;
+            line-height: 1.9;
+        }
+        
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 12px 0;
+            font-size: 17px;
+            line-height: 1.8;
+        }
+        
+        .intro-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        
+        .note {
+            background: #f0f8ff;
+            border-left: 4px solid #007aff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .danger {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .step {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            position: relative;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: #007aff;
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .step-content {
+            margin-top: 10px;
+        }
+        
+        .example {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 15px 0;
+            border: 1px solid #444;
+            overflow-x: auto;
+        }
+        
+        .example-title {
+            color: #34c759;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        strong {
+            color: #007aff;
+            font-weight: 600;
+        }
+        
+        .method-card {
+            background: white;
+            border: 2px solid #007aff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .method-title {
+            color: #007aff;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .difficulty {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .difficulty-easy {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .difficulty-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .difficulty-hard {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        
+        .comparison-table th {
+            background: #007aff;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-size: 16px;
+        }
+        
+        .comparison-table td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            font-size: 15px;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        
+        .icon {
+            font-size: 24px;
+        }
+        
+        .button-example {
+            background: #007aff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 10px 5px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .tips-box {
+            background: #fff9e6;
+            border: 2px dashed #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .tips-box h4 {
+            color: #ff9800;
+            margin-top: 0;
+        }
+        
+        .screenshot-placeholder {
+            background: #e9ecef;
+            border: 3px dashed #6c757d;
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            margin: 15px 0;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .code-line {
+            background: #f4f4f4;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            display: inline-block;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 联机服务器部署教程（超详细版）</h1>
+        
+        <div class="intro-box">
+            <strong style="font-size: 20px; color: white;">📖 写给零基础的朋友</strong><br><br>
+            这份教程会一步一步教你如何搭建联机服务器<br>
+            就像做菜一样，跟着步骤走，保证成功！<br>
+            <strong style="color: white;">预计时间：10-20分钟</strong>
+        </div>
+
+        <h2>📚 开始之前：先了解一下</h2>
+        
+        <div class="note">
+            <h4>❓ 什么是服务器？</h4>
+            <p>把服务器想象成一个<strong>"传话筒"</strong>：</p>
+            <ul>
+                <li>你说的话 → 传话筒传递给朋友 → 朋友收到</li>
+                <li>朋友说的话 → 传话筒传递给你 → 你收到</li>
+            </ul>
+            <p><strong>重点：</strong>传话筒不会偷听，也不会记住你们说的话，只负责传递！</p>
+        </div>
+
+        <div class="warning">
+            <h4>⚠️ 需要服务器吗？</h4>
+            <p><strong>是的，必须要！</strong>两个手机不能直接联机，必须通过服务器中转。</p>
+            <p>但别担心，下面有<strong>完全免费</strong>的方案！</p>
+        </div>
+
+        <h2>🎯 选择适合你的方案</h2>
+        
+        <p style="font-size: 18px;"><strong>根据你的情况，选择一个方案：</strong></p>
+
+        <table class="comparison-table">
+            <tr>
+                <th>方案</th>
+                <th>难度</th>
+                <th>费用</th>
+                <th>适合人群</th>
+            </tr>
+            <tr>
+                <td><strong>方案一：使用免费平台</strong></td>
+                <td><span class="difficulty difficulty-easy">⭐ 超简单</span></td>
+                <td><strong style="color: #28a745;">完全免费</strong></td>
+                <td>零基础新手（<strong>强烈推荐</strong>）</td>
+            </tr>
+            <tr>
+                <td><strong>方案二：使用云服务器</strong></td>
+                <td><span class="difficulty difficulty-medium">⭐⭐ 一般</span></td>
+                <td>约10-30元/月</td>
+                <td>想要稳定服务，稍有电脑使用经验</td>
+            </tr>
+            <tr>
+                <td><strong>方案三：使用家里电脑</strong></td>
+                <td><span class="difficulty difficulty-hard">⭐⭐⭐ 较难</span></td>
+                <td>免费</td>
+                <td>家里电脑24小时开机，了解基础网络配置</td>
+            </tr>
+        </table>
+
+        <div class="success">
+            <h4>💡 新手推荐</h4>
+            <p style="font-size: 18px;">如果你是第一次接触，<strong>直接看方案一</strong>就够了！</p>
+            <p>方案一完全免费，而且非常简单，10分钟就能搞定！</p>
+        </div>
+
+        <!-- 方案一 -->
+        <div class="method-card">
+            <div class="method-title">
+                <span class="icon">🎁</span>
+                <span>方案一：使用免费平台（Render）</span>
+                <span class="difficulty difficulty-easy">最推荐</span>
+            </div>
+            
+            <div class="note">
+                <p><strong>为什么选 Render？</strong></p>
+                <ul>
+                    <li>✅ 完全免费，不需要信用卡</li>
+                    <li>✅ 中文界面友好，操作简单</li>
+                    <li>✅ 自动运行，不用管理</li>
+                    <li>✅ 适合2-10个朋友一起用</li>
+                </ul>
+            </div>
+
+            <h3>第一步：准备工作</h3>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>📧 注册一个 GitHub 账号</h4>
+                    <p>GitHub 就像是一个"代码仓库"，免费且安全。</p>
+                    <ol>
+                        <li>用电脑打开网址：<span class="code-line">https://github.com</span></li>
+                        <li>点击右上角的 <span class="button-example">Sign up</span>（注册）</li>
+                        <li>填写邮箱、密码、用户名</li>
+                        <li>验证邮箱（去邮箱里点击验证链接）</li>
+                    </ol>
+                    <div class="warning">
+                        <strong>⚠️ 注意：</strong>用户名和密码要记住，后面要用！
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>📥 复制服务器代码</h4>
+                    <p>登录 GitHub 后，复制现成的服务器代码到你的账号。</p>
+                    <ol>
+                        <li>用电脑打开这个网址：<span class="code-line">https://github.com/新建模板仓库</span></li>
+                        <li>（如果没有现成的模板，看下方"方案B"）</li>
+                        <li>点击页面右上角的 <span class="button-example">Fork</span> 按钮（意思是"复制"）</li>
+                        <li>等待几秒钟，代码就复制到你的账号了</li>
+                    </ol>
+                    
+                    <div class="tips-box">
+                        <h4>💡 方案B：如果没有现成模板</h4>
+                        <p>如果找不到模板，需要先把<strong>服务器代码文件（server.js 和 package.json）</strong>上传到 GitHub。服务器代码文件就在聊天程序的根目录里，找到后上传即可。</p>
+                        <p>创建步骤：</p>
+                        <ol>
+                            <li>在 GitHub 点击右上角的 <span class="button-example">+</span> → <span class="button-example">New repository</span></li>
+                            <li>名字随便起，比如：<span class="code-line">my-chat-server</span></li>
+                            <li>选择 <strong>Public</strong>（公开）</li>
+                            <li>勾选 <strong>Add a README file</strong></li>
+                            <li>点击 <span class="button-example">Create repository</span></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>🌐 注册 Render 账号</h4>
+                    <p>Render 是一个免费的服务器托管平台。</p>
+                    <ol>
+                        <li>用电脑打开网址：<span class="code-line">https://render.com</span></li>
+                        <li>点击右上角 <span class="button-example">Get Started</span>（开始）</li>
+                        <li>选择 <strong>Sign up with GitHub</strong>（用 GitHub 登录）</li>
+                        <li>授权 Render 访问你的 GitHub（点击 <span class="button-example">Authorize Render</span>）</li>
+                    </ol>
+                    <div class="success">
+                        ✅ 这样就不用单独注册账号了，用 GitHub 就能登录！
+                    </div>
+                </div>
+            </div>
+
+            <h3>第二步：部署服务器</h3>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>🚀 创建 Web Service</h4>
+                    <p>现在要把代码"上传"到 Render，让它24小时运行。</p>
+                    <ol>
+                        <li>登录 Render 后，点击顶部导航栏的 <span class="button-example">Dashboard</span>（控制面板）</li>
+                        <li>点击右上角的 <span class="button-example">+ New</span> 按钮</li>
+                        <li>在下拉菜单中选择 <span class="button-example">Web Service</span></li>
+                        <li>在列表中找到你刚才 Fork 的代码仓库（名字应该是 <span class="code-line">你的用户名/仓库名</span>）</li>
+                        <li>点击旁边的 <span class="button-example">Connect</span>（连接）</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h4>⚙️ 配置服务器</h4>
+                    <p>Render 会让你填一些设置，按照下面的填：</p>
+                    
+                    <table class="comparison-table">
+                        <tr>
+                            <th>项目</th>
+                            <th>填什么</th>
+                            <th>说明</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Name</strong></td>
+                            <td>随便起，比如：<span class="code-line">my-chat-server</span></td>
+                            <td>给你的服务器起个名字</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Region</strong></td>
+                            <td>选 <strong>Singapore</strong>（新加坡）</td>
+                            <td>离中国最近，速度快</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Branch</strong></td>
+                            <td>保持默认 <span class="code-line">main</span></td>
+                            <td>代码分支名</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Runtime</strong></td>
+                            <td>选 <strong>Node</strong></td>
+                            <td>服务器运行环境</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Build Command</strong></td>
+                            <td><span class="code-line">npm install</span></td>
+                            <td>安装依赖</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Start Command</strong></td>
+                            <td><span class="code-line">node server.js</span></td>
+                            <td>启动服务器</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Instance Type</strong></td>
+                            <td>选 <strong>Free</strong></td>
+                            <td>免费套餐</td>
+                        </tr>
+                    </table>
+                    
+                    <div class="warning">
+                        <strong>⚠️ 重要：</strong>如果你的服务器代码文件名不是 <span class="code-line">server.js</span>，Start Command 要改成对应的文件名！
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h4>✨ 部署完成</h4>
+                    <ol>
+                        <li>检查上面的设置，确认没有错误</li>
+                        <li>点击页面底部的 <span class="button-example">Create Web Service</span>（创建服务）</li>
+                        <li>等待3-5分钟，Render 会自动部署（界面会显示部署进度）</li>
+                        <li>看到页面上方显示 <strong style="color: #28a745;">● Live</strong>（绿色圆点），就说明成功了！</li>
+                    </ol>
+                </div>
+            </div>
+
+            <h3>第三步：获取服务器地址</h3>
+
+            <div class="step">
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <h4>📋 复制地址</h4>
+                    <p>部署成功后，你需要获取服务器地址，填到聊天程序里。</p>
+                    <ol>
+                        <li>在 Render 的服务页面，找到顶部的地址（类似这样）：<br>
+                            <div class="example">https://my-chat-server.onrender.com</div>
+                        </li>
+                        <li><strong>重要：</strong>把地址改成 WebSocket 格式：<br>
+                            <div class="example">wss://my-chat-server.onrender.com</div>
+                            （把 <span class="code-line">https</span> 改成 <span class="code-line">wss</span>）
+                        </li>
+                        <li>如果服务器代码有特定路径（比如 <span class="code-line">/ws</span>），要加上：<br>
+                            <div class="example">wss://my-chat-server.onrender.com/ws</div>
+                        </li>
+                        <li>复制这个地址（右键→复制，或 Ctrl+C）</li>
+                    </ol>
+                    
+                    <div class="success">
+                        <h4>🎉 恭喜！服务器搭建完成！</h4>
+                        <p>现在把这个地址<strong>分享给你的朋友</strong>，大家在聊天程序的"服务器地址"里填上这个地址，就能联机了！</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>第四步：测试和使用</h3>
+
+            <div class="step">
+                <div class="step-number">8</div>
+                <div class="step-content">
+                    <h4>🧪 测试连接</h4>
+                    <ol>
+                        <li>打开聊天程序</li>
+                        <li>进入"设置" → "联机功能"</li>
+                        <li>打开"启用真人联机"开关</li>
+                        <li>在"服务器地址"输入框粘贴刚才复制的地址</li>
+                        <li>点击"连接服务器"</li>
+                        <li>如果"连接状态"显示 <strong style="color: #28a745;">"已连接"</strong>，就成功了！</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="tips-box">
+                <h4>💡 Render 免费版小贴士</h4>
+                <ul>
+                    <li>✅ 免费版每月有 <strong>750小时</strong>的运行时间（足够用了）</li>
+                    <li>⚠️ 如果15分钟没人使用，服务器会"休眠"</li>
+                    <li>⚠️ 休眠后首次连接需要等待30秒-1分钟（会自动唤醒）</li>
+                    <li>✅ 只要有人连接，服务器就会一直运行</li>
+                    <li>💡 如果想让服务器一直在线，可以设置一个自动访问脚本（后面会讲）</li>
+                </ul>
+            </div>
+
+            <div class="warning">
+                <h4>❌ 连接失败？试试这些办法：</h4>
+                <ol>
+                    <li><strong>检查地址：</strong>确保是 <span class="code-line">wss://</span> 开头，不是 <span class="code-line">https://</span></li>
+                    <li><strong>等待唤醒：</strong>如果服务器休眠了，第一次连接要等1分钟</li>
+                    <li><strong>查看日志：</strong>在 Render 的服务页面，点击 <span class="button-example">Logs</span> 查看是否有错误</li>
+                    <li><strong>重新部署：</strong>在 Render 点击右上角 <span class="button-example">Manual Deploy</span> → <span class="button-example">Deploy latest commit</span></li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- 方案二 -->
+        <div class="method-card">
+            <div class="method-title">
+                <span class="icon">☁️</span>
+                <span>方案二：使用云服务器</span>
+                <span class="difficulty difficulty-medium">更稳定</span>
+            </div>
+            
+            <div class="note">
+                <p><strong>什么时候选云服务器？</strong></p>
+                <ul>
+                    <li>✅ 想要24小时稳定运行，不休眠</li>
+                    <li>✅ 朋友比较多（10人以上）</li>
+                    <li>✅ 愿意每月花10-30元</li>
+                    <li>⚠️ 能够跟着教程操作命令行即可</li>
+                </ul>
+            </div>
+
+            <h3>推荐的云服务器平台</h3>
+
+            <table class="comparison-table">
+                <tr>
+                    <th>平台</th>
+                    <th>价格</th>
+                    <th>优点</th>
+                    <th>适合人群</th>
+                </tr>
+                <tr>
+                    <td><strong>阿里云</strong></td>
+                    <td>约10元/月起</td>
+                    <td>国内访问快，中文支持好</td>
+                    <td>国内用户</td>
+                </tr>
+                <tr>
+                    <td><strong>腾讯云</strong></td>
+                    <td>约10元/月起</td>
+                    <td>新用户优惠多</td>
+                    <td>国内用户</td>
+                </tr>
+                <tr>
+                    <td><strong>DigitalOcean</strong></td>
+                    <td>约35元/月（$5/月）</td>
+                    <td>操作简单，国际用户多</td>
+                    <td>国际用户</td>
+                </tr>
+            </table>
+
+            <h3>第一步：购买服务器</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>🛒 选择服务器配置</h4>
+                    <p>以阿里云为例（其他平台类似）：</p>
+                    <ol>
+                        <li>访问 <span class="code-line">https://www.aliyun.com</span></li>
+                        <li>注册账号并登录（需要实名认证）</li>
+                        <li>搜索"轻量应用服务器"（便宜又够用）</li>
+                        <li>选择配置：
+                            <ul>
+                                <li><strong>地域：</strong>选离你最近的城市（比如上海、北京）</li>
+                                <li><strong>镜像：</strong>选 <strong>Ubuntu 20.04</strong> 或 <strong>Ubuntu 22.04</strong></li>
+                                <li><strong>套餐：</strong>最便宜的就够用（1核CPU，1-2GB内存）</li>
+                            </ul>
+                        </li>
+                        <li>购买时长：建议先买1个月试试</li>
+                        <li>支付并等待服务器创建完成（通常1-2分钟）</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>📝 记录服务器信息</h4>
+                    <p>服务器创建后，你会得到这些信息：</p>
+                    <ul>
+                        <li><strong>公网IP：</strong>类似 <span class="code-line">123.456.789.0</span></li>
+                        <li><strong>用户名：</strong>通常是 <span class="code-line">root</span></li>
+                        <li><strong>密码：</strong>或者使用SSH密钥</li>
+                    </ul>
+                    <div class="warning">
+                        <strong>⚠️ 重要：</strong>把这些信息保存到记事本，别弄丢了！
+                    </div>
+                </div>
+            </div>
+
+            <h3>第二步：连接服务器</h3>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>🖥️ 打开远程连接工具</h4>
+                    
+                    <p><strong>Windows用户：</strong></p>
+                    <ol>
+                        <li>按 <strong>Win + R</strong>，输入 <span class="code-line">cmd</span>，回车</li>
+                        <li>输入：<div class="example">ssh root@你的公网IP</div>
+                            例如：<div class="example">ssh root@123.456.789.0</div>
+                        </li>
+                        <li>输入密码（注意：输入密码时不会显示，这是正常的）</li>
+                        <li>看到一堆文字，最后显示 <span class="code-line">root@服务器名</span> 就说明连接成功了</li>
+                    </ol>
+                    
+                    <p><strong>Mac用户：</strong></p>
+                    <ol>
+                        <li>打开"终端"（Terminal）</li>
+                        <li>后面步骤和Windows一样</li>
+                    </ol>
+                    
+                    <div class="tips-box">
+                        <h4>💡 更简单的方法</h4>
+                        <p>阿里云、腾讯云都有网页版的远程连接工具，在控制台直接点击"远程连接"就可以，不用自己输命令！</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>第三步：安装和运行</h3>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>📦 安装 Node.js</h4>
+                    <p>服务器需要 Node.js 才能运行，复制下面的命令，一行一行执行：</p>
+                    
+                    <div class="example">
+                        <div class="example-title"># 更新系统</div>
+                        sudo apt update && sudo apt upgrade -y
+                    </div>
+                    
+                    <div class="example">
+                        <div class="example-title"># 安装 Node.js（版本16或更高）</div>
+                        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -<br>
+                        sudo apt install -y nodejs
+                    </div>
+                    
+                    <div class="example">
+                        <div class="example-title"># 检查安装是否成功</div>
+                        node -v<br>
+                        npm -v
+                    </div>
+                    
+                    <div class="success">
+                        如果显示版本号（比如 <span class="code-line">v18.19.0</span>），就说明安装成功了！
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h4>📤 上传服务器代码</h4>
+                    
+                    <p><strong>方法1：从 GitHub 下载（推荐）</strong></p>
+                    <div class="example">
+                        <div class="example-title"># 如果代码在 GitHub 上</div>
+                        git clone https://github.com/你的用户名/仓库名.git<br>
+                        cd 仓库名
+                    </div>
+                    
+                    <p><strong>方法2：手动上传</strong></p>
+                    <ol>
+                        <li>在电脑上找到服务器代码文件夹</li>
+                        <li>使用 FileZilla 或 WinSCP 等工具上传到服务器的 <span class="code-line">/root/</span> 目录</li>
+                        <li>在服务器上输入：<div class="example">cd /root/你的文件夹名</div></li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h4>🚀 启动服务器</h4>
+                    <div class="example">
+                        <div class="example-title"># 安装依赖</div>
+                        npm install
+                    </div>
+                    
+                    <div class="example">
+                        <div class="example-title"># 启动服务器</div>
+                        node server.js
+                    </div>
+                    
+                    <div class="success">
+                        看到类似 <span class="code-line">Server is running on port 8080</span> 的提示，就说明启动成功了！
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <h4>🌐 配置防火墙</h4>
+                    <p>要让外网能访问你的服务器，需要开放端口：</p>
+                    <ol>
+                        <li>登录阿里云/腾讯云控制台</li>
+                        <li>找到你的服务器，点击"防火墙"或"安全组"</li>
+                        <li>添加规则：
+                            <ul>
+                                <li><strong>端口：</strong>8080（或你代码里设置的端口）</li>
+                                <li><strong>协议：</strong>TCP</li>
+                                <li><strong>来源：</strong>0.0.0.0/0（允许所有IP访问）</li>
+                            </ul>
+                        </li>
+                        <li>保存规则</li>
+                    </ol>
+                </div>
+            </div>
+
+            <h3>第四步：获取服务器地址</h3>
+
+            <div class="step">
+                <div class="step-number">8</div>
+                <div class="step-content">
+                    <h4>📋 组装地址</h4>
+                    <p>你的服务器地址格式是：</p>
+                    <div class="example">
+                        ws://你的公网IP:端口号
+                    </div>
+                    
+                    <p>例如，如果你的公网IP是 <span class="code-line">123.456.789.0</span>，端口是 <span class="code-line">8080</span>：</p>
+                    <div class="example">
+                        ws://123.456.789.0:8080
+                    </div>
+                    
+                    <p>如果服务器代码有路径（比如 <span class="code-line">/ws</span>），要加上：</p>
+                    <div class="example">
+                        ws://123.456.789.0:8080/ws
+                    </div>
+                    
+                    <div class="warning">
+                        <strong>⚠️ 安全提示：</strong>这里用的是 <span class="code-line">ws://</span>（不加密），如果想要加密（<span class="code-line">wss://</span>），需要配置SSL证书（稍复杂，可以搜索"Let's Encrypt 免费SSL证书"）。
+                    </div>
+                </div>
+            </div>
+
+            <h3>第五步：保持后台运行</h3>
+
+            <div class="step">
+                <div class="step-number">9</div>
+                <div class="step-content">
+                    <h4>🔄 使用 PM2 管理进程</h4>
+                    <p>如果关闭命令行窗口，服务器就会停止。用 PM2 可以让服务器一直运行：</p>
+                    
+                    <div class="example">
+                        <div class="example-title"># 安装 PM2</div>
+                        sudo npm install -g pm2
+                    </div>
+                    
+                    <div class="example">
+                        <div class="example-title"># 用 PM2 启动服务器</div>
+                        pm2 start server.js --name chat-server
+                    </div>
+                    
+                    <div class="example">
+                        <div class="example-title"># 设置开机自启</div>
+                        pm2 startup<br>
+                        pm2 save
+                    </div>
+                    
+                    <div class="example">
+                        <div class="example-title"># 常用命令</div>
+                        pm2 list          # 查看运行状态<br>
+                        pm2 logs          # 查看日志<br>
+                        pm2 restart all   # 重启服务器<br>
+                        pm2 stop all      # 停止服务器
+                    </div>
+                    
+                    <div class="success">
+                        设置完成后，即使你关闭电脑，服务器也会一直运行！
+                    </div>
+                </div>
+            </div>
+
+            <div class="tips-box">
+                <h4>💰 省钱小技巧</h4>
+                <ul>
+                    <li>新用户通常有优惠券，记得使用</li>
+                    <li>选最便宜的配置就够用（1核1GB）</li>
+                    <li>按月付费，不要一次买太久（万一用不上）</li>
+                    <li>如果只是测试，Render 免费版就够了</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 方案三 -->
+        <div class="method-card">
+            <div class="method-title">
+                <span class="icon">🏠</span>
+                <span>方案三：使用家里电脑</span>
+                <span class="difficulty difficulty-hard">适合折腾</span>
+            </div>
+            
+            <div class="warning">
+                <p><strong>⚠️ 注意事项：</strong></p>
+                <ul>
+                    <li>电脑必须24小时开机</li>
+                    <li>需要配置路由器（端口转发）</li>
+                    <li>需要公网IP（部分宽带没有）</li>
+                    <li>电费成本要考虑</li>
+                    <li>操作步骤较多，<strong>建议优先考虑方案一或方案二</strong></li>
+                </ul>
+            </div>
+
+            <h3>第一步：检查条件</h3>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>✅ 检查是否有公网IP</h4>
+                    <ol>
+                        <li>访问 <span class="code-line">https://www.ip138.com</span></li>
+                        <li>记下显示的IP地址（假设是 <span class="code-line">123.456.789.0</span>）</li>
+                        <li>在电脑上按 <strong>Win + R</strong>，输入 <span class="code-line">cmd</span>，回车</li>
+                        <li>输入命令：<div class="example">ipconfig</div></li>
+                        <li>找到"默认网关"或"IPv4地址"</li>
+                        <li>如果网站显示的IP和电脑上看到的<strong>不一样</strong>，说明你在<strong>内网</strong>，需要配置端口转发</li>
+                    </ol>
+                    
+                    <div class="danger">
+                        <strong>❌ 没有公网IP？</strong><br>
+                        某些宽带运营商不提供公网IP（比如小区宽带、校园网）。这种情况下：
+                        <ul>
+                            <li>可以打电话给运营商申请公网IP（通常免费）</li>
+                            <li>或者使用内网穿透工具（如 Frp、ngrok，稍复杂）</li>
+                            <li>或者直接用方案一、方案二（更简单）</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <h3>第二步：安装和运行</h3>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>📦 安装 Node.js</h4>
+                    <ol>
+                        <li>访问 <span class="code-line">https://nodejs.org</span></li>
+                        <li>下载 <strong>LTS 版本</strong>（左边那个，长期支持版）</li>
+                        <li>双击安装，一路点"下一步"</li>
+                        <li>安装完成后，打开"命令提示符"（Win + R，输入 <span class="code-line">cmd</span>）</li>
+                        <li>输入命令检查：<div class="example">node -v<br>npm -v</div></li>
+                        <li>如果显示版本号，就说明安装成功了</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>📁 准备服务器代码</h4>
+                    <ol>
+                        <li>把服务器代码文件夹放到一个好找的位置（比如 <span class="code-line">D:\chat-server</span>）</li>
+                        <li>打开"命令提示符"，输入：<div class="example">cd D:\chat-server</div>（改成你的路径）</li>
+                        <li>安装依赖：<div class="example">npm install</div></li>
+                        <li>启动服务器：<div class="example">node server.js</div></li>
+                        <li>看到成功提示后，<strong>不要关闭这个窗口</strong></li>
+                    </ol>
+                </div>
+            </div>
+
+            <h3>第三步：配置路由器</h3>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>🌐 设置端口转发</h4>
+                    <p>这一步是让外网能访问你家里的电脑：</p>
+                    <ol>
+                        <li>查看电脑的<strong>内网IP</strong>：
+                            <ul>
+                                <li>按 <strong>Win + R</strong>，输入 <span class="code-line">cmd</span></li>
+                                <li>输入命令：<div class="example">ipconfig</div></li>
+                                <li>找到"IPv4 地址"，通常是 <span class="code-line">192.168.x.x</span>，记下来</li>
+                            </ul>
+                        </li>
+                        <li>登录路由器管理页面：
+                            <ul>
+                                <li>在浏览器输入：<span class="code-line">192.168.1.1</span> 或 <span class="code-line">192.168.0.1</span></li>
+                                <li>输入用户名和密码（通常在路由器背面贴纸上）</li>
+                            </ul>
+                        </li>
+                        <li>找到"端口转发"、"虚拟服务器"或"NAT转发"（不同路由器叫法不同）</li>
+                        <li>添加规则：
+                            <ul>
+                                <li><strong>服务名称：</strong>随便填，比如"聊天服务器"</li>
+                                <li><strong>外部端口：</strong>8080（外网访问用这个端口）</li>
+                                <li><strong>内部端口：</strong>8080（你服务器代码设置的端口）</li>
+                                <li><strong>内部IP：</strong>填你刚才记下的内网IP（192.168.x.x）</li>
+                                <li><strong>协议：</strong>选 TCP 或 TCP/UDP</li>
+                            </ul>
+                        </li>
+                        <li>保存并启用规则</li>
+                    </ol>
+                    
+                    <div class="tips-box">
+                        <h4>💡 找不到端口转发设置？</h4>
+                        <p>不同品牌的路由器界面差异很大：</p>
+                        <ul>
+                            <li><strong>TP-Link：</strong>应用管理 → 虚拟服务器</li>
+                            <li><strong>小米：</strong>高级设置 → 端口转发</li>
+                            <li><strong>华为：</strong>更多功能 → 安全设置 → 虚拟服务器</li>
+                        </ul>
+                        <p>实在找不到，可以搜索"你的路由器型号 + 端口转发教程"</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3>第四步：获取服务器地址</h3>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h4>📋 获取公网IP</h4>
+                    <ol>
+                        <li>访问 <span class="code-line">https://www.ip138.com</span></li>
+                        <li>记下显示的IP地址（假设是 <span class="code-line">123.456.789.0</span>）</li>
+                        <li>你的服务器地址就是：<div class="example">ws://123.456.789.0:8080</div>（改成你的IP和端口）</li>
+                        <li>如果代码有路径，加上：<div class="example">ws://123.456.789.0:8080/ws</div></li>
+                    </ol>
+                    
+                    <div class="warning">
+                        <strong>⚠️ IP地址会变？</strong><br>
+                        家庭宽带的公网IP通常是<strong>动态的</strong>，每次路由器重启可能会变。解决办法：
+                        <ul>
+                            <li>使用 DDNS（动态域名）服务，把域名绑定到动态IP</li>
+                            <li>常用免费DDNS：花生壳、Noip、DuckDNS</li>
+                            <li>配置DDNS后，就可以用域名访问了：<span class="code-line">ws://你的域名:8080</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <h3>第五步：保持后台运行</h3>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h4>🔄 设置开机自启</h4>
+                    
+                    <p><strong>方法1：创建批处理文件</strong></p>
+                    <ol>
+                        <li>在服务器代码文件夹创建一个新文本文件</li>
+                        <li>改名为 <span class="code-line">启动服务器.bat</span>（注意扩展名是.bat）</li>
+                        <li>右键编辑，输入：<div class="example">@echo off<br>cd /d D:\chat-server<br>node server.js<br>pause</div>（改成你的路径）</li>
+                        <li>保存</li>
+                        <li>双击运行这个文件，服务器就会启动</li>
+                    </ol>
+                    
+                    <p><strong>方法2：设置开机自启</strong></p>
+                    <ol>
+                        <li>按 <strong>Win + R</strong>，输入：<span class="code-line">shell:startup</span></li>
+                        <li>把刚才的 <span class="code-line">启动服务器.bat</span> 快捷方式放进去</li>
+                        <li>以后开机就会自动启动服务器了</li>
+                    </ol>
+                    
+                    <div class="tips-box">
+                        <h4>💡 更专业的方法</h4>
+                        <p>使用 PM2（Windows版）或 NSSM 将服务器注册为 Windows 服务，更稳定。</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="danger">
+                <h4>⚡ 电费和安全注意</h4>
+                <ul>
+                    <li>💡 电脑24小时运行，一个月电费约30-100元（取决于电脑功耗）</li>
+                    <li>🔥 注意散热，避免灰尘积累</li>
+                    <li>🔒 定期更新系统和软件，防止安全漏洞</li>
+                    <li>💾 建议使用笔记本或低功耗主机，省电</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 常见问题 -->
+        <h2>❓ 常见问题解答</h2>
+
+        <div class="qa">
+            <strong>Q1: 哪个方案最好？</strong><br>
+            A: <strong>如果是第一次接触，强烈推荐方案一（Render免费平台）</strong>，10分钟就能搞定，完全免费，适合2-10人使用。如果想要更稳定的服务，选方案二（云服务器）。方案三（家里电脑）最不推荐，麻烦又费电。
+        </div>
+
+        <div class="qa">
+            <strong>Q2: 服务器会看到我的聊天内容吗？</strong><br>
+            A: <strong>不会！</strong>服务器只负责传递消息，就像邮递员只负责送信，不会拆开看。而且消息是<strong>端到端加密</strong>的，服务器即使想看也看不到明文内容。
+        </div>
+
+        <div class="qa">
+            <strong>Q3: Render 免费版够用吗？</strong><br>
+            A: 对于2-10个朋友聊天，完全够用！唯一的缺点是15分钟没人使用会休眠，但有人连接会自动唤醒（30秒-1分钟）。如果想让服务器一直在线，可以设置一个定时访问脚本。
+        </div>
+
+        <div class="qa">
+            <strong>Q4: 如何让 Render 服务器不休眠？</strong><br>
+            A: 可以使用 UptimeRobot 等免费服务，每5分钟自动访问一次你的服务器，保持活跃状态。或者升级到 Render 的付费版（$7/月）。
+        </div>
+
+        <div class="qa">
+            <strong>Q5: 我部署好了，朋友连接不上？</strong><br>
+            A: 检查这几点：
+            <ul>
+                <li>地址是否正确（<span class="code-line">wss://</span> 或 <span class="code-line">ws://</span> 开头）</li>
+                <li>端口号是否正确</li>
+                <li>服务器是否正在运行（在 Render 看是否显示 <strong style="color: #28a745;">● Live</strong>）</li>
+                <li>如果用的是云服务器，检查防火墙是否开放了端口</li>
+                <li>如果用的是家里电脑，检查路由器端口转发是否设置正确</li>
+            </ul>
+        </div>
+
+        <div class="qa">
+            <strong>Q6: 可以换服务器吗？</strong><br>
+            A: 可以！但是<strong>换服务器后需要重新添加好友</strong>，因为好友列表是和服务器绑定的。建议先和朋友们商量好再换。
+        </div>
+
+        <div class="qa">
+            <strong>Q7: 服务器会保存聊天记录吗？</strong><br>
+            A: 不会！聊天记录只保存在你的手机上。服务器只负责实时传递消息，不存储任何聊天内容。这就是为什么换手机后聊天记录会丢失。
+        </div>
+
+        <div class="qa">
+            <strong>Q8: 可以多个人用同一个服务器吗？</strong><br>
+            A: 完全可以！这就是服务器的作用。只要大家都填同一个服务器地址，就可以互相添加好友、一起聊天。
+        </div>
+
+        <div class="qa">
+            <strong>Q9: 我不小心把服务器关了怎么办？</strong><br>
+            A: 
+            <ul>
+                <li><strong>Render：</strong>在控制台点击 <span class="button-example">Manual Deploy</span> 重新部署</li>
+                <li><strong>云服务器：</strong>重新连接服务器，运行启动命令</li>
+                <li><strong>家里电脑：</strong>重新打开命令行，运行启动命令</li>
+            </ul>
+        </div>
+
+        <div class="qa">
+            <strong>Q10: 服务器费用太贵了，有更便宜的吗？</strong><br>
+            A: <strong>方案一（Render）完全免费！</strong>如果非要买服务器，国内的轻量应用服务器最便宜，10元/月起。不要买配置太高的，1核1GB就够用了。
+        </div>
+
+        <!-- 小贴士 -->
+        <div class="tips-box">
+            <h4>💡 最后的小贴士</h4>
+            <ul>
+                <li>✅ <strong>第一次部署建议和朋友一起操作</strong>，互相帮助</li>
+                <li>✅ <strong>部署成功后记得备份</strong>服务器地址和配置信息</li>
+                <li>✅ <strong>定期检查服务器运行状态</strong>，确保朋友能正常连接</li>
+                <li>✅ <strong>如果遇到问题不要慌</strong>，大部分都是地址填错或端口没开</li>
+                <li>✅ <strong>推荐方案一（Render）</strong>，真的很简单，跟着步骤操作即可😊</li>
+            </ul>
+        </div>
+
+        <!-- 成功提示 -->
+        <div class="success" style="text-align: center; font-size: 20px; padding: 30px;">
+            <h2 style="color: #28a745;">🎉 恭喜你！</h2>
+            <p>如果你看到这里，说明你已经学会如何部署联机服务器了！</p>
+            <p>现在快去试试吧，和朋友们一起享受联机聊天的乐趣！</p>
+            <p style="margin-top: 20px; font-size: 16px; color: #666;">
+                有任何问题，随时回来看这份教程<br>
+                也可以把这个教程分享给你的朋友们
+            </p>
+        </div>
+    </div>
+</body>
+</html>
