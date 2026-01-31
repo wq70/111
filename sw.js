@@ -2,7 +2,7 @@
 // 【强制网络优先策略】- 始终从服务器获取最新版本，不使用缓存
 
 // 缓存版本号（强制更新策略）
-const CACHE_VERSION = 'v0.0.1';
+const CACHE_VERSION = 'v0.0.2';
 const CACHE_NAME = `ephone-cache-${CACHE_VERSION}`;
 
 // 需要被缓存的文件列表（仅用于离线访问）
@@ -61,15 +61,24 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // 排除 API 请求，让它们不受 Service Worker 干扰
+  const url = event.request.url;
+  const isApiRequest = url.includes('generativelanguage.googleapis.com') || 
+                       url.includes('/v1/models') || 
+                       url.includes('/v1/chat/completions') ||
+                       url.includes('gemini.beijixingxing.com') ||
+                       url.includes('api.imgbb.com') ||
+                       url.includes(':generateContent');
+  
+  if (isApiRequest) {
+    // API 请求直接透传，不做任何处理
+    return;
+  }
+
   event.respondWith(
-    // 【强制网络优先】始终从网络获取最新版本，添加 no-cache 头
+    // 【强制网络优先】始终从网络获取最新版本
     fetch(event.request, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+      cache: 'no-store'
     })
       .then(response => {
         // 网络请求成功，直接返回，不缓存
