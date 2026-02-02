@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '1.31.2'; // 当前更新版本号
+    this.currentVersion = '2.2'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -17,15 +17,24 @@ class UpdateNotification {
   // 创建弹窗HTML
   createNotificationHTML() {
     const updateContent = `
-      <div class="update-item">明天会有个很好玩的功能新增嘿嘿（我自己觉得）</div>
-      <div class="update-item">1. 修复角色生成器中途停止生成的问题</div>
-      <div class="update-item">2. 优化真心话上下文处理逻辑</div>
-      <div class="update-item">3. 修复MyPhone壁纸与图标显示异常</div>
-      <div class="update-item">4. 修复联机功能头像加载问题</div>
-      <div class="update-item">5. 修复记忆库长期记忆数据丢失</div>
-      <div class="update-item">6. 新增联机数据重置功能</div>
-      <div class="update-item">7. 新增聊天窗口快捷导航（回顶/回底）</div>
-      <div class="update-item">8. 新增开发者控制台功能</div>
+      <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
+      <div class="update-item important-note">强烈建议：安装PWA版本以获得最佳体验</div>
+      <div class="update-item important-note">注意：首次打开最好使用魔法</div>
+      <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
+      <div class="update-divider">本次更新内容</div>
+      <div class="update-item">1. 修复服务工作线程策略，解决表情包卡顿、加载缓慢、字体显示异常等网络问题</div>
+      <div class="update-item">2. 修复保活机制，增强稳定性并内置保活音频</div>
+      <div class="update-item">3. 新增精简总结功能的自定义范围设置</div>
+      <div class="update-item">4. 新增真心话悬浮球拖动功能，位置可自由调节</div>
+      <div class="update-item">5. 新增豆瓣帖子删除功能</div>
+      <div class="update-item">6. 修复MyPhone壁纸上传失败问题</div>
+      <div class="update-item">7. 完善视频通话文本提取功能，需开启只读对话开关，若仍有问题可尝试语音通话</div>
+      <div class="update-item">8. 修复真心话卡顿、无法关闭、思考时间过长及格式错乱等问题</div>
+      <div class="update-item">9. 尝试修复亲密付功能中角色不生效的问题</div>
+      <div class="update-item">10. 新增消息提示音预设选项</div>
+      <div class="update-item">11. 修复真人联机模式下服务器ID占用导致的持续报错</div>
+      <div class="update-item">12. 优化iOS系统级通知体验</div>
+      <div class="update-item">13. 修复移动端控制台打不开的问题</div>
     `;
 
     return `
@@ -33,8 +42,8 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">1.31二次更新</div>
-            <div class="update-subtitle">联机可用</div>
+            <div class="update-title">2.2 稳定性优化更新</div>
+            <div class="update-subtitle">修复核心问题并提升体验</div>
           </div>
           
           <div class="update-notification-body">

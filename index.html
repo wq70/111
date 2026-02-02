@@ -31,6 +31,7 @@
   <script src="notification-manager.js" defer></script>
   <script src="character-generator.js" defer></script>
   <script src="script.js" defer="defer"></script>
+  <script src="helper-assistant.js" defer></script>
   
   <style>
     /* 守护甜心风格验证界面 */
@@ -2192,6 +2193,14 @@
                     <span id="keep-alive-status-text" style="color: #999;">未启用</span>
                 </div>
             </div>
+            
+            <!-- 无声音频播放器 -->
+            <div class="settings-item" id="keep-alive-audio-container" style="display:none; flex-direction: column; align-items: stretch;">
+                <label style="margin-bottom: 10px;">保活音频（完全无声 - 循环播放）</label>
+                <audio id="keep-alive-audio-player" controls style="width: 100%; max-width: 500px;">
+                    您的浏览器不支持音频播放。
+                </audio>
+            </div>
         </div>
         <div class="settings-desc">
             开启后会使用静默音频和定时任务等技术保持应用在后台持续运行，减少被系统清理的概率。
@@ -3090,8 +3099,17 @@
                 <label style="display:block; margin-bottom:8px;">消息提示音 URL</label>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="notification-sound-url-input" placeholder="留空使用默认" class="settings-textarea" style="flex-grow:1; min-height:36px; padding:8px;">
-                    <button id="test-sound-btn" class="settings-mini-btn" style="width:auto;">▶</button>
+                    <button id="test-sound-btn" class="settings-mini-btn" style="width:auto;">试听</button>
                     <button id="reset-sound-btn" class="settings-mini-btn" style="width:auto;">重置</button>
+                    <button id="save-sound-preset-btn" class="settings-mini-btn" style="width:auto;">保存</button>
+                </div>
+            </div>
+            
+            <!-- 预设列表 -->
+            <div class="settings-item-block" id="sound-presets-container" style="margin-top: 12px;">
+                <label style="display:block; margin-bottom:8px;">提示音预设</label>
+                <div id="sound-presets-list" style="display: flex; flex-direction: column; gap: 6px;">
+                    <!-- 预设项将在这里动态生成 -->
                 </div>
             </div>
         </div>
@@ -5498,6 +5516,11 @@
         <div class="form-group douban-settings-item"> <label for="douban-min-posts-input"> 每次生成帖子数范围 <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;"> 设置AI在豆瓣页面一次性生成帖子的最小和最大数量。 </p> </label>
           <div class="douban-settings-controls"> <input type="number" id="douban-min-posts-input" min="1" value="12"> <span>到</span> <input type="number" id="douban-max-posts-input" min="1" value="20"> <span>篇</span> </div>
         </div>
+        <hr style="opacity: 0.2; margin: 15px 0;">
+        <div class="form-group douban-settings-item">
+          <label> 帖子管理 <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;"> 可以选择性删除已生成的豆瓣帖子。 </p> </label>
+        </div>
+        <button class="save" id="manage-douban-posts-btn" style="width: calc(100% - 40px); margin: 0 20px 15px 20px; padding: 10px; font-size: 14px;">管理豆瓣帖子</button>
       </div>
       <div class="modal-footer"> <button class="cancel" id="cancel-douban-settings-btn"data-lang-key="cancel">取消</button> <button class="save" id="save-douban-settings-btn"data-lang-key="save">保存</button> </div>
     </div>
@@ -5507,6 +5530,13 @@
       <div class="modal-header"> <span>选择参与豆瓣的角色</span> </div>
       <div class="modal-body" id="douban-cast-list" style="padding: 0;"> </div>
       <div class="modal-footer"> <button class="cancel" id="cancel-douban-cast-btn"data-lang-key="cancel">取消</button> <button class="save" id="save-douban-cast-btn"data-lang-key="save">保存并刷新</button> </div>
+    </div>
+  </div>
+  <div id="delete-douban-posts-modal" class="modal">
+    <div class="modal-content" style="height: 70%;">
+      <div class="modal-header"> <span>选择要删除的豆瓣帖子</span> <label style="font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;"> <input type="checkbox" id="select-all-douban-posts"> 全选 </label> </div>
+      <div class="modal-body" id="delete-douban-posts-list" style="padding: 0;"> </div>
+      <div class="modal-footer"> <button class="cancel" id="cancel-delete-douban-posts-btn"data-lang-key="cancel">取消</button> <button class="save btn-danger" id="confirm-delete-douban-posts-btn">确认删除</button> </div>
     </div>
   </div><input type="file" id="import-preset-input" accept=".json" hidden>
   <div id="update-notice-modal">

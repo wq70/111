@@ -318,7 +318,19 @@ class OnlineChatManager {
                     detailsDiv.style.display = settings.enabled ? 'block' : 'none';
                 }
                 
-                if (userIdInput) userIdInput.value = settings.userId || '';
+                // 【优化】如果没有保存的用户ID，使用设备ID作为默认值
+                if (userIdInput) {
+                    if (settings.userId) {
+                        userIdInput.value = settings.userId;
+                    } else if (typeof EPHONE_DEVICE_ID !== 'undefined' && EPHONE_DEVICE_ID) {
+                        // 使用设备ID的前12位作为默认ID（去掉连字符）
+                        const defaultId = EPHONE_DEVICE_ID.replace(/-/g, '').substring(0, 12);
+                        userIdInput.value = defaultId;
+                        console.log('使用设备ID生成默认用户ID:', defaultId);
+                    } else {
+                        userIdInput.value = '';
+                    }
+                }
                 if (nicknameInput) nicknameInput.value = settings.nickname || '';
                 if (serverUrlInput) serverUrlInput.value = settings.serverUrl || '';
                 
@@ -362,11 +374,20 @@ class OnlineChatManager {
                 }
             }
         } else {
-            // 首次使用，设置默认头像
+            // 首次使用，设置默认头像和ID
             this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
             const avatarPreview = document.getElementById('my-online-avatar-preview');
             if (avatarPreview) {
                 avatarPreview.src = this.avatar;
+            }
+            
+            // 【新增】首次使用时，自动使用设备ID生成默认用户ID
+            const userIdInput = document.getElementById('my-online-id');
+            if (userIdInput && !userIdInput.value && typeof EPHONE_DEVICE_ID !== 'undefined' && EPHONE_DEVICE_ID) {
+                // 使用设备ID的前12位作为默认ID（去掉连字符）
+                const defaultId = EPHONE_DEVICE_ID.replace(/-/g, '').substring(0, 12);
+                userIdInput.value = defaultId;
+                console.log('首次使用，使用设备ID生成默认用户ID:', defaultId);
             }
         }
 
@@ -400,6 +421,21 @@ class OnlineChatManager {
         if (!this.serverUrl) {
             alert('请输入服务器地址');
             return;
+        }
+
+        // 【修复】如果已有WebSocket连接，先关闭旧连接
+        if (this.ws) {
+            console.log('检测到旧连接，先关闭...');
+            try {
+                if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+                    this.ws.close();
+                }
+            } catch (error) {
+                console.error('关闭旧连接时出错:', error);
+            }
+            this.ws = null;
+            // 等待一小段时间确保旧连接完全关闭
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
 
         // 更新状态
@@ -585,7 +621,17 @@ class OnlineChatManager {
         const statusSpan = document.getElementById('online-connection-status');
         statusSpan.textContent = '连接失败';
         statusSpan.className = 'disconnected';
-        alert('注册失败: ' + error);
+        
+        // 【优化】根据错误类型给出更友好的提示
+        if (error.includes('ID格式不正确')) {
+            alert('注册失败: ' + error + '\n\n提示：ID只能包含字母、数字和下划线，长度3-20位');
+        } else if (error.includes('已被使用')) {
+            // 这种情况理论上不应该再出现，因为服务器已经会自动踢掉旧连接
+            console.warn('收到ID占用错误，但服务器应该已自动处理旧连接');
+            alert('注册失败: ' + error + '\n\n如果这是您自己的ID，请稍等片刻后重试');
+        } else {
+            alert('注册失败: ' + error);
+        }
     }
 
     // 搜索好友
@@ -703,24 +749,27 @@ class OnlineChatManager {
         
         if (this.friendRequests.length === 0) {
             listDiv.innerHTML = `
-                <div class="empty-state">
-                    <div style="font-size: 14px; color: #999;">暂无好友申请</div>
+                <div class="shugo-empty">
+                    <div style="font-size: 14px; font-weight: bold;">暂无好友申请</div>
+                    <div style="font-size: 12px; margin-top: 5px;">如果有新的申请，会在这里显示哦~</div>
                 </div>
             `;
         } else {
             listDiv.innerHTML = this.friendRequests.map((request, index) => `
-                <div class="friend-request-item">
-                    <img src="${request.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                         class="friend-request-avatar" alt="头像">
-                    <div class="friend-request-info">
-                        <div class="friend-request-nickname">${escapeHTML(request.nickname)}</div>
-                        <div class="friend-request-id">ID: ${escapeHTML(request.userId)}</div>
-                        <div class="friend-request-time">${this.formatTime(request.timestamp)}</div>
+                <div class="shugo-list-item">
+                    <div class="shugo-avatar-wrapper">
+                        <img src="${request.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
+                             class="shugo-avatar" alt="头像">
                     </div>
-                    <div class="friend-request-actions">
-                        <button class="friend-request-accept-btn" 
+                    <div class="shugo-info">
+                        <div class="shugo-nickname">${escapeHTML(request.nickname)}</div>
+                        <div class="shugo-id">ID: ${escapeHTML(request.userId)}</div>
+                        <div style="font-size: 11px; color: #aaa; margin-top: 2px;">${this.formatTime(request.timestamp)}</div>
+                    </div>
+                    <div class="shugo-actions">
+                        <button class="shugo-btn shugo-btn-primary" 
                                 onclick="onlineChatManager.acceptFriendRequest(${index})">同意</button>
-                        <button class="friend-request-reject-btn" 
+                        <button class="shugo-btn shugo-btn-danger" 
                                 onclick="onlineChatManager.rejectFriendRequest(${index})">拒绝</button>
                     </div>
                 </div>
@@ -921,27 +970,28 @@ class OnlineChatManager {
         
         if (this.onlineFriends.length === 0) {
             listDiv.innerHTML = `
-                <div class="empty-state">
-                    <div style="font-size: 14px; color: #999;">暂无联机好友</div>
-                    <div style="margin-top: 10px; font-size: 13px; color: #aaa;">搜索ID添加好友吧</div>
+                <div class="shugo-empty">
+                    <div style="font-size: 14px; font-weight: bold;">暂无联机好友</div>
+                    <div style="margin-top: 10px; font-size: 13px;">搜索ID添加好友吧</div>
                 </div>
             `;
         } else {
             listDiv.innerHTML = this.onlineFriends.map((friend, index) => `
-                <div class="online-friend-item">
-                    <div class="online-friend-avatar-wrapper">
+                <div class="shugo-list-item">
+                    <div class="shugo-avatar-wrapper">
                         <img src="${friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                             class="online-friend-avatar" alt="头像">
-                        <div class="online-friend-status-dot ${friend.online ? 'online' : 'offline'}"></div>
+                             class="shugo-avatar" alt="头像">
+                        <div class="online-friend-status-dot ${friend.online ? 'online' : 'offline'}" 
+                             style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; background-color: ${friend.online ? '#4cd964' : '#999'}; box-shadow: 0 0 5px rgba(0,0,0,0.1);"></div>
                     </div>
-                    <div class="online-friend-info">
-                        <div class="online-friend-nickname">${escapeHTML(friend.nickname)}</div>
-                        <div class="online-friend-id">ID: ${escapeHTML(friend.userId)}</div>
+                    <div class="shugo-info">
+                        <div class="shugo-nickname">${escapeHTML(friend.nickname)}</div>
+                        <div class="shugo-id">ID: ${escapeHTML(friend.userId)}</div>
                     </div>
-                    <div class="online-friend-actions">
-                        <button class="online-friend-chat-btn" 
+                    <div class="shugo-actions">
+                        <button class="shugo-btn shugo-btn-primary" 
                                 onclick="onlineChatManager.startChatWithFriend('${friend.userId}')">聊天</button>
-                        <button class="online-friend-delete-btn" 
+                        <button class="shugo-btn shugo-btn-danger" 
                                 onclick="onlineChatManager.deleteFriend(${index})">删除</button>
                     </div>
                 </div>
@@ -1157,14 +1207,24 @@ class OnlineChatManager {
             } else {
                 console.log('页面已显示（切换回应用）');
                 
-                // 【关键】如果应该保持连接但当前未连接，立即重连
-                if (this.shouldAutoReconnect && !this.isConnected) {
-                    console.log('检测到页面重新显示，尝试重新连接...');
+                // 【优化】只有在连接断开时才重连，避免重复注册
+                if (this.shouldAutoReconnect && !this.isConnected && 
+                    this.ws && this.ws.readyState !== WebSocket.OPEN && 
+                    this.ws.readyState !== WebSocket.CONNECTING) {
+                    console.log('检测到页面重新显示且连接已断开，尝试重新连接...');
                     this.reconnectAttempts = 0; // 重置重连次数
-                    this.connect();
-                } else if (this.isConnected) {
-                    // 即使已连接，也发送一个心跳检查连接健康
+                    // 延迟500ms重连，确保旧连接完全关闭
+                    setTimeout(() => {
+                        if (!this.isConnected) {
+                            this.connect();
+                        }
+                    }, 500);
+                } else if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    // 已连接且连接正常，只发送心跳检查健康
+                    console.log('连接正常，发送心跳检查');
                     this.send({ type: 'heartbeat' });
+                } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+                    console.log('连接正在建立中，无需重连');
                 }
             }
         });

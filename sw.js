@@ -1,8 +1,8 @@
 // Service Worker 文件 (sw.js)
-// 【强制网络优先策略】- 始终从服务器获取最新版本，不使用缓存
+// 【智能缓存策略】- 根据资源类型使用不同的缓存策略，优化加载速度
 
-// 缓存版本号（强制更新策略）
-const CACHE_VERSION = 'v0.0.5';
+// 缓存版本号（智能缓存策略）
+const CACHE_VERSION = 'v0.0.6';
 const CACHE_NAME = `ephone-cache-${CACHE_VERSION}`;
 
 // 需要被缓存的文件列表（仅用于离线访问）
@@ -20,7 +20,7 @@ const URLS_TO_CACHE = [
 
 // 1. 安装事件：当 Service Worker 首次被注册时触发
 self.addEventListener('install', event => {
-  console.log('[SW] 正在安装 Service Worker (网络优先策略)...');
+  console.log('[SW] 正在安装 Service Worker (智能缓存策略)...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -48,21 +48,22 @@ self.addEventListener('activate', event => {
         })
       );
     }).then(() => {
-        console.log('[SW] Service Worker 已激活！使用网络优先策略。');
+        console.log('[SW] Service Worker 已激活！使用智能缓存策略。');
         return self.clients.claim();
     })
   );
 });
 
-// 3. 拦截网络请求事件：使用【强制网络优先策略 - 不使用缓存】
+// 3. 拦截网络请求事件：使用【智能缓存策略】
 self.addEventListener('fetch', event => {
   // 只对 GET 请求进行处理
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // 排除 API 请求，让它们不受 Service Worker 干扰
   const url = event.request.url;
+
+  // 排除 API 请求，让它们不受 Service Worker 干扰
   const isApiRequest = url.includes('generativelanguage.googleapis.com') || 
                        url.includes('/v1/models') || 
                        url.includes('/v1/chat/completions') ||
@@ -75,22 +76,95 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  event.respondWith(
-    // 【强制网络优先】始终从网络获取最新版本
-    fetch(event.request, {
-      cache: 'no-store'
-    })
+  // 识别资源类型
+  const isImage = /\.(png|jpg|jpeg|gif|webp|svg|ico)(\?|$)/i.test(url) ||
+                  url.includes('postimg.cc') ||
+                  url.includes('catbox.moe') ||
+                  url.includes('sharkpan.xyz') ||
+                  url.includes('meituan.net');
+  
+  const isFont = /\.(woff|woff2|ttf|otf|eot)(\?|$)/i.test(url);
+  
+  const isCDNResource = url.includes('unpkg.com') ||
+                        url.includes('cdnjs.cloudflare.com') ||
+                        url.includes('cdn.jsdelivr.net') ||
+                        url.includes('phoebeboo.github.io');
+
+  const isHTMLPage = url.includes('.html') || 
+                     (!url.includes('.') && !url.includes('?')) ||
+                     url.endsWith('/');
+
+  // 策略 1：图片、字体、CDN 资源 → 缓存优先（加载快，减少流量）
+  if (isImage || isFont || isCDNResource) {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) {
+          console.log('[SW] 从缓存加载:', url);
+          return cachedResponse;
+        }
+        // 缓存未命中，从网络获取并缓存
+        return fetch(event.request).then(response => {
+          if (response && response.status === 200) {
+            return caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, response.clone());
+              console.log('[SW] 已缓存资源:', url);
+              return response;
+            });
+          }
+          return response;
+        }).catch(() => {
+          // 网络失败，尝试返回缓存
+          return caches.match(event.request);
+        });
+      })
+    );
+  }
+  // 策略 2：HTML 页面 → 网络优先（保证内容最新）
+  else if (isHTMLPage) {
+    event.respondWith(
+      fetch(event.request, {
+        cache: 'no-cache' // 允许验证缓存，不是完全禁用
+      })
       .then(response => {
-        // 网络请求成功，直接返回，不缓存
-        console.log('[SW] 从网络获取最新版本:', event.request.url);
+        // 更新缓存
+        if (response && response.status === 200) {
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, response.clone());
+          });
+        }
         return response;
       })
       .catch(() => {
-        // 如果网络请求失败（离线或网络错误），则使用缓存作为后备
-        console.log('[SW] 网络请求失败，使用缓存作为后备:', event.request.url);
+        // 网络失败，使用缓存
+        console.log('[SW] 网络失败，使用缓存的 HTML:', url);
         return caches.match(event.request);
       })
-  );
+    );
+  }
+  // 策略 3：CSS/JS → 缓存优先，但允许后台更新
+  else {
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        const fetchPromise = fetch(event.request).then(response => {
+          // 后台更新缓存
+          if (response && response.status === 200) {
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, response.clone());
+            });
+          }
+          return response;
+        }).catch(() => null);
+
+        // 如果有缓存，立即返回缓存，同时后台更新
+        if (cachedResponse) {
+          console.log('[SW] 从缓存加载（后台更新）:', url);
+          return cachedResponse;
+        }
+        // 没有缓存，等待网络请求
+        return fetchPromise;
+      })
+    );
+  }
 });
 
 // 4. 推送通知事件：接收服务器推送的通知
