@@ -17,6 +17,7 @@ class UpdateNotification {
   // 创建弹窗HTML
   createNotificationHTML() {
     const updateContent = `
+      <div class="update-item important-note" style="color: #FF4444; font-weight: bold; border-left: 4px solid #FF4444; padding-left: 10px;">紧急修改：已经替换外观设置BUG的版本，请确保你使用的版本为v0.0.5！！（查看位置在系统级通知开关那边）</div>
       <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
       <div class="update-item important-note">强烈建议：安装PWA版本以获得最佳体验</div>
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>

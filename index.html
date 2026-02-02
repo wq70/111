@@ -2207,7 +2207,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.3</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.5</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -3095,21 +3095,24 @@
         <!-- 4. 提示音 -->
         <div class="settings-header">声音</div>
         <div class="settings-section">
+            <!-- 预设选择下拉框 -->
             <div class="settings-item-block">
+                <label style="display:block; margin-bottom:8px;">选择或切换预设</label>
+                <div style="display: flex; gap: 8px;">
+                    <select id="sound-preset-select" class="settings-textarea" style="flex-grow:1; min-height:36px; padding:8px;">
+                        <option value="current">当前配置 (未保存)</option>
+                    </select>
+                    <button id="delete-sound-preset-btn" class="settings-mini-btn" style="width:auto; color: #ff3b30;">删除</button>
+                </div>
+            </div>
+            
+            <div class="settings-item-block" style="margin-top: 12px;">
                 <label style="display:block; margin-bottom:8px;">消息提示音 URL</label>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="notification-sound-url-input" placeholder="留空使用默认" class="settings-textarea" style="flex-grow:1; min-height:36px; padding:8px;">
                     <button id="test-sound-btn" class="settings-mini-btn" style="width:auto;">试听</button>
                     <button id="reset-sound-btn" class="settings-mini-btn" style="width:auto;">重置</button>
                     <button id="save-sound-preset-btn" class="settings-mini-btn" style="width:auto;">保存</button>
-                </div>
-            </div>
-            
-            <!-- 预设列表 -->
-            <div class="settings-item-block" id="sound-presets-container" style="margin-top: 12px;">
-                <label style="display:block; margin-bottom:8px;">提示音预设</label>
-                <div id="sound-presets-list" style="display: flex; flex-direction: column; gap: 6px;">
-                    <!-- 预设项将在这里动态生成 -->
                 </div>
             </div>
         </div>
