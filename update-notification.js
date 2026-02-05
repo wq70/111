@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.5'; // 当前更新版本号
+    this.currentVersion = '0.0.6'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -17,25 +17,26 @@ class UpdateNotification {
   // 创建弹窗HTML
   createNotificationHTML() {
     const updateContent = `
-      <div class="update-item important-note" style="color: #FF4444; font-weight: bold; border-left: 4px solid #FF4444; padding-left: 10px;">紧急修改：已经替换外观设置BUG的版本，请确保你使用的版本为v0.0.5！！（查看位置在系统级通知开关那边）</div>
       <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
       <div class="update-item important-note">强烈建议：安装PWA版本以获得最佳体验</div>
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1. 修复服务工作线程策略，解决表情包卡顿、加载缓慢、字体显示异常等网络问题</div>
-      <div class="update-item">2. 修复保活机制，增强稳定性并内置保活音频</div>
-      <div class="update-item">3. 新增精简总结功能的自定义范围设置</div>
-      <div class="update-item">4. 新增真心话悬浮球拖动功能，位置可自由调节</div>
-      <div class="update-item">5. 新增豆瓣帖子删除功能</div>
-      <div class="update-item">6. 修复MyPhone壁纸上传失败问题</div>
-      <div class="update-item">7. 完善视频通话文本提取功能，需开启只读对话开关，若仍有问题可尝试语音通话</div>
-      <div class="update-item">8. 修复真心话卡顿、无法关闭、思考时间过长及格式错乱等问题</div>
-      <div class="update-item">9. 尝试修复亲密付功能中角色不生效的问题</div>
-      <div class="update-item">10. 新增消息提示音预设选项</div>
-      <div class="update-item">11. 修复真人联机模式下服务器ID占用导致的持续报错</div>
-      <div class="update-item">12. 优化iOS系统级通知体验</div>
-      <div class="update-item">13. 修复移动端控制台打不开的问题</div>
+      <div class="update-item">1. 新增角色本地图片清除功能，可选择性清理角色图片</div>
+      <div class="update-item">2. 新增高级导出功能，支持分类导出数据</div>
+      <div class="update-item">3. 修复推进剧情时出现的报错问题</div>
+      <div class="update-item">4. 修复CPhone壁纸显示异常的BUG</div>
+      <div class="update-item">5. 修复MYphone网易云AI生成歌单无法删除的问题</div>
+      <div class="update-item">6. 修复移动端控制台被iOS顶栏遮挡的适配问题</div>
+      <div class="update-item">7. 修复后台保活失效问题，保活音频现已支持自定义上传</div>
+      <div class="update-item">8. 尝试修复一起看在线搜索无法识别的问题</div>
+      <div class="update-item">9. 修复角色生成添加到NPC库和预设失败的BUG，新增角色生成历史记录功能（仅本次更新后生成的记录可查看）</div>
+      <div class="update-item">10. 优化联机部署教程，增加重要声明（必看），并新增部分免绑卡平台</div>
+      <div class="update-item">11. 修复消息提示音预设保存失败的BUG，新增提示音音量调节功能</div>
+      <div class="update-item">12. 点击麦克风可直接发送真实语音，通过浏览器自带功能转换为中文</div>
+      <div class="update-item">13. 修复关闭动态后角色在后台仍会发动态的BUG</div>
+      <div class="update-item">14. 修复一起听功能卡顿的问题</div>
+      <div class="update-item">15. 新增语音通话功能，已接入TTS语音合成（没测试过不知丢，但是应该已经是接入了！）</div>
     `;
 
     return `
@@ -43,8 +44,8 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.2 稳定性优化更新</div>
-            <div class="update-subtitle">修复核心问题并提升体验</div>
+            <div class="update-title">2.6 功能更新（第一阶段）</div>
+            <div class="update-subtitle">本次更新分两阶段发布，第二阶段正在开发中</div>
           </div>
           
           <div class="update-notification-body">

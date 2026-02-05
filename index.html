@@ -24,7 +24,7 @@
   <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-  <script src="update-notification.js?v=0.0.5" defer></script>
+  <script src="update-notification.js?v=0.0.6" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
   <script src="sticker-vision.js" defer></script>
@@ -1045,7 +1045,10 @@
       <div id="myphone-home-screen" class="char-screen active">
         <div style="height: 50px;"></div>
 
-        <div id="myphone-layout-container">
+        <div id="myphone-pages-container">
+          <div id="myphone-pages">
+            <div class="myphone-page">
+              <div id="myphone-layout-container">
             
             <div class="cphone-staggered-group">
                 <div class="cphone-bubble-pill top">
@@ -1122,6 +1125,10 @@
                 </div>
             </div>
 
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <div class="cphone-dock-container">
@@ -2194,12 +2201,216 @@
                 </div>
             </div>
             
-            <!-- 无声音频播放器 -->
-            <div class="settings-item" id="keep-alive-audio-container" style="display:none; flex-direction: column; align-items: stretch;">
-                <label style="margin-bottom: 10px;">保活音频（完全无声 - 循环播放）</label>
-                <audio id="keep-alive-audio-player" controls style="width: 100%; max-width: 500px;">
-                    您的浏览器不支持音频播放。
-                </audio>
+            <!-- 保活音频控制按钮 -->
+            <div class="settings-item" id="keep-alive-audio-btn-container" style="display:none;">
+                <label>保活音频</label>
+                <button id="keep-alive-audio-btn" class="primary-btn" style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                    配置保活音频
+                </button>
+            </div>
+            
+            <!-- 保活音频播放器面板（守护甜心/游戏机风格） -->
+            <div id="keep-alive-audio-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 240, 245, 0.4); backdrop-filter: blur(5px); z-index: 10000; justify-content: center; align-items: center;">
+                <style>
+                    .sc-player-device {
+                        width: 320px;
+                        background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
+                        border-radius: 40px;
+                        border: 6px solid #fff;
+                        box-shadow: 
+                            0 0 0 4px #ffb7c5,
+                            0 20px 50px rgba(255, 182, 193, 0.6),
+                            inset 0 -10px 20px rgba(255,105,180, 0.1);
+                        padding: 20px;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                        position: relative;
+                        overflow: hidden;
+                        animation: sc-float 6s ease-in-out infinite;
+                    }
+                    @keyframes sc-float {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-6px); }
+                    }
+                    .sc-pattern {
+                        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                        background-image: 
+                            linear-gradient(45deg, #ffdee9 25%, transparent 25%, transparent 75%, #ffdee9 75%, #ffdee9),
+                            linear-gradient(45deg, #ffdee9 25%, transparent 25%, transparent 75%, #ffdee9 75%, #ffdee9);
+                        background-position: 0 0, 10px 10px;
+                        background-size: 20px 20px;
+                        opacity: 0.3;
+                        pointer-events: none;
+                        z-index: 0;
+                    }
+                    .sc-content { position: relative; z-index: 1; }
+                    .sc-header {
+                        display: flex; justify-content: space-between; align-items: center;
+                        margin-bottom: 15px;
+                    }
+                    .sc-title-badge {
+                        background: #ff69b4; color: white;
+                        padding: 4px 12px; border-radius: 20px;
+                        font-size: 12px; font-weight: bold;
+                        letter-spacing: 1px;
+                        box-shadow: 0 4px 10px rgba(255,105,180, 0.4);
+                        border: 2px solid white;
+                    }
+                    .sc-win-actions { display: flex; gap: 8px; }
+                    .sc-win-btn {
+                        width: 28px; height: 28px; border-radius: 50%; border: 2px solid white;
+                        display: flex; align-items: center; justify-content: center;
+                        cursor: pointer; color: white; transition: transform 0.2s;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    }
+                    .sc-btn-min { background: #ffd700; }
+                    .sc-btn-close { background: #ff6b6b; }
+                    .sc-win-btn:hover { transform: scale(1.1); }
+                    .sc-screen {
+                        background: #fff;
+                        border-radius: 20px;
+                        padding: 15px;
+                        box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+                        border: 3px solid #fff;
+                        margin-bottom: 20px;
+                        position: relative;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                    }
+                    .sc-screen-label {
+                        align-self: flex-start;
+                        font-size: 10px; color: #ffb7c5; font-weight: bold; margin-bottom: 5px;
+                    }
+                    .sc-audio-wrapper { width: 100%; }
+                    .sc-audio-wrapper audio {
+                        width: 100%;
+                        height: 36px;
+                        border-radius: 18px;
+                        outline: none;
+                    }
+                    .sc-audio-wrapper audio::-webkit-media-controls-enclosure {
+                        background-color: #f0f7ff;
+                        border-radius: 18px;
+                    }
+                    .sc-control-panel {
+                        background: rgba(255,255,255,0.6);
+                        border-radius: 20px;
+                        padding: 15px;
+                        border: 2px solid white;
+                    }
+                    .sc-input-row { margin-bottom: 12px; }
+                    .sc-file-label {
+                        display: flex; align-items: center; justify-content: center; width: 100%; padding: 10px;
+                        background: white; border-radius: 12px;
+                        text-align: center; color: #ff69b4; font-size: 13px; font-weight: bold;
+                        border: 2px dashed #ffb7c5; cursor: pointer;
+                        transition: all 0.3s;
+                        box-sizing: border-box;
+                    }
+                    .sc-file-label:hover { background: #fff0f5; border-color: #ff69b4; }
+                    .sc-url-group { display: flex; gap: 8px; }
+                    .sc-url-input {
+                        flex: 1; padding: 8px 12px; border-radius: 12px;
+                        border: 2px solid #ffdeeb; background: white;
+                        color: #666; font-size: 12px; outline: none;
+                        transition: border-color 0.3s;
+                    }
+                    .sc-url-input:focus { border-color: #ff69b4; }
+                    .sc-load-btn {
+                        background: #87ceeb; color: white; border: 2px solid white;
+                        border-radius: 12px; padding: 0 15px; font-weight: bold; font-size: 12px;
+                        cursor: pointer; box-shadow: 0 4px 0 #5fb8d9;
+                        transition: transform 0.1s, box-shadow 0.1s;
+                        height: 36px;
+                    }
+                    .sc-load-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #5fb8d9; }
+                    .sc-hint {
+                        margin-top: 15px; font-size: 11px; color: #ff8da1;
+                        text-align: center;
+                        display: flex; align-items: center; justify-content: center; gap: 6px;
+                        font-weight: 500;
+                    }
+                    .sc-hint-icon {
+                        width: 16px; height: 16px; background: #ffd700; border-radius: 50%;
+                        color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 11px;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    }
+                    .sc-visualizer-mock {
+                        display: flex; gap: 4px; justify-content: center; margin-bottom: 8px; height: 20px; align-items: flex-end;
+                    }
+                    .sc-bar {
+                        width: 6px; background: #ffb7c5; border-radius: 3px;
+                        animation: sc-equalizer 1s infinite ease-in-out;
+                    }
+                    .sc-bar:nth-child(2) { animation-delay: 0.1s; height: 60%; }
+                    .sc-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
+                    .sc-bar:nth-child(4) { animation-delay: 0.3s; height: 50%; }
+                    .sc-bar:nth-child(5) { animation-delay: 0.1s; height: 70%; }
+                    @keyframes sc-equalizer {
+                        0%, 100% { height: 30%; }
+                        50% { height: 100%; }
+                    }
+                </style>
+
+                <div class="sc-player-device">
+                    <div class="sc-pattern"></div>
+                    <div class="sc-content">
+                        <!-- Header -->
+                        <div class="sc-header">
+                            <div class="sc-title-badge">KEEP ALIVE</div>
+                            <div class="sc-win-actions">
+                                <button id="keep-alive-audio-minimize" class="sc-win-btn sc-btn-min" title="最小化">
+                                    <svg width="12" height="2" viewBox="0 0 12 2" fill="none"><rect width="12" height="2" rx="1" fill="white"/></svg>
+                                </button>
+                                <button id="keep-alive-audio-close" class="sc-win-btn sc-btn-close" title="关闭">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2L10 10M10 2L2 10" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Screen Area -->
+                        <div class="sc-screen">
+                            <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <span class="sc-screen-label">AUDIO VISUALIZER</span>
+                                <span class="sc-screen-label" style="color: #ccc;">● REC</span>
+                            </div>
+                            <div class="sc-visualizer-mock">
+                                <div class="sc-bar"></div><div class="sc-bar"></div><div class="sc-bar"></div><div class="sc-bar"></div><div class="sc-bar"></div>
+                            </div>
+                            <div class="sc-audio-wrapper">
+                                <audio id="keep-alive-audio-player" controls loop>
+                                    您的浏览器不支持音频播放。
+                                </audio>
+                            </div>
+                        </div>
+
+                        <!-- Controls Panel -->
+                        <div class="sc-control-panel">
+                            <!-- File Upload -->
+                            <div class="sc-input-row">
+                                <label for="keep-alive-audio-file" class="sc-file-label">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                    </svg>
+                                    上传本地音频
+                                </label>
+                                <input type="file" id="keep-alive-audio-file" accept="audio/*" style="display:none">
+                            </div>
+
+                            <!-- URL Load -->
+                            <div class="sc-input-row sc-url-group">
+                                <input type="text" id="keep-alive-audio-url" class="sc-url-input" placeholder="输入音频URL...">
+                                <button id="keep-alive-audio-load-url" class="sc-load-btn">加载</button>
+                            </div>
+                        </div>
+
+                        <!-- Footer Hint -->
+                        <div class="sc-hint">
+                            <div class="sc-hint-icon">!</div>
+                            <span>自动循环播放 • 后台保活中</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="settings-desc">
@@ -2207,7 +2418,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.5</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.6</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -2373,8 +2584,11 @@
             </div>
             
             <!-- 列表按钮：黑色左对齐 -->
+            <button class="settings-full-btn" id="clear-chat-images-btn">清空聊天的本地图片</button>
             <button class="settings-full-btn" id="export-data-btn">导出所有数据</button>
+            <button class="settings-full-btn" id="advanced-export-btn">高级导出导入</button>
             <button class="settings-full-btn" id="import-btn">导入备份文件</button>
+            <input id="advanced-import-input" type="file" accept="application/json" hidden>
             <input id="import-data-input" type="file" accept="application/json" hidden>
             
             <button class="settings-full-btn" id="cleanup-data-btn">清理冗余数据</button>
@@ -2443,6 +2657,22 @@
           <div class="modal-body" id="data-clear-type-list" style="padding: 0;"> </div>
           <div class="modal-footer"> <button class="form-button-secondary" id="back-to-clear-step1-btn" style="width: 30%; margin:0;">上一步</button> <button class="cancel" id="cancel-clear-wizard-btn-step2" style="width: 30%; margin:0;"data-lang-key="cancel">取消</button> <button class="save btn-danger"
               id="confirm-final-clear-btn" style="width: 30%; margin:0;">确认清理</button> </div>
+        </div>
+      </div>
+    </div>
+    <div id="clear-chat-images-modal" class="modal">
+      <div class="modal-content" style="height: 70%;">
+        <div class="modal-header">
+          <span>选择要清空图片的角色</span>
+          <label>
+            <input type="checkbox" id="select-all-chars-for-image-clear"> 全选
+          </label>
+        </div>
+        <div class="modal-body" id="clear-chat-images-list" style="padding: 0;">
+        </div>
+        <div class="modal-footer">
+          <button class="cancel" id="cancel-clear-images-btn">取消</button>
+          <button class="save btn-danger" id="confirm-clear-images-btn">确认清空</button>
         </div>
       </div>
     </div>
@@ -2700,7 +2930,14 @@
               <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
               <path d="M12 19v4"></path>
               <path d="M8 23h8"></path>
-            </svg></button> <button id="send-waimai-request-btn" class="chat-action-icon-btn action-button" title="发起外卖请求"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            </svg></button> <button id="voice-record-btn" class="chat-action-icon-btn action-button" title="录音">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="4" width="4" height="10" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+                <path d="M6 12c0 3.314 2.686 6 6 6s6-2.686 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="9" y1="22" x2="15" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button> <button id="send-waimai-request-btn" class="chat-action-icon-btn action-button" title="发起外卖请求"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round"
               stroke-linejoin="round">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
               <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -2713,6 +2950,14 @@
               <circle cx="9" cy="7" r="4"></circle>
               <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg></button> <button id="voice-call-btn" class="chat-action-icon-btn action-button" title="语音通话"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg></button> <button id="group-voice-call-btn" class="chat-action-icon-btn action-button" title="群语音通话"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              <path d="M15.05 16a5 5 0 0 1 0-9.9"></path>
             </svg></button> <button id="send-poll-btn" class="chat-action-icon-btn action-button" title="发起投票"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M8 6h10"></path>
               <path d="M6 6h.01"></path>
@@ -3108,11 +3353,19 @@
             
             <div class="settings-item-block" style="margin-top: 12px;">
                 <label style="display:block; margin-bottom:8px;">消息提示音 URL</label>
+                <input type="text" id="notification-sound-url-input" placeholder="留空使用默认" class="settings-textarea" style="width:100%; min-height:36px; padding:8px; margin-bottom:8px;">
                 <div style="display: flex; gap: 8px;">
-                    <input type="text" id="notification-sound-url-input" placeholder="留空使用默认" class="settings-textarea" style="flex-grow:1; min-height:36px; padding:8px;">
-                    <button id="test-sound-btn" class="settings-mini-btn" style="width:auto;">试听</button>
-                    <button id="reset-sound-btn" class="settings-mini-btn" style="width:auto;">重置</button>
-                    <button id="save-sound-preset-btn" class="settings-mini-btn" style="width:auto;">保存</button>
+                    <button id="test-sound-btn" class="settings-mini-btn" style="flex:1;">试听</button>
+                    <button id="reset-sound-btn" class="settings-mini-btn" style="flex:1;">重置</button>
+                    <button id="save-sound-preset-btn" class="settings-mini-btn" style="flex:1;">保存</button>
+                </div>
+            </div>
+            
+            <div class="settings-item-block" style="margin-top: 12px;">
+                <label style="display:block; margin-bottom:8px;">提示音音量</label>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="range" id="notification-volume-slider" min="0" max="100" value="100" style="flex: 1; height: 6px;">
+                    <span id="notification-volume-label" style="min-width: 45px; text-align: right; font-size: 14px; color: #8e8e93;">100%</span>
                 </div>
             </div>
         </div>
@@ -3283,6 +3536,29 @@
       <div id="video-call-main" class="video-call-main"> </div>
       <div class="video-call-controls"> <button id="user-speak-btn" class="control-btn speak-btn"></button> <button id="hang-up-btn" class="control-btn hangup-btn"></button> <button id="regenerate-call-btn" class="control-btn regenerate-btn"></button> <button id="join-call-btn"
           class="control-btn join-btn" style="display: none;"></button> </div>
+    </div>
+    
+    <!-- 语音通话界面 -->
+    <div id="voice-call-screen" class="screen">
+      <div class="voice-call-top-bar">
+        <button id="minimize-voice-call-btn" title="最小化">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <span id="voice-call-timer">00:00</span> 
+      </div>
+
+      <div class="voice-call-avatar-area">
+        <div id="voice-participant-avatars-grid"> </div>
+      </div>
+      <div id="voice-call-main" class="voice-call-main"> </div>
+      <div class="voice-call-controls"> 
+        <button id="voice-user-speak-btn" class="control-btn speak-btn"></button> 
+        <button id="voice-hang-up-btn" class="control-btn hangup-btn"></button> 
+        <button id="voice-regenerate-call-btn" class="control-btn regenerate-btn"></button> 
+        <button id="voice-join-call-btn" class="control-btn join-btn" style="display: none;"></button> 
+      </div>
     </div>
     <div id="outgoing-call-screen" class="screen">
       <div class="outgoing-call-content"> <img id="outgoing-call-avatar" class="caller-avatar" src="">
@@ -4760,7 +5036,7 @@
       </div>
     </div>
   </div>
-  </div> <input type="file" id="import-card-input" accept=".json,.png" multiple style="display: none;"> <input type="file" id="import-world-book-input" accept=".json,.txt" multiple style="display: none;">
+  </div> <input type="file" id="import-card-input" accept=".json,.png" multiple style="display: none;"> <input type="file" id="import-world-book-input" accept=".json,.txt,.zip,.docx" multiple style="display: none;">
   <div id="persona-library-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -6045,6 +6321,11 @@
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="23 7 16 12 23 17 23 7"></polygon>
         <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+    </svg>
+</div>
+<div id="voice-call-restore-btn" style="display: none;">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
     </svg>
 </div>
 <div id="char-music-player-modal" class="modal">

@@ -10,6 +10,9 @@
     // API选择配置（使用主API还是副API）
     let generatorUseSecondaryApi = false;
 
+    // 历史记录存储键
+    const HISTORY_STORAGE_KEY = 'characterGeneratorHistory';
+
     // 从localStorage加载API选择
     function loadGeneratorApiChoice() {
         const saved = localStorage.getItem('characterGeneratorUseSecondaryApi');
@@ -21,6 +24,36 @@
     // 保存API选择到localStorage
     function saveGeneratorApiChoice() {
         localStorage.setItem('characterGeneratorUseSecondaryApi', generatorUseSecondaryApi.toString());
+    }
+
+    // 保存角色到历史记录
+    function saveToHistory(character) {
+        const history = getHistory();
+        history.unshift({
+            id: Date.now() + Math.random(),
+            content: character.content,
+            timestamp: new Date().toISOString()
+        });
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
+        console.log('角色已保存到历史记录');
+    }
+
+    // 获取历史记录
+    function getHistory() {
+        try {
+            const data = localStorage.getItem(HISTORY_STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.error('读取历史记录失败:', e);
+            return [];
+        }
+    }
+
+    // 删除历史记录中的指定项
+    function deleteFromHistory(ids) {
+        const history = getHistory();
+        const filtered = history.filter(item => !ids.includes(item.id));
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
     }
 
     // 初始化
@@ -62,7 +95,7 @@
             <div class="header">
                 <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
                 <span>角色生成器</span>
-                <span style="width: 30px;"></span>
+                <span class="action-btn" onclick="window.openCharacterHistory()">历史</span>
             </div>
             <div class="form-container" style="padding-bottom: 80px;">
                 
@@ -694,6 +727,9 @@
                 const character = await generateCharacterWithApi(prompt);
                 generatedCharacters.push(character);
                 
+                // 保存到历史记录
+                saveToHistory(character);
+                
                 console.log(`第 ${i + 1} 个角色生成成功`);
             }
 
@@ -966,7 +1002,7 @@
                     <button onclick="window.addGeneratedAsUsePreset(${index})" 
                             class="form-button form-button-secondary" 
                             style="flex: 1; padding: 10px; font-size: 14px;">
-                        添加为Use预设
+                        添加到我的人设库
                     </button>
                     <button onclick="window.discardGenerated(${index})" 
                             class="form-button form-button-secondary" 
@@ -1004,7 +1040,7 @@
     };
 
     // ========== 添加为NPC ==========
-    window.addGeneratedAsNpc = function(index) {
+    window.addGeneratedAsNpc = async function(index) {
         const character = generatedCharacters[index];
         if (!character) return;
 
@@ -1021,61 +1057,74 @@
             }
         }
 
-        // 创建NPC
-        const npc = {
-            id: Date.now(),
-            name: characterName,
-            description: character.content,
-            avatar: 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg', // 默认头像
-            createdAt: new Date().toISOString()
-        };
+        try {
+            // 检查window.db是否存在
+            if (!window.db || !window.db.npcs) {
+                alert('数据库未初始化，无法添加NPC');
+                return;
+            }
 
-        // 保存到localStorage
-        const npcKey = 'npc_' + npc.id;
-        localStorage.setItem(npcKey, JSON.stringify(npc));
+            // 创建NPC数据（使用与主程序相同的结构）
+            const npcData = {
+                name: characterName,
+                persona: character.content,
+                avatar: 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg', // 默认头像
+                associatedWith: [],
+                enableBackgroundActivity: false,
+                actionCooldownMinutes: 15,
+                npcGroupId: null
+            };
 
-        alert('已添加到NPC库: ' + characterName);
+            // 保存到IndexedDB
+            await window.db.npcs.add(npcData);
 
-        // 从列表中移除
-        generatedCharacters.splice(index, 1);
-        updateGeneratedResultsList();
+            alert('已添加到NPC库: ' + characterName);
+
+            // 从列表中移除
+            generatedCharacters.splice(index, 1);
+            updateGeneratedResultsList();
+        } catch (error) {
+            console.error('添加NPC失败:', error);
+            alert('添加NPC失败: ' + error.message);
+        }
     };
 
-    // ========== 添加为Use预设 ==========
-    window.addGeneratedAsUsePreset = function(index) {
+    // ========== 添加为Use预设（人设库） ==========
+    window.addGeneratedAsUsePreset = async function(index) {
         const character = generatedCharacters[index];
         if (!character) return;
 
-        // 提取角色名称
-        const lines = character.content.split('\n');
-        let characterName = '未命名角色';
-        for (const line of lines) {
-            if (line.includes('姓名') || line.includes('名字') || line.includes('Name')) {
-                const match = line.match(/[:：]\s*(.+)/);
-                if (match) {
-                    characterName = match[1].trim();
-                    break;
-                }
+        try {
+            // 检查window.db是否存在
+            if (!window.db || !window.db.personaPresets) {
+                alert('数据库未初始化，无法添加人设预设');
+                return;
             }
+
+            // 创建人设预设数据（使用与主程序相同的结构）
+            const personaPreset = {
+                id: 'preset_' + Date.now(),
+                avatar: 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg', // 默认头像
+                persona: character.content
+            };
+
+            // 保存到IndexedDB
+            await window.db.personaPresets.add(personaPreset);
+            
+            // 同步到state（如果存在）
+            if (window.state && window.state.personaPresets) {
+                window.state.personaPresets.push(personaPreset);
+            }
+
+            alert('已添加到我的人设库');
+
+            // 从列表中移除
+            generatedCharacters.splice(index, 1);
+            updateGeneratedResultsList();
+        } catch (error) {
+            console.error('添加人设预设失败:', error);
+            alert('添加人设预设失败: ' + error.message);
         }
-
-        // 创建Use预设
-        const preset = {
-            id: Date.now(),
-            name: characterName,
-            description: character.content,
-            createdAt: new Date().toISOString()
-        };
-
-        // 保存到localStorage (假设主script.js使用 'usePreset_' 前缀)
-        const presetKey = 'usePreset_' + preset.id;
-        localStorage.setItem(presetKey, JSON.stringify(preset));
-
-        alert('已添加为Use预设: ' + characterName);
-
-        // 从列表中移除
-        generatedCharacters.splice(index, 1);
-        updateGeneratedResultsList();
     };
 
     // ========== 丢弃生成结果 ==========
@@ -1090,6 +1139,321 @@
                 window.showScreen('character-generator-screen');
             }
         }
+    };
+
+    // ========== 历史记录界面 ==========
+    window.openCharacterHistory = function() {
+        console.log('打开历史记录');
+        
+        let screen = document.getElementById('gen-history-screen');
+        if (!screen) {
+            screen = createHistoryScreen();
+            document.getElementById('phone-screen').appendChild(screen);
+        }
+
+        updateHistoryList();
+        
+        if (typeof window.showScreen === 'function') {
+            window.showScreen('gen-history-screen');
+        }
+    };
+
+    function createHistoryScreen() {
+        const screen = document.createElement('div');
+        screen.id = 'gen-history-screen';
+        screen.className = 'screen';
+        screen.innerHTML = `
+            <div class="header">
+                <span class="back-btn" onclick="showScreen('character-generator-screen')">‹</span>
+                <span>历史记录</span>
+                <span class="action-btn" onclick="window.deleteSelectedHistory()">删除</span>
+            </div>
+            <div style="padding: 10px 15px; background: #f5f5f5; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 10px;">
+                <input type="checkbox" id="history-select-all" onchange="window.toggleSelectAllHistory()" style="width: 18px; height: 18px;">
+                <label for="history-select-all" style="font-size: 14px; color: #666;">全选</label>
+            </div>
+            <div id="gen-history-list" class="list-container" style="padding-bottom: 60px;">
+                <!-- 历史记录列表 -->
+            </div>
+        `;
+
+        return screen;
+    }
+
+    function updateHistoryList() {
+        const container = document.getElementById('gen-history-list');
+        if (!container) return;
+
+        const history = getHistory();
+
+        if (history.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 50px 20px;">暂无历史记录</p>';
+            return;
+        }
+
+        container.innerHTML = history.map((item, index) => {
+            const date = new Date(item.timestamp);
+            const dateStr = date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            // 提取角色名称预览
+            const lines = item.content.split('\n');
+            let preview = '角色描述';
+            for (const line of lines) {
+                if (line.includes('姓名') || line.includes('名字') || line.includes('Name')) {
+                    const match = line.match(/[:：]\s*(.+)/);
+                    if (match) {
+                        preview = match[1].trim();
+                        break;
+                    }
+                }
+            }
+
+            return `
+                <div class="list-item" style="display: flex; align-items: flex-start; gap: 10px; padding: 15px; border-bottom: 1px solid var(--border-color);">
+                    <input type="checkbox" 
+                           class="history-checkbox" 
+                           data-history-id="${item.id}" 
+                           style="width: 18px; height: 18px; margin-top: 3px;">
+                    <div style="flex: 1; cursor: pointer;" onclick="window.viewHistoryDetail(${index})">
+                        <div style="font-weight: 600; font-size: 15px; margin-bottom: 5px;">${escapeHTML(preview)}</div>
+                        <div style="font-size: 12px; color: #999; margin-bottom: 8px;">${dateStr}</div>
+                        <div style="font-size: 13px; color: #666; line-height: 1.5; max-height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">
+                            ${escapeHTML(item.content.substring(0, 150))}${item.content.length > 150 ? '...' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // 全选/取消全选
+    window.toggleSelectAllHistory = function() {
+        const selectAll = document.getElementById('history-select-all');
+        const checkboxes = document.querySelectorAll('.history-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+        });
+    };
+
+    // 删除选中的历史记录
+    window.deleteSelectedHistory = function() {
+        const checkboxes = document.querySelectorAll('.history-checkbox:checked');
+        
+        if (checkboxes.length === 0) {
+            alert('请先选择要删除的历史记录');
+            return;
+        }
+
+        if (!confirm(`确定删除选中的 ${checkboxes.length} 条历史记录吗？`)) {
+            return;
+        }
+
+        const ids = Array.from(checkboxes).map(cb => parseFloat(cb.dataset.historyId));
+        deleteFromHistory(ids);
+        
+        // 重新加载列表
+        updateHistoryList();
+        
+        // 取消全选状态
+        const selectAll = document.getElementById('history-select-all');
+        if (selectAll) selectAll.checked = false;
+    };
+
+    // 查看历史记录详情
+    window.viewHistoryDetail = function(index) {
+        const history = getHistory();
+        const item = history[index];
+        if (!item) return;
+
+        let screen = document.getElementById('gen-history-detail-screen');
+        if (!screen) {
+            screen = createHistoryDetailScreen();
+            document.getElementById('phone-screen').appendChild(screen);
+        }
+
+        // 更新详情内容
+        const container = document.getElementById('gen-history-detail-content');
+        if (container) {
+            const date = new Date(item.timestamp);
+            const dateStr = date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            container.innerHTML = `
+                <div style="padding: 15px;">
+                    <div style="font-size: 12px; color: #999; margin-bottom: 15px;">生成时间: ${dateStr}</div>
+                    <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; white-space: pre-wrap; line-height: 1.8; font-size: 14px;">${escapeHTML(item.content)}</div>
+                    <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                        <button onclick="window.addHistoryAsCharacter(${index})" 
+                                class="form-button">
+                            添加为角色
+                        </button>
+                        <button onclick="window.addHistoryAsNpc(${index})" 
+                                class="form-button form-button-secondary">
+                            添加到NPC库
+                        </button>
+                        <button onclick="window.addHistoryAsUsePreset(${index})" 
+                                class="form-button form-button-secondary">
+                            添加到我的人设库
+                        </button>
+                        <button onclick="window.copyHistoryContent(${index})" 
+                                class="form-button form-button-secondary">
+                            复制内容
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (typeof window.showScreen === 'function') {
+            window.showScreen('gen-history-detail-screen');
+        }
+    };
+
+    function createHistoryDetailScreen() {
+        const screen = document.createElement('div');
+        screen.id = 'gen-history-detail-screen';
+        screen.className = 'screen';
+        screen.innerHTML = `
+            <div class="header">
+                <span class="back-btn" onclick="showScreen('gen-history-screen')">‹</span>
+                <span>历史详情</span>
+                <span style="width: 30px;"></span>
+            </div>
+            <div id="gen-history-detail-content" class="form-container" style="padding-bottom: 80px;">
+                <!-- 详情内容 -->
+            </div>
+        `;
+
+        return screen;
+    }
+
+    // 从历史添加为角色
+    window.addHistoryAsCharacter = function(index) {
+        const history = getHistory();
+        const item = history[index];
+        if (!item) return;
+
+        if (typeof window.openCreateCharacterWithData === 'function') {
+            window.openCreateCharacterWithData({
+                description: item.content
+            });
+        } else {
+            alert('角色描述已复制，请手动创建角色');
+            copyToClipboard(item.content);
+            if (typeof window.showScreen === 'function') {
+                window.showScreen('chat-list-screen');
+            }
+        }
+    };
+
+    // 从历史添加为NPC
+    window.addHistoryAsNpc = async function(index) {
+        const history = getHistory();
+        const item = history[index];
+        if (!item) return;
+
+        const lines = item.content.split('\n');
+        let characterName = '未命名角色';
+        for (const line of lines) {
+            if (line.includes('姓名') || line.includes('名字') || line.includes('Name')) {
+                const match = line.match(/[:：]\s*(.+)/);
+                if (match) {
+                    characterName = match[1].trim();
+                    break;
+                }
+            }
+        }
+
+        try {
+            // 检查window.db是否存在
+            if (!window.db || !window.db.npcs) {
+                alert('数据库未初始化，无法添加NPC');
+                return;
+            }
+
+            // 创建NPC数据（使用与主程序相同的结构）
+            const npcData = {
+                name: characterName,
+                persona: item.content,
+                avatar: 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg',
+                associatedWith: [],
+                enableBackgroundActivity: false,
+                actionCooldownMinutes: 15,
+                npcGroupId: null
+            };
+
+            // 保存到IndexedDB
+            await window.db.npcs.add(npcData);
+
+            alert('已添加到NPC库: ' + characterName);
+            
+            if (typeof window.showScreen === 'function') {
+                window.showScreen('gen-history-screen');
+            }
+        } catch (error) {
+            console.error('添加NPC失败:', error);
+            alert('添加NPC失败: ' + error.message);
+        }
+    };
+
+    // 从历史添加为Use预设（人设库）
+    window.addHistoryAsUsePreset = async function(index) {
+        const history = getHistory();
+        const item = history[index];
+        if (!item) return;
+
+        try {
+            // 检查window.db是否存在
+            if (!window.db || !window.db.personaPresets) {
+                alert('数据库未初始化，无法添加人设预设');
+                return;
+            }
+
+            // 创建人设预设数据（使用与主程序相同的结构）
+            const personaPreset = {
+                id: 'preset_' + Date.now(),
+                avatar: 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg', // 默认头像
+                persona: item.content
+            };
+
+            // 保存到IndexedDB
+            await window.db.personaPresets.add(personaPreset);
+            
+            // 同步到state（如果存在）
+            if (window.state && window.state.personaPresets) {
+                window.state.personaPresets.push(personaPreset);
+            }
+
+            alert('已添加到我的人设库');
+            
+            if (typeof window.showScreen === 'function') {
+                window.showScreen('gen-history-screen');
+            }
+        } catch (error) {
+            console.error('添加人设预设失败:', error);
+            alert('添加人设预设失败: ' + error.message);
+        }
+    };
+
+    // 复制历史内容
+    window.copyHistoryContent = function(index) {
+        const history = getHistory();
+        const item = history[index];
+        if (!item) return;
+
+        copyToClipboard(item.content);
+        alert('内容已复制到剪贴板');
     };
 
     // ========== 工具函数 ==========

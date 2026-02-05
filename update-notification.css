@@ -94,6 +94,36 @@
   color: #666;
 }
 
+/* 更新内容分隔线 - 显眼的过渡样式 */
+.update-divider {
+  margin: 15px 0 12px;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffb7c5;
+  position: relative;
+  letter-spacing: 1px;
+}
+
+.update-divider::before,
+.update-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #ffc0cb, transparent);
+}
+
+.update-divider::before {
+  left: 0;
+}
+
+.update-divider::after {
+  right: 0;
+}
+
 .update-item {
   padding: 6px 8px; /* 更加紧凑 */
   margin-bottom: 4px;
@@ -106,6 +136,33 @@
 
 .update-item:last-child {
   border-bottom: none;
+}
+
+/* 重要提示样式 */
+.update-item.important-note {
+  background: linear-gradient(to right, #fff5f7, transparent);
+  border-left: 3px solid #ffc0cb;
+  padding-left: 12px;
+  font-weight: 500;
+  color: #ff69b4;
+  margin-bottom: 6px;
+}
+
+.update-item.important-note::before {
+  display: none;
+}
+
+.update-item.tips {
+  background: #fafafa;
+  border-left: 3px solid #e0e0e0;
+  padding-left: 12px;
+  color: #888;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.update-item.tips::before {
+  display: none;
 }
 
 /* 简约圆点列表样式 */
