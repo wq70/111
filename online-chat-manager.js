@@ -163,6 +163,16 @@ class OnlineChatManager {
                     if (connectBtn) connectBtn.style.display = 'inline-block';
                     if (disconnectBtn) disconnectBtn.style.display = 'none';
                     console.log('联机开关已关闭，已彻底断开连接');
+                    
+                    // 【关键】关闭联机时，恢复原始发送按钮，移除拦截器
+                    if (typeof window._restoreOriginalSendBtn === 'function') {
+                        window._restoreOriginalSendBtn();
+                    }
+                } else {
+                    // 【关键】开启联机时，重新初始化消息拦截器
+                    if (typeof window._initOnlineChatIntegration === 'function') {
+                        window._initOnlineChatIntegration();
+                    }
                 }
                 
                 this.saveSettings();

@@ -7,8 +7,31 @@
     
     console.log('联机功能集成模块已加载');
     
+    // 保存初始化状态
+    let _isInitialized = false;
+    
     // 等待DOM和script.js完全加载
     function init() {
+        // 【关键修复】如果联机开关没开，完全不初始化，不劫持任何按钮
+        const enableSwitch = document.getElementById('enable-online-chat-switch');
+        const savedSettings = localStorage.getItem('ephone-online-settings');
+        let onlineEnabled = false;
+        if (enableSwitch) {
+            onlineEnabled = enableSwitch.checked;
+        } else if (savedSettings) {
+            try { onlineEnabled = JSON.parse(savedSettings).enabled; } catch(e) {}
+        }
+        if (!onlineEnabled) {
+            console.log('❌ 联机功能未开启，跳过消息拦截器初始化');
+            return;
+        }
+        
+        // 防止重复初始化
+        if (_isInitialized) {
+            console.log('⚠️ 联机消息拦截器已初始化，跳过');
+            return;
+        }
+
         // 拦截发送按钮
         const sendBtn = document.getElementById('send-btn');
         const chatInput = document.getElementById('chat-input');
@@ -25,6 +48,7 @@
         const newSendBtn = sendBtn.cloneNode(true);
         sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
         
+        _isInitialized = true;
         console.log('✅ 已重置发送按钮事件');
         
         // 添加新的点击事件监听器（在最前面执行）
@@ -325,6 +349,24 @@
         
         console.log('✅ 联机消息拦截器设置完成');
     }
+    
+    // 暴露全局函数，供联机开关切换时调用
+    window._initOnlineChatIntegration = init;
+    window._restoreOriginalSendBtn = function() {
+        if (!_isInitialized) return;
+        _isInitialized = false;
+        // 关闭联机后需要刷新页面以恢复原始发送按钮事件
+        // 因为克隆替换按钮会销毁script.js绑定的原始事件，无法程序化恢复
+        console.log('✅ 联机已关闭，标记为未初始化，下次刷新页面后生效');
+        // 立即让拦截器失效：再次克隆按钮移除拦截器事件，然后提示刷新
+        const currentBtn = document.getElementById('send-btn');
+        if (currentBtn && currentBtn.parentNode) {
+            const cleanBtn = currentBtn.cloneNode(true);
+            currentBtn.parentNode.replaceChild(cleanBtn, currentBtn);
+        }
+        alert('已关闭联机功能，请刷新页面以恢复正常发送功能。');
+        location.reload();
+    };
     
     // 启动初始化
     if (document.readyState === 'loading') {
