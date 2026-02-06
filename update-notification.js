@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.11'; // 当前更新版本号
+    this.currentVersion = '0.0.12'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
