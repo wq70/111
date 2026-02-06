@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.10'; // 当前更新版本号
+    this.currentVersion = '0.0.11'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,6 +22,10 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
+      <div class="update-item">1.修复字体大小无法调节的bug</div>
+      <div class="update-item">2.修复联机无故导致正常发不出去消息的bug</div>
+      <div class="update-item important-note" style="margin-top: 8px;">⚠重要提醒：之前开过联机功能不用的时候一定要关掉！一定要关掉！否则可能会出现bug！</div>
+      <div class="update-divider">历史更新</div>
       <div class="update-item">1.修复移动端谷歌浏览器语音识别的问题</div>
       <div class="update-item">2.优化联机，可以显示头像了和聊天记录混乱串来串去的问题、关掉联机还一直有错误提示的问题</div>
       <div class="update-item">3.新增持久化数据存储</div>
@@ -36,7 +40,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.6 修复BUG版</div>
+            <div class="update-title">2.7 修复BUG版</div>
           </div>
           
           <div class="update-notification-body">
