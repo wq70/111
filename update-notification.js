@@ -37,6 +37,9 @@ class UpdateNotification {
       <div class="update-item">13. 修复关闭动态后角色在后台仍会发动态的BUG</div>
       <div class="update-item">14. 修复一起听功能卡顿的问题</div>
       <div class="update-item">15. 新增语音通话功能，已接入TTS语音合成（没测试过不知丢，但是应该已经是接入了！）</div>
+      <div class="update-item">16. 修复推进剧情群聊失败的问题</div>
+      <div class="update-item">17. 新增世界书ZIP导入</div>
+      <div class="update-item">18. 修复语音通话的一些BUG</div>
     `;
 
     return `
