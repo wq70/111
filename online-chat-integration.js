@@ -58,22 +58,7 @@
                 }
             }
             
-            // 方法3: 从 db.chats 中找到 isOnlineFriend 的记录
-            if (!chatId && typeof db !== 'undefined') {
-                console.log('尝试从数据库查找当前打开的联机好友聊天...');
-                try {
-                    const allChats = await db.chats.toArray();
-                    const onlineChats = allChats.filter(c => c.isOnlineFriend);
-                    if (onlineChats.length > 0) {
-                        // 找最近打开的
-                        onlineChats.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                        chatId = onlineChats[0].id;
-                        console.log('从数据库最近的联机聊天获取:', chatId);
-                    }
-                } catch (err) {
-                    console.error('从数据库查找失败:', err);
-                }
-            }
+            // 【已移除方法3】不再从数据库猜测聊天对象，避免消息发错人
             
             console.log('发送内容:', content);
             console.log('最终chatId:', chatId);
@@ -145,6 +130,16 @@
                             chat.history = [];
                         }
                         
+                        // 【修复】补全 settings 中缺失的头像（兼容旧数据）
+                        if (!chat.settings) chat.settings = {};
+                        if (!chat.settings.myAvatar && typeof onlineChatManager !== 'undefined') {
+                            chat.settings.myAvatar = onlineChatManager.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                        }
+                        if (!chat.settings.aiAvatar) {
+                            const friend = onlineChatManager.onlineFriends?.find(f => `online_${f.userId}` === chatId);
+                            chat.settings.aiAvatar = chat.avatar || (friend ? friend.avatar : '') || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                        }
+                        
                         console.log('发送方 - 添加消息前，history长度:', chat.history.length);
                         
                         // 创建消息对象
@@ -213,6 +208,112 @@
                     
                 } catch (error) {
                     console.error('发送联机消息失败:', error);
+                    alert('发送失败: ' + error.message);
+                }
+            } else if (chatId.startsWith('group_')) {
+                console.log('✅ 这是群聊，拦截并使用WebSocket发送');
+                
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                
+                const groupId = chatId;
+                console.log('群聊ID:', groupId);
+                
+                try {
+                    if (!onlineChatManager.isConnected) {
+                        alert('未连接到服务器，无法发送消息');
+                        return;
+                    }
+                    
+                    if (typeof playSilentAudio === 'function') {
+                        playSilentAudio();
+                    }
+                    
+                    let processedContent = content;
+                    
+                    // 处理表情包
+                    if (typeof STICKER_REGEX !== 'undefined' && STICKER_REGEX.test(content)) {
+                        const chat = await db.chats.get(chatId);
+                        if (chat && chat.settings && chat.settings.enableStickerVision) {
+                            const sticker = state.userStickers.find(s => s.url === content);
+                            const stickerName = sticker?.name || '表情';
+                            try {
+                                const aiDescription = await recognizeSticker(content, stickerName);
+                                processedContent = `[表情包：${aiDescription} - ${stickerName}]`;
+                            } catch (error) {
+                                processedContent = `[发送了一个表情，意思是: '${stickerName}']`;
+                            }
+                        } else {
+                            const sticker = state.userStickers?.find(s => s.url === content);
+                            processedContent = `[发送了一个表情，意思是: '${sticker?.name || '表情'}']`;
+                        }
+                    }
+                    
+                    // 通过WebSocket发送群消息
+                    await onlineChatManager.sendGroupMessageToServer(groupId, processedContent);
+                    console.log('✅ 群消息已通过WebSocket发送');
+                    
+                    // 保存到本地数据库
+                    const chat = await db.chats.get(chatId);
+                    
+                    if (chat) {
+                        if (!Array.isArray(chat.history)) chat.history = [];
+                        
+                        if (!chat.settings) chat.settings = {};
+                        if (!chat.settings.myAvatar && typeof onlineChatManager !== 'undefined') {
+                            chat.settings.myAvatar = onlineChatManager.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                        }
+                        
+                        const msg = {
+                            role: 'user',
+                            content: processedContent,
+                            timestamp: Date.now(),
+                            senderUserId: onlineChatManager.userId,
+                            senderNickname: onlineChatManager.nickname,
+                            senderAvatar: onlineChatManager.getSafeAvatar()
+                        };
+                        
+                        chat.history.push(msg);
+                        chat.lastMessage = processedContent;
+                        chat.timestamp = Date.now();
+                        
+                        await db.chats.put(chat);
+                        
+                        if (typeof state !== 'undefined' && state && state.chats) {
+                            state.chats[chatId] = chat;
+                        }
+                        if (typeof window.state !== 'undefined' && window.state && window.state.chats) {
+                            window.state.chats[chatId] = chat;
+                        }
+                        
+                        if (typeof window.appendMessage === 'function') {
+                            await window.appendMessage(msg, chat);
+                        } else if (typeof window.renderChatInterface === 'function') {
+                            await window.renderChatInterface(chatId);
+                        }
+                    }
+                    
+                    // 清空输入框
+                    chatInput.value = '';
+                    chatInput.style.height = 'auto';
+                    chatInput.focus();
+                    
+                    if (typeof cancelReplyMode === 'function') {
+                        cancelReplyMode();
+                    }
+                    
+                    if (document.body.classList.contains('chat-actions-expanded')) {
+                        document.body.classList.remove('chat-actions-expanded');
+                    }
+                    
+                    if (typeof window.renderChatListProxy === 'function') {
+                        await window.renderChatListProxy();
+                    }
+                    
+                    console.log('✅ 群消息发送完成');
+                    
+                } catch (error) {
+                    console.error('发送群消息失败:', error);
                     alert('发送失败: ' + error.message);
                 }
             } else {

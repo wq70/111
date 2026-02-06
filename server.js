@@ -61,6 +61,10 @@ const wss = new WebSocket.Server({
 // 结构: { userId: { ws, nickname, avatar, connectedAt } }
 const onlineUsers = new Map();
 
+// 存储群聊信息
+// 结构: { groupId: { name, creatorId, members: [userId...], createdAt } }
+const groups = new Map();
+
 console.log('='.repeat(60));
 console.log('                  真人联机服务器启动中...                  ');
 console.log('='.repeat(60));
@@ -74,14 +78,13 @@ wss.on('connection', (ws, req) => {
     let currentUserId = null; // 当前连接的用户ID
     let heartbeatTimer = null; // 心跳超时计时器
     
-    // 设置心跳超时检测
+    // 设置心跳超时检测（30分钟无任何消息才断开）
     function resetHeartbeat() {
         if (heartbeatTimer) clearTimeout(heartbeatTimer);
-        // 60秒无心跳则断开连接
         heartbeatTimer = setTimeout(() => {
-            console.log(`[超时] 用户心跳超时: ${currentUserId}`);
+            console.log(`[超时] 用户30分钟无活动: ${currentUserId}`);
             ws.terminate();
-        }, 60000);
+        }, 30 * 60 * 1000); // 30分钟
     }
     
     resetHeartbeat();
@@ -126,6 +129,26 @@ wss.on('connection', (ws, req) => {
                     handleSendMessage(ws, data);
                     break;
                 
+                case 'create_group':
+                    handleCreateGroup(ws, data);
+                    break;
+                
+                case 'send_group_message':
+                    handleSendGroupMessage(ws, data);
+                    break;
+                
+                case 'invite_to_group':
+                    handleInviteToGroup(ws, data);
+                    break;
+                
+                case 'leave_group':
+                    handleLeaveGroup(ws, data);
+                    break;
+                
+                case 'sync_group':
+                    handleSyncGroup(ws, data);
+                    break;
+                
                 case 'heartbeat':
                     // 心跳响应
                     sendToClient(ws, { type: 'heartbeat_ack' });
@@ -149,8 +172,15 @@ wss.on('connection', (ws, req) => {
         if (heartbeatTimer) clearTimeout(heartbeatTimer);
         
         if (currentUserId) {
-            onlineUsers.delete(currentUserId);
-            console.log(`[离线] 用户离线: ${currentUserId} (在线: ${onlineUsers.size})`);
+            // 【关键修复】只有当 map 里存的还是当前这个 ws 时才删除
+            // 避免旧连接关闭时误删新连接的记录
+            const existing = onlineUsers.get(currentUserId);
+            if (existing && existing.ws === ws) {
+                onlineUsers.delete(currentUserId);
+                console.log(`[离线] 用户离线: ${currentUserId} (在线: ${onlineUsers.size})`);
+            } else {
+                console.log(`[忽略] 旧连接关闭，用户 ${currentUserId} 已有新连接，不删除`);
+            }
         } else {
             console.log('[断开] 未注册的客户端断开连接');
         }
@@ -200,10 +230,10 @@ wss.on('connection', (ws, req) => {
             const oldUser = onlineUsers.get(userId);
             console.log(`[重连] 用户 ${userId} 正在重新连接，关闭旧连接`);
             
-            // 关闭旧的WebSocket连接
+            // 立即终止旧连接（用terminate而非close，避免等待握手）
             try {
-                if (oldUser.ws && oldUser.ws.readyState === WebSocket.OPEN) {
-                    oldUser.ws.close(1000, '账号在其他地方登录');
+                if (oldUser.ws && oldUser.ws.readyState !== WebSocket.CLOSED) {
+                    oldUser.ws.terminate();
                 }
             } catch (error) {
                 console.error(`[错误] 关闭旧连接失败:`, error);
@@ -388,6 +418,231 @@ wss.on('connection', (ws, req) => {
             });
             console.log(`[消息失败] ${fromUserId} -> ${toUserId} (对方不在线)`);
         }
+    }
+
+    /**
+     * 处理创建群聊
+     */
+    function handleCreateGroup(ws, data) {
+        const { groupId, groupName, creatorId, members } = data;
+        
+        if (!groupId || !groupName || !creatorId || !Array.isArray(members)) {
+            return sendToClient(ws, { type: 'error', message: '创建群聊参数不完整' });
+        }
+        
+        // 存储群信息
+        groups.set(groupId, {
+            name: groupName,
+            creatorId,
+            members: members, // [{ userId, nickname, avatar }]
+            createdAt: Date.now()
+        });
+        
+        console.log(`[创建群聊] ${creatorId} 创建了群 "${groupName}" (${groupId})，成员: ${members.map(m => m.userId).join(', ')}`);
+        
+        // 通知创建者成功
+        sendToClient(ws, {
+            type: 'group_created',
+            groupId,
+            groupName,
+            members
+        });
+        
+        // 通知所有被拉入的成员（排除创建者自己）
+        for (const member of members) {
+            if (member.userId !== creatorId) {
+                const targetUser = onlineUsers.get(member.userId);
+                if (targetUser) {
+                    // 获取创建者信息
+                    const creator = onlineUsers.get(creatorId);
+                    sendToClient(targetUser.ws, {
+                        type: 'group_invite',
+                        groupId,
+                        groupName,
+                        creatorId,
+                        creatorNickname: creator ? creator.nickname : creatorId,
+                        members
+                    });
+                }
+            }
+        }
+    }
+
+    /**
+     * 处理群聊消息
+     */
+    function handleSendGroupMessage(ws, data) {
+        const { groupId, fromUserId, fromNickname, fromAvatar, message, timestamp } = data;
+        
+        if (!groupId || !fromUserId || !message) {
+            return sendToClient(ws, { type: 'error', message: '群消息内容不完整' });
+        }
+        
+        if (message.length > 10000) {
+            return sendToClient(ws, { type: 'error', message: '消息内容过长' });
+        }
+        
+        const group = groups.get(groupId);
+        
+        if (!group) {
+            // 群不在服务器内存中（可能服务器重启过），尝试广播给已知成员
+            // 客户端会在 sync_group 时重新注册群
+            return sendToClient(ws, { type: 'error', message: '群聊不存在，请等待同步完成' });
+        }
+        
+        const msgTimestamp = timestamp || Date.now();
+        let deliveredCount = 0;
+        
+        // 转发给群内所有在线成员（排除发送者）
+        for (const member of group.members) {
+            if (member.userId !== fromUserId) {
+                const targetUser = onlineUsers.get(member.userId);
+                if (targetUser) {
+                    sendToClient(targetUser.ws, {
+                        type: 'receive_group_message',
+                        groupId,
+                        fromUserId,
+                        fromNickname: fromNickname || fromUserId,
+                        fromAvatar: fromAvatar || '',
+                        message,
+                        timestamp: msgTimestamp
+                    });
+                    deliveredCount++;
+                }
+            }
+        }
+        
+        console.log(`[群消息] ${fromUserId} -> 群${groupId} (送达${deliveredCount}/${group.members.length - 1}人)`);
+    }
+
+    /**
+     * 处理邀请成员入群
+     */
+    function handleInviteToGroup(ws, data) {
+        const { groupId, inviterId, newMembers } = data;
+        
+        if (!groupId || !inviterId || !Array.isArray(newMembers)) {
+            return sendToClient(ws, { type: 'error', message: '邀请参数不完整' });
+        }
+        
+        const group = groups.get(groupId);
+        if (!group) {
+            return sendToClient(ws, { type: 'error', message: '群聊不存在' });
+        }
+        
+        // 添加新成员到群
+        for (const newMember of newMembers) {
+            if (!group.members.some(m => m.userId === newMember.userId)) {
+                group.members.push(newMember);
+            }
+        }
+        
+        const inviter = onlineUsers.get(inviterId);
+        const inviterNickname = inviter ? inviter.nickname : inviterId;
+        
+        // 通知群内所有在线成员有新人加入
+        for (const member of group.members) {
+            const targetUser = onlineUsers.get(member.userId);
+            if (targetUser) {
+                sendToClient(targetUser.ws, {
+                    type: 'group_member_joined',
+                    groupId,
+                    newMembers,
+                    inviterNickname,
+                    allMembers: group.members
+                });
+            }
+        }
+        
+        // 通知新成员被邀请入群
+        for (const newMember of newMembers) {
+            const targetUser = onlineUsers.get(newMember.userId);
+            if (targetUser) {
+                sendToClient(targetUser.ws, {
+                    type: 'group_invite',
+                    groupId,
+                    groupName: group.name,
+                    creatorId: group.creatorId,
+                    creatorNickname: inviterNickname,
+                    members: group.members
+                });
+            }
+        }
+        
+        console.log(`[邀请入群] ${inviterId} 邀请 ${newMembers.map(m => m.userId).join(', ')} 加入群 ${groupId}`);
+    }
+
+    /**
+     * 处理退出群聊
+     */
+    function handleLeaveGroup(ws, data) {
+        const { groupId, userId } = data;
+        
+        if (!groupId || !userId) return;
+        
+        const group = groups.get(groupId);
+        if (!group) return;
+        
+        // 从成员列表移除
+        group.members = group.members.filter(m => m.userId !== userId);
+        
+        const leaver = onlineUsers.get(userId);
+        const leaverNickname = leaver ? leaver.nickname : userId;
+        
+        // 如果群里没人了，删除群
+        if (group.members.length === 0) {
+            groups.delete(groupId);
+            console.log(`[群解散] 群 ${groupId} 已无成员，自动解散`);
+            return;
+        }
+        
+        // 通知剩余成员
+        for (const member of group.members) {
+            const targetUser = onlineUsers.get(member.userId);
+            if (targetUser) {
+                sendToClient(targetUser.ws, {
+                    type: 'group_member_left',
+                    groupId,
+                    userId,
+                    leaverNickname,
+                    allMembers: group.members
+                });
+            }
+        }
+        
+        console.log(`[退出群聊] ${userId} 退出了群 ${groupId}`);
+    }
+
+    /**
+     * 处理群同步（客户端重连后重新注册群信息）
+     */
+    function handleSyncGroup(ws, data) {
+        const { groupId, groupName, members, userId } = data;
+        
+        if (!groupId || !groupName || !Array.isArray(members)) return;
+        
+        if (!groups.has(groupId)) {
+            // 服务器没有这个群的记录，重新创建
+            groups.set(groupId, {
+                name: groupName,
+                creatorId: userId || members[0]?.userId,
+                members: members,
+                createdAt: Date.now()
+            });
+            console.log(`[群同步] 重新注册群 "${groupName}" (${groupId})，成员: ${members.map(m => m.userId).join(', ')}`);
+        } else {
+            // 群已存在，更新成员信息
+            const group = groups.get(groupId);
+            // 合并成员（以客户端数据为补充）
+            for (const member of members) {
+                if (!group.members.some(m => m.userId === member.userId)) {
+                    group.members.push(member);
+                }
+            }
+            console.log(`[群同步] 更新群 "${groupName}" (${groupId})，当前成员: ${group.members.map(m => m.userId).join(', ')}`);
+        }
+        
+        sendToClient(ws, { type: 'group_synced', groupId });
     }
 });
 

@@ -24,7 +24,9 @@
   <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-  <script src="update-notification.js?v=0.0.7" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
+  <script src="update-notification.js?v=0.0.8" defer></script>
+  <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
   <script src="sticker-vision.js" defer></script>
@@ -2000,8 +2002,9 @@
                  </div>
                  
                  <!-- GitHub 按钮 -->
-                 <div class="settings-item" style="justify-content: space-around;">
+                 <div class="settings-item" style="justify-content: space-around; flex-wrap: wrap; gap: 6px;">
                     <button id="github-upload-btn" class="settings-mini-btn">☁️ 上传备份</button>
+                    <button id="github-upload-large-btn" class="settings-mini-btn">🚀 大数据备份</button>
                     <button id="github-download-btn" class="settings-mini-btn">📥 恢复备份</button>
                 </div>
             </div>
@@ -2174,6 +2177,12 @@
                 
                 <!-- 我的好友列表 -->
                 <button class="settings-full-btn" id="view-online-friends-btn">我的联机好友</button>
+                
+                <!-- 创建群聊 -->
+                <button class="settings-full-btn" id="create-group-chat-btn" style="color: #007aff;">创建群聊</button>
+                
+                <!-- 清理所有旧数据（解决头像不同步等问题） -->
+                <button class="settings-full-btn" id="clear-online-cache-btn" style="color: #ff9500;"> 清理所有旧数据</button>
                 
                 <!-- 重置联机数据 -->
                 <button class="settings-full-btn" id="reset-online-data-btn" style="color: #ff3b30;">重置联机数据</button>
@@ -2418,7 +2427,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.7</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.8</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -2597,6 +2606,28 @@
             <button class="settings-full-btn" id="check-and-fix-data-btn">数据检查与修复</button>
             <button class="settings-full-btn" id="emergency-reset-appearance-btn" >重置当前外观</button>
             <button class="settings-full-btn" id="factory-reset-btn" > 初始化所有内容 (慎用)</button>
+        </div>
+
+        <!-- 提示词管理 -->
+        <div class="settings-header">提示词管理</div>
+        <div class="settings-section">
+            <div class="settings-item">
+                <label>自定义AI提示词</label>
+                <div class="settings-right">
+                    <button id="open-prompt-manager-btn" class="settings-mini-btn">管理提示词</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-item">
+                <label>持久化存储保护</label>
+                <div class="settings-right">
+                    <button id="check-storage-persistence-btn" class="settings-mini-btn">检查状态</button>
+                </div>
+            </div>
+            <div id="storage-persistence-info" style="display:none; padding: 10px 15px; font-size: 13px; color: #666; line-height: 1.6;">
+            </div>
         </div>
         
         <!-- 底部垫高 -->
@@ -3157,6 +3188,47 @@
       </div>
       </div> <input type="file" id="local-song-upload-input" accept="audio/*" multiple style="display: none;"> <input type="file" id="lrc-upload-input" accept=".lrc" style="display: none;">
     </div>
+    
+    <!-- 提示词管理屏幕 -->
+    <div id="prompt-manager-screen" class="screen ios-settings-screen">
+      <div class="header">
+        <span class="back-btn" onclick="showScreen('api-settings-screen')">‹</span>
+        <span>提示词管理</span>
+        <span style="width: 30px;"></span>
+      </div>
+      
+      <div class="settings-container ios-scroll-container">
+        <!-- 操作按钮区 -->
+        <div class="settings-section">
+          <button id="prompt-export-btn" class="settings-full-btn">导出提示词</button>
+          <button id="prompt-import-btn" class="settings-full-btn">导入提示词</button>
+          <button id="prompt-reset-btn" class="settings-full-btn">重置默认</button>
+        </div>
+        
+        <!-- 场景列表 -->
+        <div id="prompt-scenes-container"></div>
+      </div>
+      
+      <input type="file" id="prompt-import-input" accept=".json" style="display: none;">
+    </div>
+    
+    <!-- 提示词编辑器模态框 -->
+    <div id="prompt-editor-modal" class="modal" style="display: none;">
+      <div class="modal-content" style="max-width: 90%; max-height: 90%; width: 800px;">
+        <div class="modal-header">
+          <h3 id="prompt-editor-title">编辑提示词</h3>
+          <span class="modal-close" onclick="closePromptEditor()">&times;</span>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+          <textarea id="prompt-editor-textarea" style="width: 100%; min-height: 400px; font-family: monospace; font-size: 14px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; resize: vertical;"></textarea>
+          <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: flex-end;">
+            <button onclick="closePromptEditor()" class="form-button form-button-secondary">取消</button>
+            <button onclick="savePromptEdit()" class="form-button">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <div id="wallpaper-screen" class="screen ios-settings-screen">
       <div class="header"> 
         <span class="back-btn" onclick="showScreen('home-screen')">‹</span> 
@@ -3466,12 +3538,39 @@
         </div>
         <hr style="margin: 30px 0; opacity: 0.3;">
         <div class="form-group"> <label for="font-url-input"data-lang-key="fontFileUrlLabel">字体文件URL (.ttf, .otf, .woff等)</label> <input type="text" id="font-url-input" placeholder="https://..../font.ttf"> </div>
+        <div class="form-group">
+          <label>字体大小 <span id="font-size-value">16</span>px</label>
+          <input type="range" id="font-size-slider" min="10" max="28" value="16" step="1" style="width:100%;">
+        </div>
         <div class="form-group"> <label data-lang-key="fontPreviewLabel">实时预览</label>
           <div id="font-preview">
             <p style="font-size: 20px; margin: 0 0 10px 0;">你好世界 Hello World</p>
             <p style="margin: 0;">这是字体预览效果，12345。</p>
           </div>
-        </div> <button class="form-button" id="save-font-btn"data-lang-key="fontSaveAndApply">保存并应用</button> <button class="form-button form-button-secondary" id="reset-font-btn"data-lang-key="fontResetDefault">恢复默认字体</button>
+        </div>
+        <hr style="margin: 30px 0; opacity: 0.3;">
+        <div class="form-group">
+          <label>字体应用范围</label>
+          <div class="font-scope-container">
+            <label class="font-scope-item font-scope-all">
+              <input type="checkbox" id="font-scope-all" checked>
+              <span>全部应用</span>
+            </label>
+            <div id="font-scope-list" class="font-scope-list" style="display:none;">
+              <label class="font-scope-item"><input type="checkbox" data-scope="homeScreen" checked><span>主屏幕</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="qq" checked><span>QQ (聊天)</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="cphone" checked><span>Cphone</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="myphone" checked><span>Myphone</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="worldBook" checked><span>世界书</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="douban" checked><span>豆瓣</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="alipay" checked><span>支付宝</span></label>
+              <label class="font-scope-item"><input type="checkbox" data-scope="settings" checked><span>设置页面</span></label>
+            </div>
+          </div>
+        </div>
+        <button class="form-button" id="save-font-btn"data-lang-key="fontSaveAndApply">保存并应用</button>
+        <button class="form-button form-button-secondary" id="reset-font-scope-btn">按区域恢复默认字体</button>
+        <button class="form-button form-button-secondary" id="reset-font-btn"data-lang-key="fontResetDefault">全部恢复默认字体</button>
       </div>
     </div>
     <div id="contact-picker-screen" class="screen">
@@ -6622,6 +6721,43 @@
             <div style="text-align: center; color: #999; padding: 40px 20px;">
               暂无好友申请
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 创建群聊弹窗 -->
+    <div id="create-group-modal" class="modal">
+      <div class="modal-content" style="height: 75%;">
+        <div class="modal-header">
+          <span>创建群聊</span>
+          <span class="close-btn" onclick="closeCreateGroupModal()">×</span>
+        </div>
+        <div class="modal-body" style="padding: 0;">
+          <div style="padding: 15px;">
+            <input type="text" id="group-name-input" placeholder="输入群名称" 
+                   style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; margin-bottom: 10px;">
+            <div style="font-size: 13px; color: #999; margin-bottom: 10px;">选择要拉入群聊的好友：</div>
+            <div id="create-group-friend-list" style="max-height: 300px; overflow-y: auto;">
+              <!-- JS动态填充 -->
+            </div>
+            <button id="confirm-create-group-btn" class="settings-full-btn" style="margin-top: 15px; background: #007aff; color: white; border: none;"
+                    onclick="onlineChatManager.confirmCreateGroup()">创建群聊</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 群聊信息弹窗 -->
+    <div id="group-info-modal" class="modal">
+      <div class="modal-content" style="height: 65%;">
+        <div class="modal-header">
+          <span>群聊信息</span>
+          <span class="close-btn" onclick="closeGroupInfoModal()">×</span>
+        </div>
+        <div class="modal-body" style="padding: 0;">
+          <div id="group-info-content">
+            <!-- JS动态填充 -->
           </div>
         </div>
       </div>

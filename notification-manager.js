@@ -62,9 +62,13 @@ class NotificationManager {
             return false;
         }
 
-        // 权限为 default，需要请求
-        return await this.requestPermission();
+        // iOS 要求必须在用户手势中请求权限，这里不自动请求
+        // 权限为 default，等待用户手动触发
+        console.log('[通知管理器] 权限为 default，等待用户手势触发请求');
+        this.permissionGranted = false;
+        return false;
     }
+
 
     /**
      * 请求通知权限
@@ -100,7 +104,11 @@ class NotificationManager {
             }
         }
 
-        // 检查权限
+        // 检查权限 — 先重新读取真实权限状态（用户可能已在浏览器弹窗中授权）
+        if (Notification.permission === 'granted') {
+            this.permissionGranted = true;
+        }
+
         if (!this.permissionGranted) {
             console.warn('[通知管理器] 没有通知权限');
             const granted = await this.requestPermission();
