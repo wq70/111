@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.12'; // 当前更新版本号
+    this.currentVersion = '0.0.13'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -18,21 +18,17 @@ class UpdateNotification {
   createNotificationHTML() {
     const updateContent = `
       <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
-      <div class="update-item important-note">强烈建议：安装PWA版本以获得最佳体验</div>
+      <div class="update-item important-note">强烈建议：安装到主屏幕以获得最佳体验</div>
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.修复字体大小无法调节的bug</div>
-      <div class="update-item">2.修复联机无故导致正常发不出去消息的bug</div>
-      <div class="update-item important-note" style="margin-top: 8px;">⚠重要提醒：之前开过联机功能不用的时候一定要关掉！一定要关掉！否则可能会出现bug！</div>
-      <div class="update-divider">历史更新</div>
-      <div class="update-item">1.修复移动端谷歌浏览器语音识别的问题</div>
-      <div class="update-item">2.优化联机，可以显示头像了和聊天记录混乱串来串去的问题、关掉联机还一直有错误提示的问题</div>
-      <div class="update-item">3.新增持久化数据存储</div>
-      <div class="update-item">4.云备份新增流式备份，更适配大数据</div>
-      <div class="update-item">5.字体新增可以选择APP、区域应用。新增可以调节字体大小</div>
-      <div class="update-item">6.修复心声弹窗层级问题</div>
-      <div class="update-item">7.修复IOS系统通知</div>
+      <div class="update-item">1.修复MYphone生成淘宝失败的BUG</div>
+      <div class="update-item tips" style="margin-top: 4px; font-size: 12px;">解释：有生成了但是查看不了的问题的，查手机的把调试层打开，可以看到角色查看了什么，每次查看都是看角色心情的，不一定他会查看全部APP，他想看哪部分看哪部分，想要他看哪一个APP直接和他说就好！</div>
+      <div class="update-item">2.修复NOVEL生图绑定失效的BUG，现在应该重新绑定即可</div>
+      <div class="update-item">3.修复语音电话读取顺序错乱的BUG</div>
+      <div class="update-item">4.尝试修复了一下动态回复错乱的问题，如果有不对一定要告诉我啊，不知道这个修复的效果如何！</div>
+      <div class="update-item">5.新增视频通话反转摄像头</div>
+      <div class="update-item">6.新增导出小手机角色，这样就可以直接转移角色和聊天记录了！</div>
     `;
 
     return `
@@ -40,7 +36,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.7 修复BUG版</div>
+            <div class="update-title">2.8 修复式更新</div>
           </div>
           
           <div class="update-notification-body">
