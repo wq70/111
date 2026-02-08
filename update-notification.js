@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.13'; // 当前更新版本号
+    this.currentVersion = '0.0.15'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -29,6 +29,8 @@ class UpdateNotification {
       <div class="update-item">4.尝试修复了一下动态回复错乱的问题，如果有不对一定要告诉我啊，不知道这个修复的效果如何！</div>
       <div class="update-item">5.新增视频通话反转摄像头</div>
       <div class="update-item">6.新增导出小手机角色，这样就可以直接转移角色和聊天记录了！</div>
+      <div class="update-item">7.新增表格式总结，可以和原来的长期记忆搭配使用，就算中途关掉也没事。仅测试</div>
+      <div class="update-item">8.新增谷歌生图（Google Imagen），支持官方API和第三方中转站，在生图设置中配置即可使用</div>
     `;
 
     return `
@@ -36,7 +38,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.8 修复式更新</div>
+            <div class="update-title">2.8 二次更新</div>
           </div>
           
           <div class="update-notification-body">

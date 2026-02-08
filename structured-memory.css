@@ -1,0 +1,263 @@
+/* ========================================
+   结构化动态记忆系统 - 样式
+   ======================================== */
+
+/* 统计信息栏 */
+.structured-memory-stats {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  padding: 12px 15px;
+  margin-bottom: 12px;
+}
+
+.sm-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+
+.sm-stats-row span {
+  background: var(--bg-secondary, #f5f5f5);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* 分类区块 */
+.sm-section {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.sm-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color, #eee);
+}
+
+.sm-section-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.sm-tag-F { background: #007aff; }
+.sm-tag-E { background: #34c759; }
+.sm-tag-D { background: #ff9500; }
+.sm-tag-P { background: #5856d6; }
+.sm-tag-R { background: #ff2d55; }
+.sm-tag-M { background: #af52de; }
+
+.sm-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  flex: 1;
+}
+
+.sm-section-count {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  background: var(--bg-secondary, #f0f0f0);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 记忆条目 */
+.sm-section-list {
+  padding: 0;
+}
+
+.sm-item-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  gap: 8px;
+}
+
+.sm-item-row:last-child {
+  border-bottom: none;
+}
+
+.sm-item-content {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.sm-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.sm-item-row:hover .sm-item-actions,
+.sm-item-row:active .sm-item-actions {
+  opacity: 1;
+}
+
+.sm-item-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.sm-item-btn:hover {
+  background: var(--bg-secondary, #f0f0f0);
+}
+
+/* Tab 切换 */
+.sm-tab-bar {
+  display: flex;
+  background: var(--card-bg, #fff);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 12px;
+  gap: 2px;
+}
+
+.sm-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary, #666);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: none;
+}
+
+.sm-tab.active {
+  background: var(--accent-color, #007aff);
+  color: #fff;
+}
+
+/* 手动添加弹窗 */
+.sm-add-form {
+  padding: 15px;
+}
+
+.sm-add-form select,
+.sm-add-form input,
+.sm-add-form textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #333);
+  box-sizing: border-box;
+}
+
+.sm-add-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* 暗色模式适配 */
+.dark-mode .structured-memory-stats,
+.dark-mode .sm-section {
+  background: var(--card-bg, #1c1c1e);
+}
+
+.dark-mode .sm-stats-row span {
+  background: var(--bg-secondary, #2c2c2e);
+}
+
+.dark-mode .sm-item-content {
+  color: var(--text-primary, #e5e5e7);
+}
+
+.dark-mode .sm-section-header {
+  border-bottom-color: var(--border-color, #38383a);
+}
+
+.dark-mode .sm-item-row {
+  border-bottom-color: var(--border-color, #38383a);
+}
+
+.dark-mode .sm-tab-bar {
+  background: var(--card-bg, #1c1c1e);
+}
+
+/* 操作工具栏 */
+.sm-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sm-toolbar-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px dashed var(--border-color, #ccc);
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  color: var(--accent-color, #007aff);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sm-toolbar-btn:active {
+  background: var(--bg-secondary, #f0f0f0);
+  transform: scale(0.97);
+}
+
+/* 分类区块头部操作按钮 */
+.sm-section-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.sm-section-action-btn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.sm-section-action-btn:hover {
+  opacity: 1;
+}
+
+/* 暗色模式 */
+.dark-mode .sm-toolbar-btn {
+  background: var(--card-bg, #1c1c1e);
+  border-color: var(--border-color, #38383a);
+}
+
+.dark-mode .sm-toolbar-btn:active {
+  background: var(--bg-secondary, #2c2c2e);
+}

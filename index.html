@@ -6,6 +6,7 @@
   <title>EPhone</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="update-notification.css">
+  <link rel="stylesheet" href="structured-memory.css">
   <link rel="apple-touch-icon" href="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -25,13 +26,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=0.0.13" defer></script>
+  <script src="update-notification.js?v=0.0.15" defer></script>
   <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
   <script src="sticker-vision.js" defer></script>
   <script src="notification-manager.js" defer></script>
   <script src="character-generator.js" defer></script>
+  <script src="structured-memory.js" defer></script>
   <script src="script.js" defer="defer"></script>
   <script src="helper-assistant.js" defer></script>
   
@@ -1851,6 +1853,66 @@
                 </label>
             </div>
             
+            <!-- Google Imagen -->
+            <div class="settings-item">
+                <label>启用 Google Imagen</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="google-imagen-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <!-- Google Imagen 详情 (JS控制显示/隐藏) -->
+            <div id="google-imagen-details" style="display:none; background-color: #f9f9f9; border-top: 0.5px solid #ebedf0;">
+                <div class="settings-item">
+                    <label>API 地址</label>
+                    <div class="settings-right">
+                        <input type="text" id="google-imagen-endpoint" placeholder="https://generativelanguage.googleapis.com" style="width:100%; font-size:12px;">
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label>API Key</label>
+                    <div class="settings-right">
+                        <div style="position:relative; width:100%;">
+                             <input type="password" id="google-imagen-api-key" placeholder="AIzaSy...">
+                             <span id="google-imagen-key-toggle" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); cursor: pointer;">🧐</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label>模型</label>
+                    <div class="settings-right" style="display:flex; gap:6px; align-items:center;">
+                         <select id="google-imagen-model" class="settings-select" style="flex:1;">
+                            <option value="imagen-4.0-generate-001">Imagen 4 Standard</option>
+                            <option value="imagen-4.0-ultra-generate-001">Imagen 4 Ultra</option>
+                            <option value="imagen-4.0-fast-generate-001">Imagen 4 Fast</option>
+                        </select>
+                        <button id="google-imagen-fetch-models-btn" class="settings-mini-btn" style="white-space:nowrap; padding:4px 8px; font-size:12px;">🔄 拉取</button>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label>宽高比</label>
+                    <div class="settings-right">
+                         <select id="google-imagen-aspect-ratio" class="settings-select">
+                            <option value="1:1">1:1 (方形)</option>
+                            <option value="3:4">3:4 (竖屏)</option>
+                            <option value="4:3">4:3 (横屏)</option>
+                            <option value="9:16">9:16 (竖屏宽)</option>
+                            <option value="16:9">16:9 (横屏宽)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-item" style="justify-content: space-around;">
+                    <button id="google-imagen-test-btn" class="settings-mini-btn">🧪 测试生成</button>
+                </div>
+                <div id="google-imagen-test-result" style="display: none; padding: 10px 15px;">
+                    <div style="font-weight: bold; color: #333; margin-bottom: 10px;">生成结果：</div>
+                    <div style="text-align: center; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
+                        <img id="google-imagen-result-image" style="max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
+
             <!-- NovelAI 详情 (JS控制显示/隐藏) -->
             <div id="novelai-details" style="display:none; background-color: #f9f9f9; border-top: 0.5px solid #ebedf0;">
                 <div class="settings-item">
@@ -2427,7 +2489,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.13</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.15</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -3762,7 +3824,17 @@
             </span> 
         </div>
       </div>
-      <div class="list-container" id="memory-list-container" style="padding: 15px; display: flex; flex-direction: column; gap: 15px; background-color: #f0f2f5;"> </div>
+      <div class="list-container" id="memory-list-container" style="padding: 15px; display: flex; flex-direction: column; gap: 15px; background-color: #f0f2f5;">
+        <!-- Tab 切换栏（仅在结构化记忆开启时显示） -->
+        <div id="memory-tab-bar" class="sm-tab-bar" style="display: none;">
+          <button class="sm-tab active" data-tab="original" id="memory-tab-original">原始记忆</button>
+          <button class="sm-tab" data-tab="structured" id="memory-tab-structured">结构化表格</button>
+        </div>
+        <!-- 原始记忆列表 -->
+        <div id="original-memory-list"></div>
+        <!-- 结构化记忆表格 -->
+        <div id="structured-memory-container" style="display: none;"></div>
+      </div>
     </div>
     
     <div id="chat-settings-screen" class="screen">
@@ -4006,6 +4078,15 @@
                  <button id="manual-summary-btn" style="width: 100%; padding: 10px; background: var(--accent-color); color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
                     手动总结
                  </button>
+            </div>
+
+            <!-- 结构化动态记忆开关 -->
+            <div class="settings-item">
+                <div>
+                    <label>结构化动态记忆（测试）</label>
+                    <div class="settings-desc">用压缩表格格式存储记忆，大幅降低token占用</div>
+                </div>
+                <label class="toggle-switch"> <input type="checkbox" id="structured-memory-toggle"> <span class="slider"></span> </label>
             </div>
 
             <!-- 挂载聊天 -->
