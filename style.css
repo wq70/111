@@ -25047,38 +25047,28 @@
            }
 
            /* =============================================
-              第三页布局修复 — 按第一页比例精确对齐
-              第一页: profile-widget≈270px + gap30px + desktop-layout≈175px
-              第三页: (profile+split)≈270px + gap30px + app-grid≈175px
+              第三页布局修复 — 模仿前两页的自然流式布局
+              去掉height:100%和margin-top:auto
+              让内容自然高度刚好合适
               ============================================= */
 
+           /* 去掉height:100%，改为和前两页一样的自然流式布局 */
            #page-3-content {
-               display: flex;
-               flex-direction: column;
-               padding: 20px;
-               padding-top: calc(20px + env(safe-area-inset-top));
-               padding-bottom: 0;
-               height: 100%;
-               box-sizing: border-box;
-               gap: 0;
-               margin-top: 0;
+               height: auto;
+               gap: 10px;
+               padding: 0;
            }
 
-           /* 上半区：两个组件包裹在一起，固定总高度≈270px */
+           /* 第一个组件：个人资料卡片 */
            .p3-profile-widget {
-               height: 145px;
-               min-height: 0;
-               padding: 10px 14px;
+               padding: 10px 12px;
                gap: 12px;
                border-radius: 18px;
-               overflow: hidden;
-               box-sizing: border-box;
-               flex-shrink: 0;
            }
 
            .p3-avatar-wrapper {
-               width: 58px;
-               height: 58px;
+               width: 60px;
+               height: 60px;
                border-width: 2px;
            }
 
@@ -25092,32 +25082,28 @@
            }
 
            .p3-profile-title {
-               font-size: 10px;
+               font-size: 10.5px;
            }
 
            .p3-profile-right {
-               gap: 4px;
+               gap: 5px;
            }
 
            .p3-deco-line {
                font-size: 10px;
-               line-height: 1.3;
+               line-height: 1.35;
            }
 
            .p3-studio-line {
-               font-size: 10.5px;
+               font-size: 11px;
            }
 
            .p3-dotted-divider {
                margin: 0;
            }
 
+           /* 第二三个组件：纪念日+微博 */
            .p3-split-row {
-               height: 115px;
-               min-height: 0;
-               overflow: hidden;
-               flex-shrink: 0;
-               margin-top: 10px;
                gap: 6px;
            }
 
@@ -25135,17 +25121,17 @@
            }
 
            .anni-photo {
-               width: 50px;
-               height: 50px;
+               width: 52px;
+               height: 52px;
                border-width: 2px;
            }
 
            .anni-caption {
-               font-size: 9px;
+               font-size: 9.5px;
            }
 
            .anni-date {
-               font-size: 8px;
+               font-size: 8.5px;
            }
 
            .p3-weibo-widget {
@@ -25154,8 +25140,8 @@
            }
 
            .weibo-avatar {
-               width: 18px;
-               height: 18px;
+               width: 20px;
+               height: 20px;
            }
 
            .weibo-user-info span:first-child {
@@ -25172,14 +25158,12 @@
            }
 
            .weibo-image {
-               width: 42px;
-               height: 48px;
-               margin-top: -12px;
+               width: 44px;
+               height: 50px;
+               margin-top: -14px;
            }
 
-           /* 下半区：APP网格，固定间距 */
+           /* APP网格 */
            #page-3-app-grid {
-               margin-top: 20px;
-               flex-shrink: 0;
                gap: 10px;
            }
