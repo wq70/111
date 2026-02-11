@@ -1,0 +1,249 @@
+/* ========================================
+   连接APP 独立样式
+   ======================================== */
+
+/* 视图切换 */
+.online-app-view {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+.online-app-view.active {
+    display: flex;
+}
+
+/* 连接状态栏 */
+#online-app-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 15px;
+    font-size: 12px;
+    color: var(--text-secondary, #999);
+    background: var(--bg-secondary, #f5f5f5);
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+.status-dot-online {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #34c759;
+    display: inline-block;
+}
+.status-dot-offline {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #999;
+    display: inline-block;
+}
+.status-dot-connecting {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff9500;
+    display: inline-block;
+    animation: blink 1s infinite;
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* 聊天列表 */
+#online-app-chat-list {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.online-app-empty-hint {
+    text-align: center;
+    color: #8a8a8a;
+    margin-top: 80px;
+    padding: 0 20px;
+}
+.online-app-empty-hint p:first-child {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+/* 聊天列表项 - 复制QQ样式 */
+.online-chat-list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 0.5px solid var(--border-color, #f0f0f0);
+    position: relative;
+}
+.online-chat-list-item:active {
+    background: var(--bg-hover, #f0f0f0);
+}
+.online-chat-list-item.pinned {
+    background: var(--bg-pinned, #f8f8f8);
+}
+.online-chat-list-item .avatar-group {
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+.online-chat-list-item .avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+.online-chat-list-item .info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.online-chat-list-item .name-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.online-chat-list-item .name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary, #333);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.online-chat-list-item .group-tag {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #007aff;
+    color: white;
+    flex-shrink: 0;
+}
+.online-chat-list-item .last-msg {
+    font-size: 13px;
+    color: var(--text-secondary, #b5b5b5);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.online-chat-list-item .unread-count-wrapper {
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+.online-chat-list-item .unread-count {
+    display: none;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: #ff3b30;
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 18px;
+}
+
+/* 聊天消息区域 */
+#online-app-messages {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.online-msg {
+    max-width: 75%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.5;
+    word-break: break-word;
+    position: relative;
+}
+.online-msg.user {
+    align-self: flex-end;
+    background: #007aff;
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+.online-msg.friend {
+    align-self: flex-start;
+    background: var(--bg-secondary, #f0f0f0);
+    color: var(--text-primary, #333);
+    border-bottom-left-radius: 4px;
+}
+.online-msg.system {
+    align-self: center;
+    background: transparent;
+    color: #999;
+    font-size: 12px;
+    padding: 4px 10px;
+    max-width: 90%;
+    text-align: center;
+}
+.online-msg .sender-name {
+    font-size: 12px;
+    color: #007aff;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+.online-msg .msg-time {
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+    text-align: right;
+}
+.online-msg.friend .msg-time {
+    color: #999;
+}
+
+/* 输入区域 */
+#online-app-input-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-color, #eee);
+    background: var(--bg-primary, #fff);
+}
+#online-app-chat-input {
+    flex: 1;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 15px;
+    resize: none;
+    max-height: 100px;
+    outline: none;
+    background: var(--bg-secondary, #f5f5f5);
+    color: var(--text-primary, #333);
+    font-family: inherit;
+}
+#online-app-send-btn {
+    background: #007aff;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 18px;
+    font-size: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+#online-app-send-btn:active {
+    opacity: 0.8;
+}
+
+/* 设置页面 */
+.online-app-settings-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0 20px 0;
+}

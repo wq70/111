@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="update-notification.css">
   <link rel="stylesheet" href="structured-memory.css">
+  <link rel="stylesheet" href="online-app.css">
   <link rel="apple-touch-icon" href="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -649,24 +650,123 @@
                       </div>
                   </div> </div> </div> </div>
           <div class="home-screen-page">
-            <div id="page-3-content" style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-content: start;">
-              <div class="desktop-app-icon" onclick="openMyphoneScreen()">
-                <div class="icon-bg-desktop">
-                  <img id="icon-img-myphone" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="Myphone">
+            <div id="page-3-content">
+              <!-- 顶部个人资料小组件 -->
+              <div class="p3-profile-widget">
+                <div class="p3-profile-left">
+                  <div class="p3-name-tag">
+                    <span id="p3-profile-name" class="editable-text">Mochi</span>
+                  </div>
+                  <div class="p3-avatar-wrapper">
+                    <img id="p3-avatar-img" src="https://i.imgur.com/Bv63o3h.jpg" class="editable-image" onclick="handleWidgetImageChange('p3-avatar-img')">
+                  </div>
+                  <div class="p3-profile-title" id="p3-profile-title">
+                    <span class="editable-text">星屑收集者</span>
+                  </div>
                 </div>
-                <span class="label">Myphone</span>
+                <div class="p3-profile-right">
+                  <p class="p3-deco-line" id="p3-deco-line-1">
+                    <span class="editable-text">✦.⁺ 月が静かに歌っている ✦.°</span>
+                  </p>
+                  <div class="p3-dotted-divider"></div>
+                  <p class="p3-deco-line" id="p3-deco-line-2">
+                    <span class="editable-text">今天也要元气满满地摸鱼🐟✨</span>
+                  </p>
+                  <div class="p3-dotted-divider"></div>
+                  <p class="p3-deco-line p3-studio-line" id="p3-deco-line-3">
+                    <span class="editable-text">✕✕ ✕⸳ Neko_lab ⸳✕ ✕✕</span>
+                  </p>
+                </div>
               </div>
-              <div class="desktop-app-icon" onclick="openDrawAndGuess()">
-                <div class="icon-bg-desktop">
-                  <img id="icon-img-draw-guess" src="https://i.postimg.cc/k5dG3B4p/draw-guess-icon.png" alt="你画我猜">
+
+              <!-- 左右分栏：纪念日 + 微博小组件 -->
+              <div class="p3-split-row">
+                <!-- 左：纪念日组件 -->
+                <div class="p3-anniversary-widget">
+                  <div class="anni-day-counter">
+                    <span id="p3-day-count" class="editable-text">128</span>
+                    <span class="anni-day-unit">天</span>
+                  </div>
+                  <div class="anni-photos">
+                    <div class="anni-photo" onclick="handleWidgetImageChange('p3-circle-img-left')">
+                      <img id="p3-circle-img-left" src="https://i.imgur.com/Bv63o3h.jpg" class="editable-image">
+                    </div>
+                    <div class="anni-photo" onclick="handleWidgetImageChange('p3-circle-img-right')">
+                      <img id="p3-circle-img-right" src="https://i.imgur.com/GzPzBfF.jpg" class="editable-image">
+                    </div>
+                  </div>
+                  <div class="anni-caption">
+                    <span id="p3-circle-caption" class="editable-text">with kitty🐱</span>
+                  </div>
+                  <div class="anni-date">
+                    <span id="p3-circle-date" class="editable-text">2025.10.08</span>
+                  </div>
                 </div>
-                <span class="label">你画我猜</span>
+                <!-- 右：微博/小红书帖子组件 -->
+                <div class="p3-weibo-widget">
+                  <div class="weibo-header">
+                    <img id="p3-weibo-avatar" src="https://i.imgur.com/Bv63o3h.jpg" class="weibo-avatar editable-image" onclick="handleWidgetImageChange('p3-weibo-avatar')">
+                    <div class="weibo-user-info">
+                      <span id="p3-weibo-username" class="editable-text">MochiDiary</span>
+                      <span id="p3-weibo-date" class="weibo-post-date editable-text">02-10</span>
+                    </div>
+                  </div>
+                  <div class="weibo-body">
+                    <p id="p3-weibo-text" class="editable-text">· 窗外の「薄暮色Twilight」<br>· 藏在云层背后的金色边<br>· 好多的故事像蒲公英飘散<br>· 闭上眼の刹那..<br>· 都化成了一首温柔的晚安曲.</p>
+                  </div>
+                  <div class="weibo-footer">
+                    <span id="p3-weibo-device" class="editable-text">来自 iPhone 15 Pro Max</span>
+                  </div>
+                  <div class="weibo-image" onclick="handleWidgetImageChange('p3-weibo-img')">
+                    <img id="p3-weibo-img" src="https://i.imgur.com/5A0tE9a.jpeg" class="editable-image">
+                  </div>
+                </div>
               </div>
-              <div class="desktop-app-icon" onclick="openCharacterGeneratorScreen()">
-                <div class="icon-bg-desktop">
-                  <img id="icon-img-char-generator" src="https://i.postimg.cc/nzGYM8qb/character-gen.jpg" alt="角色生成">
+
+              <!-- 第三页 App 网格 - 两行四列 -->
+              <div id="page-3-app-grid">
+                <!-- 第一行 -->
+                <div class="desktop-app-icon" onclick="openMyphoneScreen()">
+                  <div class="icon-bg-desktop">
+                    <img id="icon-img-myphone" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="Myphone">
+                  </div>
+                  <span class="label">Myphone</span>
                 </div>
-                <span class="label">角色生成</span>
+                <div class="desktop-app-icon" onclick="openDrawAndGuess()">
+                  <div class="icon-bg-desktop">
+                    <img id="icon-img-draw-guess" src="https://i.postimg.cc/k5dG3B4p/draw-guess-icon.png" alt="你画我猜">
+                  </div>
+                  <span class="label">你画我猜</span>
+                </div>
+                <div class="desktop-app-icon" onclick="openCharacterGeneratorScreen()">
+                  <div class="icon-bg-desktop">
+                    <img id="icon-img-char-generator" src="https://i.postimg.cc/nzGYM8qb/character-gen.jpg" alt="角色生成">
+                  </div>
+                  <span class="label">角色生成</span>
+                </div>
+                <div class="desktop-app-icon" onclick="showScreen('online-app-screen')">
+                  <div class="icon-bg-desktop">
+                    <img id="icon-img-online-app" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="联机">
+                  </div>
+                  <span class="label">联机</span>
+                </div>
+                <!-- 第二行 - 占位 -->
+                <div class="desktop-app-icon p3-placeholder-app">
+                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
+                  <span class="label">未定</span>
+                </div>
+                <div class="desktop-app-icon p3-placeholder-app">
+                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
+                  <span class="label">未定</span>
+                </div>
+                <div class="desktop-app-icon p3-placeholder-app">
+                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
+                  <span class="label">未定</span>
+                </div>
+                <div class="desktop-app-icon p3-placeholder-app">
+                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
+                  <span class="label">未定</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2130,126 +2230,7 @@
         </div>
 
 
-        <!-- 联机功能 -->
-        <div class="settings-header">
-            联机功能
-            <div style="display: inline-flex; gap: 8px; margin-left: 10px;">
-                <button class="help-icon-btn" onclick="openOnlineHelpLink('explain')" title="功能解释">?</button>
-                <button class="help-icon-btn help-guide-btn" onclick="openOnlineHelpLink('guide')" title="操作指南">指南</button>
-                <button class="help-icon-btn help-guide-btn" onclick="openOnlineHelpLink('deploy')" title="部署教程">部署</button>
-            </div>
-        </div>
-        <div class="settings-section">
-            <!-- 启用联机 -->
-            <div class="settings-item">
-                <label>启用真人联机</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="enable-online-chat-switch">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            
-            <!-- 联机详情 (JS控制显示/隐藏) -->
-            <div id="online-chat-details" style="display:none;">
-                <!-- 提示信息 -->
-                <div class="settings-tip-wrapper">
-                    <div class="settings-tip-content">
-                        联机功能让你与真实好友聊天，消息端到端加密，服务器不存储聊天内容。<br>
-                        连接到同一服务器的用户可以互相添加好友。
-                    </div>
-                </div>
-                
-                <!-- 我的信息 -->
-                <div class="settings-item">
-                    <label>我的ID</label>
-                    <div class="settings-right">
-                        <input type="text" id="my-online-id" placeholder="设置唯一ID" maxlength="20">
-                    </div>
-                </div>
-                
-                <div class="settings-item">
-                    <label>我的昵称</label>
-                    <div class="settings-right">
-                        <input type="text" id="my-online-nickname" placeholder="设置显示昵称" maxlength="20">
-                    </div>
-                </div>
-                
-                <div class="settings-item">
-                    <label>我的头像</label>
-                    <div class="settings-right">
-                        <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
-                            <img id="my-online-avatar-preview" src="https://i.postimg.cc/y8xWzCqj/anime-boy.jpg" 
-                                 style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd;">
-                            <button id="upload-online-avatar-btn" class="settings-mini-btn">上传</button>
-                            <button id="reset-online-avatar-btn" class="settings-mini-btn">重置</button>
-                            <input type="file" id="online-avatar-input" accept="image/*" hidden>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 服务器地址 -->
-                <div class="settings-item">
-                    <label>服务器地址</label>
-                    <div class="settings-right">
-                        <input type="text" id="online-server-url" placeholder="wss://your-server.com/ws">
-                    </div>
-                </div>
-                
-                <!-- 连接状态 -->
-                <div class="settings-item">
-                    <label>连接状态</label>
-                    <div class="settings-right">
-                        <span id="online-connection-status" style="color: #999;">未连接</span>
-                    </div>
-                </div>
-                
-                <!-- 连接/断开按钮 -->
-                <div class="settings-item" style="justify-content: center;">
-                    <button id="connect-online-btn" class="settings-mini-btn" style="width: 45%;">连接服务器</button>
-                    <button id="disconnect-online-btn" class="settings-mini-btn" style="width: 45%; display: none;">断开连接</button>
-                </div>
-                
-                <!-- 好友申请按钮 -->
-                <button class="settings-full-btn" id="open-friend-requests-btn">
-                    好友申请 <span id="friend-request-badge" style="display:none; background: #ff3b30; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 8px;">0</span>
-                </button>
-                
-                <!-- 搜索添加好友 -->
-                <div class="settings-tip-wrapper">
-                    <div class="settings-tip-content">
-                        搜索同一服务器上的用户ID并添加好友
-                    </div>
-                </div>
-                
-                <div class="settings-item">
-                    <label>搜索ID</label>
-                    <div class="settings-right">
-                        <input type="text" id="search-friend-id-input" placeholder="输入好友ID">
-                    </div>
-                </div>
-                
-                <div class="settings-item" style="justify-content: center;">
-                    <button id="search-friend-btn" class="settings-mini-btn" style="width: 100%;">搜索并添加好友</button>
-                </div>
-                
-                <!-- 搜索结果显示区域 -->
-                <div id="friend-search-result" style="display: none; padding: 15px; background: #f9f9f9; border-radius: 8px; margin-top: 10px;">
-                    <!-- JS动态填充 -->
-                </div>
-                
-                <!-- 我的好友列表 -->
-                <button class="settings-full-btn" id="view-online-friends-btn">我的联机好友</button>
-                
-                <!-- 创建群聊 -->
-                <button class="settings-full-btn" id="create-group-chat-btn" style="color: #007aff;">创建群聊</button>
-                
-                <!-- 清理所有旧数据（解决头像不同步等问题） -->
-                <button class="settings-full-btn" id="clear-online-cache-btn" style="color: #ff9500;"> 清理所有旧数据</button>
-                
-                <!-- 重置联机数据 -->
-                <button class="settings-full-btn" id="reset-online-data-btn" style="color: #ff3b30;">重置联机数据</button>
-            </div>
-        </div>
+        <!-- 联机功能已迁移到独立的连接APP -->
 
         <!-- 后台保活 -->
         <div class="settings-header">后台保活</div>
@@ -6787,6 +6768,132 @@
 <audio id="silent-audio-player" loop preload="auto" style="display:none;">
     <source src="https://phoebeboo.github.io/mewoooo/1-second-of-silence.mp3" type="audio/mpeg">
   </audio><audio id="tts-audio-player" style="display:none;"></audio>
+
+    <!-- ========== 连接APP独立界面 ========== -->
+    <div id="online-app-screen" class="screen">
+      <!-- 聊天列表视图 -->
+      <div id="online-app-list-view" class="online-app-view active">
+        <div class="header">
+          <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
+          <span>连接</span>
+          <div class="header-actions">
+            <span class="action-btn" id="online-app-settings-btn" title="联机设置">⚙</span>
+            <span class="action-btn" id="online-app-add-btn" title="添加好友">+</span>
+          </div>
+        </div>
+        <!-- 连接状态栏 -->
+        <div id="online-app-status-bar">
+          <span id="online-app-status-dot" class="status-dot-offline"></span>
+          <span id="online-app-status-text">未连接</span>
+        </div>
+        <div id="online-app-chat-list">
+          <div class="online-app-empty-hint">
+            <p>暂无联机好友</p>
+            <p style="font-size: 12px; color: #999;">点击右上角 ⚙ 配置联机，点击 + 添加好友</p>
+          </div>
+        </div>
+      </div>
+      <!-- 聊天界面视图 -->
+      <div id="online-app-chat-view" class="online-app-view">
+        <div class="header">
+          <span class="back-btn" id="online-app-back-to-list">‹</span>
+          <div id="online-app-chat-title-wrapper">
+            <span id="online-app-chat-title">聊天</span>
+            <div id="online-app-chat-status">
+              <span class="status-dot"></span>
+              <span class="status-text">在线</span>
+            </div>
+          </div>
+          <div class="header-actions">
+            <span class="action-btn" id="online-app-group-info-btn" title="群信息" style="display:none;">ℹ</span>
+          </div>
+        </div>
+        <div id="online-app-messages"></div>
+        <div id="online-app-input-area">
+          <textarea id="online-app-chat-input" placeholder="输入消息..." rows="1"></textarea>
+          <button id="online-app-send-btn">发送</button>
+        </div>
+      </div>
+      <!-- 设置视图 -->
+      <div id="online-app-settings-view" class="online-app-view">
+        <div class="header">
+          <span class="back-btn" id="online-app-settings-back">‹</span>
+          <span>联机设置</span>
+          <span style="width:30px;"></span>
+        </div>
+        <div class="online-app-settings-body">
+          <div class="settings-section">
+            <div class="settings-item">
+              <label>启用真人联机</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="online-app-enable-switch">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+          <div id="online-app-settings-details" style="display:none;">
+            <div class="settings-section">
+              <div class="settings-item">
+                <label>我的ID</label>
+                <div class="settings-right">
+                  <input type="text" id="online-app-my-id" placeholder="设置唯一ID" maxlength="20">
+                </div>
+              </div>
+              <div class="settings-item">
+                <label>我的昵称</label>
+                <div class="settings-right">
+                  <input type="text" id="online-app-my-nickname" placeholder="设置显示昵称" maxlength="20">
+                </div>
+              </div>
+              <div class="settings-item">
+                <label>我的头像</label>
+                <div class="settings-right">
+                  <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                    <img id="online-app-avatar-preview" src="https://i.postimg.cc/y8xWzCqj/anime-boy.jpg"
+                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #ddd;">
+                    <button id="online-app-upload-avatar-btn" class="settings-mini-btn">上传</button>
+                    <button id="online-app-reset-avatar-btn" class="settings-mini-btn">重置</button>
+                    <input type="file" id="online-app-avatar-input" accept="image/*" hidden>
+                  </div>
+                </div>
+              </div>
+              <div class="settings-item">
+                <label>服务器地址</label>
+                <div class="settings-right">
+                  <input type="text" id="online-app-server-url" placeholder="wss://your-server.com/ws">
+                </div>
+              </div>
+              <div class="settings-item">
+                <label>连接状态</label>
+                <div class="settings-right">
+                  <span id="online-app-conn-status" style="color: #999;">未连接</span>
+                </div>
+              </div>
+              <div class="settings-item" style="justify-content: center;">
+                <button id="online-app-connect-btn" class="settings-mini-btn" style="width: 45%;">连接服务器</button>
+                <button id="online-app-disconnect-btn" class="settings-mini-btn" style="width: 45%; display: none;">断开连接</button>
+              </div>
+              <button class="settings-full-btn" id="online-app-friend-requests-btn">
+                好友申请 <span id="online-app-friend-badge" style="display:none; background: #ff3b30; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 8px;">0</span>
+              </button>
+              <div class="settings-item">
+                <label>搜索ID</label>
+                <div class="settings-right">
+                  <input type="text" id="online-app-search-id" placeholder="输入好友ID">
+                </div>
+              </div>
+              <div class="settings-item" style="justify-content: center;">
+                <button id="online-app-search-btn" class="settings-mini-btn" style="width: 100%;">搜索并添加好友</button>
+              </div>
+              <div id="online-app-search-result" style="display: none; padding: 15px; background: #f9f9f9; border-radius: 8px; margin-top: 10px;"></div>
+              <button class="settings-full-btn" id="online-app-create-group-btn" style="color: #007aff;">创建群聊</button>
+              <button class="settings-full-btn" id="online-app-clear-cache-btn" style="color: #ff9500;">清理所有旧数据</button>
+              <button class="settings-full-btn" id="online-app-reset-btn" style="color: #ff3b30;">重置联机数据</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 联机好友列表弹窗 -->
     <div id="online-friends-modal" class="modal">

@@ -1,5 +1,6 @@
 // ========================================
-// 联机功能管理器
+// 连接APP - 独立联机功能管理器 (完全重写)
+// 不再与QQ聊天系统共享任何数据
 // ========================================
 
 class OnlineChatManager {
@@ -10,9 +11,9 @@ class OnlineChatManager {
         this.avatar = null;
         this.serverUrl = null;
         this.isConnected = false;
-        this.friendRequests = []; // 好友申请列表
-        this.onlineFriends = []; // 联机好友列表
-        this.groupChats = []; // 群聊列表
+        this.friendRequests = [];
+        this.onlineFriends = [];
+        this.groupChats = [];
         this.reconnectTimer = null;
         this.heartbeatTimer = null;
         this.shouldAutoReconnect = false;
@@ -21,507 +22,414 @@ class OnlineChatManager {
         this.heartbeatMissed = 0;
         this.maxHeartbeatMissed = 3;
         this.lastHeartbeatTime = null;
+
+        // 独立的聊天数据存储 (不使用QQ的 state.chats / db.chats)
+        this.chats = {};          // { chatId: { id, name, avatar, lastMessage, timestamp, unread, history[], isGroup, members[] } }
+        this.activeChatId = null; // 当前打开的聊天
     }
 
-    // 等待数据库就绪的辅助函数
-    async waitForDatabase(timeout = 10000) {
-        const startTime = Date.now();
-        
-        // 循环检查数据库是否真正就绪
-        while (Date.now() - startTime < timeout) {
-            // 检查数据库对象和chats表是否存在（注意：此应用不使用独立的messages表）
-            if (window.db && 
-                window.db.chats && 
-                typeof window.db.chats.get === 'function' &&
-                typeof window.db.chats.put === 'function') {
-                console.log('数据库和chats表已就绪');
-                return window.db;
-            }
-            
-            // 如果有 dbReadyPromise 并且还没完成，等待它
-            if (window.dbReadyPromise && !window.dbReady) {
-                try {
-                    await window.dbReadyPromise;
-                    // 等待完成后再检查一次
-                    continue;
-                } catch (err) {
-                    console.error('dbReadyPromise 失败:', err);
-                }
-            }
-            
-            // 等待 50ms 后再检查
-            await new Promise(resolve => setTimeout(resolve, 50));
+    // ==================== 数据持久化 (独立于QQ) ====================
+
+    _getStorageKey(suffix) {
+        return `online-app-${this.userId || 'default'}-${suffix}`;
+    }
+
+    saveChats() {
+        try {
+            const data = JSON.stringify(this.chats);
+            localStorage.setItem(this._getStorageKey('chats'), data);
+        } catch (e) {
+            console.error('保存连接APP聊天数据失败:', e);
         }
-        
-        // 超时后抛出错误
-        throw new Error('数据库初始化超时，请刷新页面重试');
     }
 
-    // 压缩图片的辅助函数
+    loadChats() {
+        try {
+            const data = localStorage.getItem(this._getStorageKey('chats'));
+            if (data) {
+                this.chats = JSON.parse(data);
+            }
+        } catch (e) {
+            console.error('加载连接APP聊天数据失败:', e);
+            this.chats = {};
+        }
+    }
+
+    saveFriendRequests() {
+        try {
+            localStorage.setItem(this._getStorageKey('friend-requests'), JSON.stringify(this.friendRequests));
+        } catch (e) { console.error('保存好友申请失败:', e); }
+    }
+    loadFriendRequests() {
+        try {
+            const data = localStorage.getItem(this._getStorageKey('friend-requests'));
+            if (data) this.friendRequests = JSON.parse(data);
+        } catch (e) { this.friendRequests = []; }
+    }
+    saveOnlineFriends() {
+        try {
+            localStorage.setItem(this._getStorageKey('friends'), JSON.stringify(this.onlineFriends));
+        } catch (e) { console.error('保存好友列表失败:', e); }
+    }
+    loadOnlineFriends() {
+        try {
+            const data = localStorage.getItem(this._getStorageKey('friends'));
+            if (data) this.onlineFriends = JSON.parse(data);
+        } catch (e) { this.onlineFriends = []; }
+    }
+    saveGroupChats() {
+        try {
+            localStorage.setItem(this._getStorageKey('groups'), JSON.stringify(this.groupChats));
+        } catch (e) { console.error('保存群聊列表失败:', e); }
+    }
+    loadGroupChats() {
+        try {
+            const data = localStorage.getItem(this._getStorageKey('groups'));
+            if (data) this.groupChats = JSON.parse(data);
+        } catch (e) { this.groupChats = []; }
+    }
+
+    // ==================== 图片压缩 ====================
+
     async compressImage(file, maxWidth = 200, maxHeight = 200, quality = 0.8) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            
             reader.onload = (e) => {
                 const img = new Image();
-                
                 img.onload = () => {
-                    // 创建canvas进行压缩
                     const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    // 计算缩放比例，保持宽高比
-                    if (width > height) {
-                        if (width > maxWidth) {
-                            height = height * (maxWidth / width);
-                            width = maxWidth;
-                        }
-                    } else {
-                        if (height > maxHeight) {
-                            width = width * (maxHeight / height);
-                            height = maxHeight;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // 转换为base64，使用JPEG格式压缩
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-                    
-                    console.log('图片压缩完成，原始大小:', e.target.result.length, '压缩后大小:', compressedBase64.length);
-                    resolve(compressedBase64);
+                    let w = img.width, h = img.height;
+                    if (w > maxWidth) { h = h * maxWidth / w; w = maxWidth; }
+                    if (h > maxHeight) { w = w * maxHeight / h; h = maxHeight; }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
                 };
-                
-                img.onerror = () => {
-                    reject(new Error('图片加载失败'));
-                };
-                
+                img.onerror = reject;
                 img.src = e.target.result;
             };
-            
-            reader.onerror = () => {
-                reject(new Error('文件读取失败'));
-            };
-            
+            reader.onerror = reject;
             reader.readAsDataURL(file);
         });
     }
 
-    // 【新增】获取安全的头像（检查大小，过大则返回默认头像）
     getSafeAvatar() {
-        let avatarToSend = this.avatar || '';
-        
-        // 如果是 base64 格式，检查大小
-        if (avatarToSend && avatarToSend.startsWith('data:image/')) {
-            const avatarSize = avatarToSend.length;
-            if (avatarSize > 500 * 1024) { // 如果头像超过500KB
-                console.warn('头像太大（' + Math.round(avatarSize/1024) + 'KB），使用默认头像');
-                return 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-            }
+        if (!this.avatar) return 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+        if (this.avatar.startsWith('data:image/') && this.avatar.length > 50000) {
+            return 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
         }
-        
-        return avatarToSend;
+        return this.avatar;
     }
 
+    // ==================== UI初始化 ====================
 
-    // 初始化UI事件监听
     initUI() {
-        // 启用联机开关
-        const enableSwitch = document.getElementById('enable-online-chat-switch');
-        const detailsDiv = document.getElementById('online-chat-details');
-        
+        // 启用开关
+        const enableSwitch = document.getElementById('online-app-enable-switch');
+        const detailsDiv = document.getElementById('online-app-settings-details');
+
         if (enableSwitch) {
             enableSwitch.addEventListener('change', (e) => {
                 detailsDiv.style.display = e.target.checked ? 'block' : 'none';
-                
-                // 【关键修复】关闭开关时，彻底断开连接并停止一切自动重连
                 if (!e.target.checked) {
                     this.shouldAutoReconnect = false;
                     this.reconnectAttempts = 0;
-                    if (this.reconnectTimer) {
-                        clearTimeout(this.reconnectTimer);
-                        this.reconnectTimer = null;
-                    }
-                    if (this.heartbeatTimer) {
-                        clearInterval(this.heartbeatTimer);
-                        this.heartbeatTimer = null;
-                    }
-                    if (this.ws) {
-                        this.isConnected = false;
-                        try { this.ws.close(); } catch(e) {}
-                        this.ws = null;
-                    }
-                    const statusSpan = document.getElementById('online-connection-status');
-                    const connectBtn = document.getElementById('connect-online-btn');
-                    const disconnectBtn = document.getElementById('disconnect-online-btn');
-                    if (statusSpan) { statusSpan.textContent = '未连接'; statusSpan.className = 'disconnected'; }
-                    if (connectBtn) connectBtn.style.display = 'inline-block';
-                    if (disconnectBtn) disconnectBtn.style.display = 'none';
-                    console.log('联机开关已关闭，已彻底断开连接');
-                    
-                    // 【关键】关闭联机时，恢复原始发送按钮，移除拦截器
-                    if (typeof window._restoreOriginalSendBtn === 'function') {
-                        window._restoreOriginalSendBtn();
-                    }
-                } else {
-                    // 【关键】开启联机时，重新初始化消息拦截器
-                    if (typeof window._initOnlineChatIntegration === 'function') {
-                        window._initOnlineChatIntegration();
-                    }
+                    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+                    if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
+                    if (this.ws) { this.isConnected = false; try { this.ws.close(); } catch(e) {} this.ws = null; }
+                    this.updateConnectionUI(false);
                 }
-                
                 this.saveSettings();
             });
         }
 
-        // 上传头像按钮
-        const uploadAvatarBtn = document.getElementById('upload-online-avatar-btn');
-        const resetAvatarBtn = document.getElementById('reset-online-avatar-btn');
-        const avatarInput = document.getElementById('online-avatar-input');
-        const avatarPreview = document.getElementById('my-online-avatar-preview');
-        
-        if (uploadAvatarBtn && avatarInput) {
-            uploadAvatarBtn.addEventListener('click', () => {
-                avatarInput.click();
-            });
-            
+        // 头像上传
+        const uploadBtn = document.getElementById('online-app-upload-avatar-btn');
+        const resetBtn = document.getElementById('online-app-reset-avatar-btn');
+        const avatarInput = document.getElementById('online-app-avatar-input');
+        const avatarPreview = document.getElementById('online-app-avatar-preview');
+
+        if (uploadBtn && avatarInput) {
+            uploadBtn.addEventListener('click', () => avatarInput.click());
             avatarInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     try {
-                        // 压缩图片以减小大小
-                        const compressedBase64 = await this.compressImage(file, 200, 200, 0.8);
-                        this.avatar = compressedBase64;
+                        this.avatar = await this.compressImage(file, 200, 200, 0.8);
                         avatarPreview.src = this.avatar;
                         this.saveSettings();
-                        
-                        // 如果已经连接，需要重新连接以更新头像
                         if (this.isConnected) {
-                            console.log('头像已更新，正在重新注册...');
-                            // 重新发送注册消息更新头像，使用安全的头像
-                            this.send({
-                                type: 'register',
-                                userId: this.userId,
-                                nickname: this.nickname,
-                                avatar: this.getSafeAvatar()
-                            });
+                            this.send({ type: 'register', userId: this.userId, nickname: this.nickname, avatar: this.getSafeAvatar() });
                         }
-                        
-                        console.log('头像上传成功');
-                    } catch (error) {
-                        console.error('头像上传失败:', error);
-                        alert('头像上传失败: ' + error.message);
-                    }
+                    } catch (err) { alert('头像上传失败: ' + err.message); }
                 }
-                // 清空input，允许重复选择同一个文件
                 e.target.value = '';
             });
         }
-        
-        // 重置头像按钮
-        if (resetAvatarBtn) {
-            resetAvatarBtn.addEventListener('click', () => {
-                const defaultAvatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                this.avatar = defaultAvatar;
-                avatarPreview.src = defaultAvatar;
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+                avatarPreview.src = this.avatar;
                 this.saveSettings();
-                
-                // 如果已经连接，重新注册以更新头像
                 if (this.isConnected) {
-                    console.log('头像已重置，正在重新注册...');
-                    this.send({
-                        type: 'register',
-                        userId: this.userId,
-                        nickname: this.nickname,
-                        avatar: this.avatar // 默认头像一定是安全的
-                    });
+                    this.send({ type: 'register', userId: this.userId, nickname: this.nickname, avatar: this.avatar });
                 }
-                
-                console.log('头像已重置为默认头像');
             });
         }
 
-        // 连接服务器按钮
-        const connectBtn = document.getElementById('connect-online-btn');
-        const disconnectBtn = document.getElementById('disconnect-online-btn');
-        
-        if (connectBtn) {
-            connectBtn.addEventListener('click', () => this.connect());
+        // 连接/断开
+        const connectBtn = document.getElementById('online-app-connect-btn');
+        const disconnectBtn = document.getElementById('online-app-disconnect-btn');
+        if (connectBtn) connectBtn.addEventListener('click', () => this.connect());
+        if (disconnectBtn) disconnectBtn.addEventListener('click', () => this.disconnect());
+
+        // 搜索好友
+        const searchBtn = document.getElementById('online-app-search-btn');
+        if (searchBtn) searchBtn.addEventListener('click', () => this.searchFriend());
+
+        // 好友申请
+        const reqBtn = document.getElementById('online-app-friend-requests-btn');
+        if (reqBtn) reqBtn.addEventListener('click', () => this.openFriendRequestsModal());
+
+        // 创建群聊
+        const createGroupBtn = document.getElementById('online-app-create-group-btn');
+        if (createGroupBtn) createGroupBtn.addEventListener('click', () => this.openCreateGroupModal());
+
+        // 清理旧数据
+        const clearBtn = document.getElementById('online-app-clear-cache-btn');
+        if (clearBtn) clearBtn.addEventListener('click', () => this.clearAllOldData());
+
+        // 重置
+        const resetDataBtn = document.getElementById('online-app-reset-btn');
+        if (resetDataBtn) resetDataBtn.addEventListener('click', () => this.resetOnlineData());
+
+        // 设置按钮 (从列表视图进入设置)
+        const settingsBtn = document.getElementById('online-app-settings-btn');
+        if (settingsBtn) settingsBtn.addEventListener('click', () => this.showView('online-app-settings-view'));
+
+        // 设置返回按钮
+        const settingsBack = document.getElementById('online-app-settings-back');
+        if (settingsBack) settingsBack.addEventListener('click', () => this.showView('online-app-list-view'));
+
+        // 添加好友按钮 (快捷入口)
+        const addBtn = document.getElementById('online-app-add-btn');
+        if (addBtn) addBtn.addEventListener('click', () => this.showView('online-app-settings-view'));
+
+        // 聊天界面返回
+        const backToList = document.getElementById('online-app-back-to-list');
+        if (backToList) backToList.addEventListener('click', () => {
+            this.activeChatId = null;
+            this.showView('online-app-list-view');
+        });
+
+        // 发送消息
+        const sendBtn = document.getElementById('online-app-send-btn');
+        const chatInput = document.getElementById('online-app-chat-input');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => this.sendCurrentMessage());
         }
-        
-        if (disconnectBtn) {
-            disconnectBtn.addEventListener('click', () => this.disconnect());
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.sendCurrentMessage();
+                }
+            });
+            // 自动调整高度
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+            });
         }
 
-        // 搜索好友按钮
-        const searchBtn = document.getElementById('search-friend-btn');
-        if (searchBtn) {
-            searchBtn.addEventListener('click', () => this.searchFriend());
-        }
+        // 群信息按钮
+        const groupInfoBtn = document.getElementById('online-app-group-info-btn');
+        if (groupInfoBtn) groupInfoBtn.addEventListener('click', () => {
+            if (this.activeChatId) this.openGroupInfoModal(this.activeChatId);
+        });
 
-        // 好友申请按钮
-        const requestsBtn = document.getElementById('open-friend-requests-btn');
-        if (requestsBtn) {
-            requestsBtn.addEventListener('click', () => this.openFriendRequestsModal());
-        }
-
-        // 查看好友列表按钮
-        const viewFriendsBtn = document.getElementById('view-online-friends-btn');
-        if (viewFriendsBtn) {
-            viewFriendsBtn.addEventListener('click', () => this.openOnlineFriendsModal());
-        }
-
-        // 创建群聊按钮
-        const createGroupBtn = document.getElementById('create-group-chat-btn');
-        if (createGroupBtn) {
-            createGroupBtn.addEventListener('click', () => this.openCreateGroupModal());
-        }
-
-        // 清理所有旧数据按钮
-        const clearOnlineCacheBtn = document.getElementById('clear-online-cache-btn');
-        if (clearOnlineCacheBtn) {
-            clearOnlineCacheBtn.addEventListener('click', () => this.clearAllOldData());
-        }
-
-        // 重置联机数据按钮
-        const resetOnlineDataBtn = document.getElementById('reset-online-data-btn');
-        if (resetOnlineDataBtn) {
-            resetOnlineDataBtn.addEventListener('click', () => this.resetOnlineData());
-        }
-
-        // 加载保存的设置
+        // 加载设置
         this.loadSettings();
-        
-        // 【新增】监听页面可见性变化
         this.setupVisibilityListener();
-        
-        // 【新增】监听页面刷新/关闭事件
         this.setupBeforeUnloadListener();
-        
-        // 【新增】如果之前已连接，自动重连
         this.autoReconnectIfNeeded();
     }
 
-    // 保存设置到localStorage
+    // ==================== 视图切换 ====================
+
+    showView(viewId) {
+        document.querySelectorAll('#online-app-screen .online-app-view').forEach(v => v.classList.remove('active'));
+        const view = document.getElementById(viewId);
+        if (view) view.classList.add('active');
+
+        if (viewId === 'online-app-list-view') {
+            this.renderChatList();
+        }
+    }
+
+    // ==================== 连接状态UI ====================
+
+    updateConnectionUI(connected) {
+        const statusDot = document.getElementById('online-app-status-dot');
+        const statusText = document.getElementById('online-app-status-text');
+        const connStatus = document.getElementById('online-app-conn-status');
+        const connectBtn = document.getElementById('online-app-connect-btn');
+        const disconnectBtn = document.getElementById('online-app-disconnect-btn');
+
+        if (connected) {
+            if (statusDot) { statusDot.className = 'status-dot-online'; }
+            if (statusText) statusText.textContent = '已连接';
+            if (connStatus) { connStatus.textContent = '已连接'; connStatus.style.color = '#34c759'; }
+            if (connectBtn) connectBtn.style.display = 'none';
+            if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+        } else {
+            if (statusDot) { statusDot.className = 'status-dot-offline'; }
+            if (statusText) statusText.textContent = '未连接';
+            if (connStatus) { connStatus.textContent = '未连接'; connStatus.style.color = '#999'; }
+            if (connectBtn) connectBtn.style.display = 'inline-block';
+            if (disconnectBtn) disconnectBtn.style.display = 'none';
+        }
+    }
+
+    updateConnectingUI() {
+        const statusDot = document.getElementById('online-app-status-dot');
+        const statusText = document.getElementById('online-app-status-text');
+        const connStatus = document.getElementById('online-app-conn-status');
+        if (statusDot) statusDot.className = 'status-dot-connecting';
+        if (statusText) statusText.textContent = '连接中...';
+        if (connStatus) { connStatus.textContent = '连接中...'; connStatus.style.color = '#ff9500'; }
+    }
+
+    // ==================== 设置保存/加载 ====================
+
     saveSettings() {
         try {
             const settings = {
-                enabled: document.getElementById('enable-online-chat-switch')?.checked || false,
-                userId: document.getElementById('my-online-id')?.value || '',
-                nickname: document.getElementById('my-online-nickname')?.value || '',
+                enabled: document.getElementById('online-app-enable-switch')?.checked || false,
+                userId: document.getElementById('online-app-my-id')?.value || '',
+                nickname: document.getElementById('online-app-my-nickname')?.value || '',
                 avatar: this.avatar || '',
-                serverUrl: document.getElementById('online-server-url')?.value || '',
-                wasConnected: this.shouldAutoReconnect // 【新增】保存连接状态
+                serverUrl: document.getElementById('online-app-server-url')?.value || '',
+                wasConnected: this.shouldAutoReconnect
             };
-            
-            // 【修复】检查localStorage空间，如果头像太大则不保存头像
-            const settingsStr = JSON.stringify(settings);
-            if (settingsStr.length > 5 * 1024 * 1024) { // 如果超过5MB
-                console.warn('设置数据过大，头像将不被保存到localStorage');
-                settings.avatar = ''; // 清空头像，避免localStorage溢出
-            }
-            
-            localStorage.setItem('ephone-online-settings', JSON.stringify(settings));
-            console.log('联机设置已保存');
-        } catch (error) {
-            console.error('保存联机设置失败:', error);
-            // 如果保存失败（可能是localStorage满了），尝试只保存关键信息
+            const str = JSON.stringify(settings);
+            if (str.length > 5 * 1024 * 1024) settings.avatar = '';
+            localStorage.setItem('online-app-settings', JSON.stringify(settings));
+        } catch (e) {
+            console.error('保存连接APP设置失败:', e);
             try {
-                const minimalSettings = {
-                    enabled: document.getElementById('enable-online-chat-switch')?.checked || false,
-                    userId: document.getElementById('my-online-id')?.value || '',
-                    nickname: document.getElementById('my-online-nickname')?.value || '',
-                    avatar: '', // 不保存头像
-                    serverUrl: document.getElementById('online-server-url')?.value || '',
+                const min = {
+                    enabled: document.getElementById('online-app-enable-switch')?.checked || false,
+                    userId: document.getElementById('online-app-my-id')?.value || '',
+                    nickname: document.getElementById('online-app-my-nickname')?.value || '',
+                    avatar: '',
+                    serverUrl: document.getElementById('online-app-server-url')?.value || '',
                     wasConnected: this.shouldAutoReconnect
                 };
-                localStorage.setItem('ephone-online-settings', JSON.stringify(minimalSettings));
-                console.log('已保存简化版设置（不含头像）');
-            } catch (err) {
-                console.error('保存简化版设置也失败:', err);
-                alert('保存设置失败，可能是浏览器存储空间不足');
-            }
+                localStorage.setItem('online-app-settings', JSON.stringify(min));
+            } catch (err) { console.error('保存简化设置也失败:', err); }
         }
     }
 
-    // 加载设置
     loadSettings() {
-        const saved = localStorage.getItem('ephone-online-settings');
-        if (saved) {
+        const saved = localStorage.getItem('online-app-settings');
+        // 兼容旧版数据迁移
+        const oldSaved = !saved ? localStorage.getItem('ephone-online-settings') : null;
+        const raw = saved || oldSaved;
+
+        if (raw) {
             try {
-                const settings = JSON.parse(saved);
-                
-                const enableSwitch = document.getElementById('enable-online-chat-switch');
-                const detailsDiv = document.getElementById('online-chat-details');
-                const userIdInput = document.getElementById('my-online-id');
-                const nicknameInput = document.getElementById('my-online-nickname');
-                const avatarPreview = document.getElementById('my-online-avatar-preview');
-                const serverUrlInput = document.getElementById('online-server-url');
-                
+                const s = JSON.parse(raw);
+                const enableSwitch = document.getElementById('online-app-enable-switch');
+                const detailsDiv = document.getElementById('online-app-settings-details');
+                const idInput = document.getElementById('online-app-my-id');
+                const nickInput = document.getElementById('online-app-my-nickname');
+                const avatarPreview = document.getElementById('online-app-avatar-preview');
+                const serverInput = document.getElementById('online-app-server-url');
+
                 if (enableSwitch) {
-                    enableSwitch.checked = settings.enabled;
-                    detailsDiv.style.display = settings.enabled ? 'block' : 'none';
+                    enableSwitch.checked = s.enabled;
+                    if (detailsDiv) detailsDiv.style.display = s.enabled ? 'block' : 'none';
                 }
-                
-                // 【优化】如果没有保存的用户ID，使用设备ID作为默认值
-                if (userIdInput) {
-                    if (settings.userId) {
-                        userIdInput.value = settings.userId;
-                        this.userId = settings.userId; // 【修复】先设置userId，确保后续加载好友数据时key正确
-                    } else if (typeof EPHONE_DEVICE_ID !== 'undefined' && EPHONE_DEVICE_ID) {
-                        // 使用设备ID的前12位作为默认ID（去掉连字符）
-                        const defaultId = EPHONE_DEVICE_ID.replace(/-/g, '').substring(0, 12);
-                        userIdInput.value = defaultId;
-                        this.userId = defaultId;
-                        console.log('使用设备ID生成默认用户ID:', defaultId);
-                    } else {
-                        userIdInput.value = '';
-                    }
+                if (idInput) {
+                    idInput.value = s.userId || '';
+                    this.userId = s.userId || null;
                 }
-                if (nicknameInput) nicknameInput.value = settings.nickname || '';
-                if (serverUrlInput) serverUrlInput.value = settings.serverUrl || '';
-                
-                // 【修复】加载头像时进行验证，如果头像无效则使用默认头像
-                if (settings.avatar && avatarPreview) {
-                    try {
-                        // 验证头像是否为有效的URL或base64
-                        if (settings.avatar.startsWith('data:image/') || settings.avatar.startsWith('http')) {
-                            this.avatar = settings.avatar;
-                            avatarPreview.src = settings.avatar;
-                        } else {
-                            // 无效格式，使用默认头像
-                            console.warn('保存的头像格式无效，使用默认头像');
-                            this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                            avatarPreview.src = this.avatar;
-                        }
-                    } catch (error) {
-                        console.error('加载头像失败:', error);
-                        this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                        avatarPreview.src = this.avatar;
-                    }
+                if (nickInput) nickInput.value = s.nickname || '';
+                if (serverInput) serverInput.value = s.serverUrl || '';
+
+                if (s.avatar && (s.avatar.startsWith('data:image/') || s.avatar.startsWith('http'))) {
+                    this.avatar = s.avatar;
+                    if (avatarPreview) avatarPreview.src = s.avatar;
                 } else {
-                    // 没有保存的头像，使用默认头像
                     this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                    if (avatarPreview) {
-                        avatarPreview.src = this.avatar;
-                    }
+                    if (avatarPreview) avatarPreview.src = this.avatar;
                 }
-                
-                // 【新增】恢复连接状态标记
-                if (settings.wasConnected) {
-                    this.shouldAutoReconnect = true;
+
+                if (s.wasConnected) this.shouldAutoReconnect = true;
+
+                // 如果是从旧版迁移，保存到新key
+                if (oldSaved && !saved) {
+                    this.saveSettings();
+                    console.log('已从旧版设置迁移到连接APP');
                 }
-            } catch (error) {
-                console.error('加载联机设置失败:', error);
-                // 设置默认头像
+            } catch (e) {
+                console.error('加载连接APP设置失败:', e);
                 this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                const avatarPreview = document.getElementById('my-online-avatar-preview');
-                if (avatarPreview) {
-                    avatarPreview.src = this.avatar;
-                }
             }
         } else {
-            // 首次使用，设置默认头像和ID
             this.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-            const avatarPreview = document.getElementById('my-online-avatar-preview');
-            if (avatarPreview) {
-                avatarPreview.src = this.avatar;
-            }
-            
-            // 【新增】首次使用时，自动使用设备ID生成默认用户ID
-            const userIdInput = document.getElementById('my-online-id');
-            if (userIdInput && !userIdInput.value && typeof EPHONE_DEVICE_ID !== 'undefined' && EPHONE_DEVICE_ID) {
-                // 使用设备ID的前12位作为默认ID（去掉连字符）
-                const defaultId = EPHONE_DEVICE_ID.replace(/-/g, '').substring(0, 12);
-                userIdInput.value = defaultId;
-                console.log('首次使用，使用设备ID生成默认用户ID:', defaultId);
-            }
+            const avatarPreview = document.getElementById('online-app-avatar-preview');
+            if (avatarPreview) avatarPreview.src = this.avatar;
         }
 
-        // 加载好友申请和好友列表
+        // 加载好友数据和聊天数据
         this.loadFriendRequests();
         this.loadOnlineFriends();
         this.loadGroupChats();
+        this.loadChats();
     }
 
-    // 连接服务器
+    // ==================== WebSocket连接 ====================
+
     async connect() {
-        const userIdInput = document.getElementById('my-online-id');
-        const nicknameInput = document.getElementById('my-online-nickname');
-        const serverUrlInput = document.getElementById('online-server-url');
-        const statusSpan = document.getElementById('online-connection-status');
-        const connectBtn = document.getElementById('connect-online-btn');
-        const disconnectBtn = document.getElementById('disconnect-online-btn');
+        const idInput = document.getElementById('online-app-my-id');
+        const nickInput = document.getElementById('online-app-my-nickname');
+        const serverInput = document.getElementById('online-app-server-url');
 
-        this.userId = userIdInput?.value.trim();
-        this.nickname = nicknameInput?.value.trim();
-        this.serverUrl = serverUrlInput?.value.trim();
+        this.userId = idInput?.value.trim();
+        this.nickname = nickInput?.value.trim();
+        this.serverUrl = serverInput?.value.trim();
 
-        // 验证输入
-        if (!this.userId) {
-            alert('请设置你的ID');
-            return;
-        }
-        if (!this.nickname) {
-            alert('请设置你的昵称');
-            return;
-        }
-        if (!this.serverUrl) {
-            alert('请输入服务器地址');
-            return;
-        }
+        if (!this.userId) { alert('请设置你的ID'); return; }
+        if (!this.nickname) { alert('请设置你的昵称'); return; }
+        if (!this.serverUrl) { alert('请输入服务器地址'); return; }
 
-        // 【修复】userId确认后，重新加载该ID绑定的好友数据
+        // 重新加载该ID绑定的数据
         this.friendRequests = [];
         this.onlineFriends = [];
         this.groupChats = [];
         this.loadFriendRequests();
         this.loadOnlineFriends();
         this.loadGroupChats();
+        this.loadChats();
 
-        // 【修复】如果已有WebSocket连接，先关闭旧连接
+        // 关闭旧连接
         if (this.ws) {
-            console.log('检测到旧连接，先关闭...');
-            try {
-                if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
-                    this.ws.close();
-                }
-            } catch (error) {
-                console.error('关闭旧连接时出错:', error);
-            }
+            try { if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) this.ws.close(); } catch(e) {}
             this.ws = null;
-            // 等待一小段时间确保旧连接完全关闭
-            await new Promise(resolve => setTimeout(resolve, 300));
+            await new Promise(r => setTimeout(r, 300));
         }
 
-        // 更新状态
-        statusSpan.textContent = '连接中...';
-        statusSpan.className = 'connecting';
+        this.updateConnectingUI();
 
         try {
-            // 创建WebSocket连接
             this.ws = new WebSocket(this.serverUrl);
 
             this.ws.onopen = () => {
-                console.log('WebSocket连接已建立');
-                
-                // 【修复】发送注册消息时使用安全的头像
                 const avatarToSend = this.getSafeAvatar();
-                if (avatarToSend !== this.avatar && this.avatar.startsWith('data:image/')) {
-                    alert('您上传的头像过大，暂时使用默认头像连接。建议重新上传更小的图片。');
-                }
-                
-                this.send({
-                    type: 'register',
-                    userId: this.userId,
-                    nickname: this.nickname,
-                    avatar: avatarToSend
-                });
+                this.send({ type: 'register', userId: this.userId, nickname: this.nickname, avatar: avatarToSend });
             };
 
             this.ws.onmessage = (event) => {
@@ -530,2112 +438,982 @@ class OnlineChatManager {
 
             this.ws.onerror = (error) => {
                 console.error('WebSocket错误:', error);
-                statusSpan.textContent = '连接失败';
-                statusSpan.className = 'disconnected';
+                this.updateConnectionUI(false);
                 alert('连接服务器失败，请检查服务器地址');
             };
 
             this.ws.onclose = () => {
-                console.log('WebSocket连接已关闭');
-                
-                const wasConnectedBefore = this.isConnected || this.shouldAutoReconnect;
+                const wasConnected = this.isConnected || this.shouldAutoReconnect;
                 this.isConnected = false;
-                
-                statusSpan.textContent = '未连接';
-                statusSpan.className = 'disconnected';
-                connectBtn.style.display = 'inline-block';
-                disconnectBtn.style.display = 'none';
-                
-                // 停止心跳
-                if (this.heartbeatTimer) {
-                    clearInterval(this.heartbeatTimer);
-                    this.heartbeatTimer = null;
-                }
-                
-                // 【优化】如果应该自动重连（不是主动断开），则尝试重连
-                if (this.shouldAutoReconnect && wasConnectedBefore) {
-                    console.log('检测到连接断开，准备自动重连...');
+                this.updateConnectionUI(false);
+                if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
+                if (this.shouldAutoReconnect && wasConnected) {
                     this.scheduleReconnect();
                 }
             };
-
         } catch (error) {
             console.error('连接失败:', error);
-            statusSpan.textContent = '连接失败';
-            statusSpan.className = 'disconnected';
+            this.updateConnectionUI(false);
             alert('连接失败: ' + error.message);
         }
     }
 
-    // 断开连接
     disconnect() {
-        // 【关键】标记为主动断开，停止自动重连
         this.shouldAutoReconnect = false;
         this.reconnectAttempts = 0;
-        
-        if (this.reconnectTimer) {
-            clearTimeout(this.reconnectTimer);
-            this.reconnectTimer = null;
-        }
-        
-        if (this.ws) {
-            this.isConnected = false;
-            this.ws.close();
-            this.ws = null;
-        }
-        
-        const statusSpan = document.getElementById('online-connection-status');
-        const connectBtn = document.getElementById('connect-online-btn');
-        const disconnectBtn = document.getElementById('disconnect-online-btn');
-        
-        statusSpan.textContent = '未连接';
-        statusSpan.className = 'disconnected';
-        connectBtn.style.display = 'inline-block';
-        disconnectBtn.style.display = 'none';
-        
-        // 保存断开状态
+        if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+        if (this.ws) { this.isConnected = false; this.ws.close(); this.ws = null; }
+        this.updateConnectionUI(false);
         this.saveSettings();
-        
-        console.log('已主动断开连接');
     }
 
-    // 发送消息到服务器
     send(data) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(data));
-        } else {
-            console.error('WebSocket未连接');
         }
     }
 
-    // 处理服务器消息
-    handleMessage(data) {
-        console.log('收到服务器消息:', data);
+    // ==================== 消息处理 ====================
 
+    handleMessage(data) {
         switch (data.type) {
-            case 'register_success':
-                this.onRegisterSuccess();
-                break;
-            
-            case 'register_error':
-                this.onRegisterError(data.error);
-                break;
-            
-            case 'search_result':
-                this.onSearchResult(data);
-                break;
-            
-            case 'friend_request':
-                this.onFriendRequest(data);
-                break;
-            
-            case 'friend_request_accepted':
-                this.onFriendRequestAccepted(data);
-                break;
-            
-            case 'friend_request_rejected':
-                this.onFriendRequestRejected(data);
-                break;
-            
-            case 'receive_message':
-                this.onReceiveMessage(data);
-                break;
-            
-            case 'group_created':
-                this.onGroupCreated(data).catch(err => console.error('处理group_created失败:', err));
-                break;
-            
-            case 'group_invite':
-                this.onGroupInvite(data).catch(err => console.error('处理group_invite失败:', err));
-                break;
-            
-            case 'receive_group_message':
-                this.onReceiveGroupMessage(data).catch(err => console.error('处理receive_group_message失败:', err));
-                break;
-            
-            case 'group_member_joined':
-                this.onGroupMemberJoined(data).catch(err => console.error('处理group_member_joined失败:', err));
-                break;
-            
-            case 'group_member_left':
-                this.onGroupMemberLeft(data).catch(err => console.error('处理group_member_left失败:', err));
-                break;
-            
-            case 'group_synced':
-                console.log('群同步完成:', data.groupId);
-                break;
-            
+            case 'register_success': this.onRegisterSuccess(); break;
+            case 'register_error': this.onRegisterError(data.error); break;
+            case 'search_result': this.onSearchResult(data); break;
+            case 'friend_request': this.onFriendRequest(data); break;
+            case 'friend_request_accepted': this.onFriendRequestAccepted(data); break;
+            case 'friend_request_rejected': this.onFriendRequestRejected(data); break;
+            case 'receive_message': this.onReceiveMessage(data); break;
+            case 'group_created': this.onGroupCreated(data); break;
+            case 'group_invite': this.onGroupInvite(data); break;
+            case 'receive_group_message': this.onReceiveGroupMessage(data); break;
+            case 'group_member_joined': this.onGroupMemberJoined(data); break;
+            case 'group_member_left': this.onGroupMemberLeft(data); break;
+            case 'group_synced': break;
             case 'heartbeat_ack':
-                // 【优化】心跳响应，重置丢失计数
                 this.heartbeatMissed = 0;
                 this.lastHeartbeatTime = Date.now();
                 break;
-            
-            default:
-                console.warn('未知消息类型:', data.type);
+            default: console.warn('未知消息类型:', data.type);
         }
     }
 
-    // 注册成功
     onRegisterSuccess() {
         this.isConnected = true;
         this.shouldAutoReconnect = true;
         this.reconnectAttempts = 0;
         this.heartbeatMissed = 0;
-        
-        const statusSpan = document.getElementById('online-connection-status');
-        const connectBtn = document.getElementById('connect-online-btn');
-        const disconnectBtn = document.getElementById('disconnect-online-btn');
-        
-        statusSpan.textContent = '已连接';
-        statusSpan.className = 'connected';
-        connectBtn.style.display = 'none';
-        disconnectBtn.style.display = 'inline-block';
-        
-        // 启动心跳
+        this.updateConnectionUI(true);
         this.startHeartbeat();
-        
-        // 同步群聊信息到服务器
         this.syncAllGroups();
-        
-        // 保存设置
         this.saveSettings();
-        
-        console.log('成功连接到服务器');
+        this.renderChatList();
     }
 
-    // 注册失败
     onRegisterError(error) {
-        const statusSpan = document.getElementById('online-connection-status');
-        statusSpan.textContent = '连接失败';
-        statusSpan.className = 'disconnected';
-        
-        // 【优化】根据错误类型给出更友好的提示
-        if (error.includes('ID格式不正确')) {
-            alert('注册失败: ' + error + '\n\n提示：ID只能包含字母、数字和下划线，长度3-20位');
-        } else if (error.includes('已被使用')) {
-            // 这种情况理论上不应该再出现，因为服务器已经会自动踢掉旧连接
-            console.warn('收到ID占用错误，但服务器应该已自动处理旧连接');
-            alert('注册失败: ' + error + '\n\n如果这是您自己的ID，请稍等片刻后重试');
-        } else {
-            alert('注册失败: ' + error);
-        }
+        this.updateConnectionUI(false);
+        alert('注册失败: ' + error);
     }
 
-    // 搜索好友
-    async searchFriend() {
-        const searchInput = document.getElementById('search-friend-id-input');
-        const searchId = searchInput?.value.trim();
-        
-        if (!searchId) {
-            alert('请输入要搜索的ID');
-            return;
-        }
-        
-        if (!this.isConnected) {
-            alert('请先连接服务器');
-            return;
-        }
-        
-        if (searchId === this.userId) {
-            alert('不能添加自己为好友');
-            return;
-        }
-        
-        // 发送搜索请求
-        this.send({
-            type: 'search_user',
-            searchId: searchId
-        });
+    // ==================== 好友搜索/申请/接受 ====================
+
+    searchFriend() {
+        const input = document.getElementById('online-app-search-id');
+        const searchId = input?.value.trim();
+        if (!searchId) { alert('请输入要搜索的好友ID'); return; }
+        if (!this.isConnected) { alert('请先连接服务器'); return; }
+        this.send({ type: 'search_user', searchId });
     }
 
-    // 搜索结果
     onSearchResult(data) {
-        const resultDiv = document.getElementById('friend-search-result');
-        
-        if (!data.found) {
+        const resultDiv = document.getElementById('online-app-search-result');
+        if (!resultDiv) return;
+
+        if (data.found) {
+            const u = data.user;
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = `
-                <div class="empty-state">
-                    <div style="font-size: 14px; color: #999;">未找到用户 "${data.searchId}"</div>
-                </div>
-            `;
-            return;
-        }
-        
-        // 检查是否已经是好友
-        const isAlreadyFriend = this.onlineFriends.some(f => f.userId === data.userId);
-        
-        resultDiv.style.display = 'block';
-        resultDiv.innerHTML = `
-            <div class="friend-search-card">
-                <img src="${data.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                     class="friend-search-avatar" alt="头像">
-                <div class="friend-search-info">
-                    <div class="friend-search-nickname">
-                        ${escapeHTML(data.nickname)}
-                        <span class="friend-search-status ${data.online ? 'online' : 'offline'}">
-                            ${data.online ? '在线' : '离线'}
-                        </span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <img src="${u.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold;">${u.nickname}</div>
+                        <div style="font-size:12px;color:#999;">ID: ${u.userId}</div>
                     </div>
-                    <div class="friend-search-id">ID: ${escapeHTML(data.userId)}</div>
-                </div>
-                <div class="friend-search-actions">
-                    ${isAlreadyFriend ? 
-                        '<button class="settings-mini-btn" disabled>已是好友</button>' :
-                        `<button class="settings-mini-btn" onclick="onlineChatManager.sendFriendRequest('${data.userId}', '${escapeHTML(data.nickname)}', '${data.avatar || ''}')">添加好友</button>`
-                    }
-                </div>
-            </div>
-        `;
+                    <button onclick="onlineChatManager.sendFriendRequest('${u.userId}','${u.nickname}','${u.avatar || ''}')" 
+                            style="padding:6px 14px;background:#007aff;color:white;border:none;border-radius:6px;cursor:pointer;">添加</button>
+                </div>`;
+        } else {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div style="text-align:center;color:#999;">未找到该用户</div>';
+        }
     }
 
-    // 发送好友申请
     sendFriendRequest(friendId, friendNickname, friendAvatar) {
-        if (!this.isConnected) {
-            alert('请先连接服务器');
-            return;
-        }
-        
-        // 【修复】使用安全的头像
+        if (!this.isConnected) { alert('未连接到服务器'); return; }
+        if (friendId === this.userId) { alert('不能添加自己为好友'); return; }
+        if (this.onlineFriends.some(f => f.userId === friendId)) { alert('已经是好友了'); return; }
         this.send({
             type: 'friend_request',
-            toUserId: friendId,
             fromUserId: this.userId,
             fromNickname: this.nickname,
-            fromAvatar: this.getSafeAvatar()
+            fromAvatar: this.getSafeAvatar(),
+            toUserId: friendId
         });
-        
-        alert(`已向 ${friendNickname} 发送好友申请`);
-        
-        // 清空搜索结果
-        document.getElementById('friend-search-result').style.display = 'none';
-        document.getElementById('search-friend-id-input').value = '';
+        alert('好友申请已发送');
+        const resultDiv = document.getElementById('online-app-search-result');
+        if (resultDiv) resultDiv.style.display = 'none';
     }
 
-    // 收到好友申请
     onFriendRequest(data) {
-        // 添加到好友申请列表
         this.friendRequests.push({
-            userId: data.fromUserId,
-            nickname: data.fromNickname,
-            avatar: data.fromAvatar,
+            fromUserId: data.fromUserId,
+            fromNickname: data.fromNickname,
+            fromAvatar: data.fromAvatar,
             timestamp: Date.now()
         });
-        
         this.saveFriendRequests();
         this.updateFriendRequestBadge();
-        
-        // 显示通知
-        alert(`${data.fromNickname} 请求添加你为好友`);
+        // 通知
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            try {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: '新的好友申请',
+                    options: { body: `${data.fromNickname} 请求添加你为好友`, tag: 'friend-req-' + Date.now() }
+                });
+            } catch(e) {}
+        }
     }
 
-    // 打开好友申请弹窗
     openFriendRequestsModal() {
         const modal = document.getElementById('friend-requests-modal');
-        const listDiv = document.getElementById('friend-requests-list');
-        
+        const list = document.getElementById('friend-requests-list');
+        if (!modal || !list) return;
+
         if (this.friendRequests.length === 0) {
-            listDiv.innerHTML = `
-                <div class="shugo-empty">
-                    <div style="font-size: 14px; font-weight: bold;">暂无好友申请</div>
-                    <div style="font-size: 12px; margin-top: 5px;">如果有新的申请，会在这里显示哦~</div>
-                </div>
-            `;
+            list.innerHTML = '<div style="text-align:center;color:#999;padding:40px 20px;">暂无好友申请</div>';
         } else {
-            listDiv.innerHTML = this.friendRequests.map((request, index) => `
-                <div class="shugo-list-item">
-                    <div class="shugo-avatar-wrapper">
-                        <img src="${request.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                             class="shugo-avatar" alt="头像">
+            list.innerHTML = this.friendRequests.map((req, i) => `
+                <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #eee;">
+                    <img src="${req.fromAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold;">${req.fromNickname}</div>
+                        <div style="font-size:12px;color:#999;">ID: ${req.fromUserId}</div>
                     </div>
-                    <div class="shugo-info">
-                        <div class="shugo-nickname">${escapeHTML(request.nickname)}</div>
-                        <div class="shugo-id">ID: ${escapeHTML(request.userId)}</div>
-                        <div style="font-size: 11px; color: #aaa; margin-top: 2px;">${this.formatTime(request.timestamp)}</div>
-                    </div>
-                    <div class="shugo-actions">
-                        <button class="shugo-btn shugo-btn-primary" 
-                                onclick="onlineChatManager.acceptFriendRequest(${index})">同意</button>
-                        <button class="shugo-btn shugo-btn-danger" 
-                                onclick="onlineChatManager.rejectFriendRequest(${index})">拒绝</button>
-                    </div>
+                    <button onclick="onlineChatManager.acceptFriendRequest(${i})" style="padding:5px 12px;background:#34c759;color:white;border:none;border-radius:6px;cursor:pointer;">接受</button>
+                    <button onclick="onlineChatManager.rejectFriendRequest(${i})" style="padding:5px 12px;background:#ff3b30;color:white;border:none;border-radius:6px;cursor:pointer;">拒绝</button>
                 </div>
             `).join('');
         }
-        
         modal.classList.add('visible');
     }
 
-    // 同意好友申请
     async acceptFriendRequest(index) {
-        const request = this.friendRequests[index];
-        
-        console.log('开始处理好友申请:', request);
-        
-        // 【修复】使用安全的头像
+        const req = this.friendRequests[index];
+        if (!req) return;
+
+        const friend = {
+            userId: req.fromUserId,
+            nickname: req.fromNickname,
+            avatar: req.fromAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
+        };
+
+        // 添加到好友列表
+        if (!this.onlineFriends.some(f => f.userId === friend.userId)) {
+            this.onlineFriends.push(friend);
+            this.saveOnlineFriends();
+        }
+
+        // 通知服务器
         this.send({
             type: 'accept_friend_request',
-            toUserId: request.userId,
-            fromUserId: this.userId,
-            fromNickname: this.nickname,
-            fromAvatar: this.getSafeAvatar()
+            fromUserId: req.fromUserId,
+            toUserId: this.userId,
+            toNickname: this.nickname,
+            toAvatar: this.getSafeAvatar()
         });
-        
-        // 添加到好友列表
-        this.onlineFriends.push({
-            userId: request.userId,
-            nickname: request.nickname,
-            avatar: request.avatar,
-            online: false
-        });
-        
-        this.saveOnlineFriends();
-        console.log('已添加到联机好友列表');
-        
-        // 【关键】添加到QQ聊天列表
-        try {
-            await this.addToQQChatList(request);
-            console.log('成功添加到QQ聊天列表');
-        } catch (error) {
-            console.error('添加到QQ聊天列表时出错:', error);
-            alert('添加好友成功，但添加到聊天列表失败，请刷新页面后查看');
-        }
-        
-        // 从申请列表中移除
+
+        // 创建聊天 (独立存储)
+        this.addFriendChat(friend);
+
+        // 移除申请
         this.friendRequests.splice(index, 1);
         this.saveFriendRequests();
         this.updateFriendRequestBadge();
-        
-        // 刷新弹窗
-        this.openFriendRequestsModal();
-        
-        alert(`已添加 ${request.nickname} 为好友，可在聊天列表中找到TA！`);
+        this.openFriendRequestsModal(); // 刷新列表
+        this.renderChatList();
     }
 
-    // 添加联机好友到QQ聊天列表
-    async addToQQChatList(friend) {
-        try {
-            // 【修复】等待数据库完全就绪
-            console.log('等待数据库初始化...');
-            const db = await this.waitForDatabase();
-            console.log('数据库已就绪');
-            
-            console.log('尝试添加联机好友到聊天列表:', friend);
-            
-            // 生成唯一的chatId，使用 'online_' 前缀标识联机好友
-            const chatId = `online_${friend.userId}`;
-            console.log('生成的chatId:', chatId);
-            
-            // 创建聊天对象，将头像同步到 settings 中以便聊天界面正确渲染
-            const friendAvatar = friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-            const myAvatar = this.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-            const newChat = {
-                id: chatId,
-                name: friend.nickname,
-                avatar: friendAvatar,
-                lastMessage: '已添加为联机好友',
-                timestamp: Date.now(),
-                unread: 0,
-                unreadCount: 0,
-                isPinned: false,
-                isOnlineFriend: true, // 标记为联机好友
-                onlineUserId: friend.userId, // 保存联机用户ID
-                history: [], // 消息历史
-                settings: {
-                    aiAvatar: friendAvatar,  // 对方头像
-                    myAvatar: myAvatar        // 自己的头像
-                }
-            };
-            
-            // 检查是否已存在
-            const existingChat = await db.chats.get(chatId);
-            if (existingChat) {
-                console.log('该联机好友已在聊天列表中，更新信息');
-                // 确保 settings 对象存在
-                const updatedSettings = existingChat.settings || {};
-                updatedSettings.aiAvatar = friendAvatar;
-                updatedSettings.myAvatar = myAvatar;
-                
-                await db.chats.update(chatId, {
-                    name: friend.nickname,
-                    avatar: friendAvatar,
-                    lastMessage: '已添加为联机好友',
-                    timestamp: Date.now(),
-                    settings: updatedSettings
-                });
-                
-                // 【关键】同步更新 state.chats
-                if (typeof window.state !== 'undefined' && window.state && window.state.chats && window.state.chats[chatId]) {
-                    window.state.chats[chatId].name = friend.nickname;
-                    window.state.chats[chatId].avatar = friendAvatar;
-                    window.state.chats[chatId].lastMessage = '已添加为联机好友';
-                    window.state.chats[chatId].timestamp = Date.now();
-                    if (!window.state.chats[chatId].settings) window.state.chats[chatId].settings = {};
-                    window.state.chats[chatId].settings.aiAvatar = friendAvatar;
-                    window.state.chats[chatId].settings.myAvatar = myAvatar;
-                }
-            } else {
-                console.log('创建新的聊天记录');
-                
-                // 初始化history数组，添加欢迎消息
-                newChat.history = [{
-                    role: 'system',
-                    content: '你们已成为联机好友，现在可以开始聊天了！',
-                    timestamp: Date.now()
-                }];
-                
-                // 保存到数据库
-                await db.chats.add(newChat);
-                console.log('聊天记录创建成功');
-                
-                // 【关键】同步添加到 state.chats
-                if (typeof window.state !== 'undefined' && window.state && window.state.chats) {
-                    window.state.chats[chatId] = newChat;
-                    console.log('已同步到 state.chats');
-                }
-            }
-            
-            console.log(`已将联机好友 ${friend.nickname} 添加到QQ聊天列表`);
-            
-            // 刷新聊天列表显示
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-                console.log('已刷新聊天列表显示');
-            } else {
-                console.warn('renderChatListProxy 函数未找到');
-            }
-        } catch (error) {
-            console.error('添加到QQ聊天列表失败:', error);
-            throw error; // 重新抛出错误以便上层捕获
-        }
-    }
-
-    // 拒绝好友申请
     rejectFriendRequest(index) {
-        const request = this.friendRequests[index];
-        
-        // 发送拒绝消息到服务器
-        this.send({
-            type: 'reject_friend_request',
-            toUserId: request.userId
-        });
-        
-        // 从申请列表中移除
+        const req = this.friendRequests[index];
+        if (!req) return;
+        this.send({ type: 'reject_friend_request', fromUserId: req.fromUserId, toUserId: this.userId });
         this.friendRequests.splice(index, 1);
         this.saveFriendRequests();
         this.updateFriendRequestBadge();
-        
-        // 刷新弹窗
         this.openFriendRequestsModal();
     }
 
-    // 好友申请被接受
     async onFriendRequestAccepted(data) {
-        console.log('收到好友申请被接受的通知:', data);
-        
-        // 添加到好友列表
-        this.onlineFriends.push({
+        const friend = {
             userId: data.fromUserId,
             nickname: data.fromNickname,
-            avatar: data.fromAvatar,
-            online: true
-        });
-        
-        this.saveOnlineFriends();
-        console.log('已添加到联机好友列表');
-        
-        // 【关键】添加到QQ聊天列表
-        try {
-            await this.addToQQChatList({
-                userId: data.fromUserId,
-                nickname: data.fromNickname,
-                avatar: data.fromAvatar
-            });
-            console.log('成功添加到QQ聊天列表');
-        } catch (error) {
-            console.error('添加到QQ聊天列表时出错:', error);
-        }
-        
-        alert(`${data.fromNickname} 接受了你的好友申请，可在聊天列表中找到TA！`);
-    }
-
-    // 好友申请被拒绝
-    onFriendRequestRejected(data) {
-        alert('对方拒绝了你的好友申请');
-    }
-
-    // 打开好友列表弹窗
-    openOnlineFriendsModal() {
-        const modal = document.getElementById('online-friends-modal');
-        const listDiv = document.getElementById('online-friends-list');
-        
-        if (this.onlineFriends.length === 0) {
-            listDiv.innerHTML = `
-                <div class="shugo-empty">
-                    <div style="font-size: 14px; font-weight: bold;">暂无联机好友</div>
-                    <div style="margin-top: 10px; font-size: 13px;">搜索ID添加好友吧</div>
-                </div>
-            `;
-        } else {
-            listDiv.innerHTML = this.onlineFriends.map((friend, index) => `
-                <div class="shugo-list-item">
-                    <div class="shugo-avatar-wrapper">
-                        <img src="${friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                             class="shugo-avatar" alt="头像">
-                        <div class="online-friend-status-dot ${friend.online ? 'online' : 'offline'}" 
-                             style="position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; background-color: ${friend.online ? '#4cd964' : '#999'}; box-shadow: 0 0 5px rgba(0,0,0,0.1);"></div>
-                    </div>
-                    <div class="shugo-info">
-                        <div class="shugo-nickname">${escapeHTML(friend.nickname)}</div>
-                        <div class="shugo-id">ID: ${escapeHTML(friend.userId)}</div>
-                    </div>
-                    <div class="shugo-actions">
-                        <button class="shugo-btn shugo-btn-primary" 
-                                onclick="onlineChatManager.startChatWithFriend('${friend.userId}')">聊天</button>
-                        <button class="shugo-btn shugo-btn-danger" 
-                                onclick="onlineChatManager.deleteFriend(${index})">删除</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        modal.classList.add('visible');
-    }
-
-    // 开始与好友聊天
-    async startChatWithFriend(friendId) {
-        const chatId = `online_${friendId}`;
-        
-        // 关闭弹窗
-        this.closeOnlineFriendsModal();
-        
-        // 跳转到聊天界面
-        if (typeof openChat === 'function') {
-            await openChat(chatId);
-        } else if (typeof window.openChat === 'function') {
-            await window.openChat(chatId);
-        } else {
-            console.error('openChat 函数未定义');
-            alert('无法打开聊天界面');
-        }
-    }
-
-    // 删除好友
-    async deleteFriend(index) {
-        const friend = this.onlineFriends[index];
-        
-        if (confirm(`确定要删除好友 ${friend.nickname} 吗？`)) {
-            const chatId = `online_${friend.userId}`;
-            
-            // 从好友列表删除
-            this.onlineFriends.splice(index, 1);
+            avatar: data.fromAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
+        };
+        if (!this.onlineFriends.some(f => f.userId === friend.userId)) {
+            this.onlineFriends.push(friend);
             this.saveOnlineFriends();
-            
-            // 从QQ聊天列表删除
-            try {
-                // 【修复】等待数据库完全就绪
-                console.log('等待数据库初始化...');
-                const db = await this.waitForDatabase();
-                console.log('数据库已就绪');
-                
-                // 删除聊天记录（消息历史包含在chat对象中，一起删除）
-                await db.chats.delete(chatId);
-                console.log(`已删除聊天记录: ${chatId}`);
-                
-                // 【关键】同步删除 state.chats
-                if (typeof window.state !== 'undefined' && window.state && window.state.chats && window.state.chats[chatId]) {
-                    delete window.state.chats[chatId];
-                    console.log('已从 state.chats 删除');
-                }
-                
-                // 刷新聊天列表
-                if (typeof window.renderChatListProxy === 'function') {
-                    await window.renderChatListProxy();
-                    console.log('已刷新聊天列表');
-                }
-                
-                alert(`已删除好友 ${friend.nickname}`);
-            } catch (error) {
-                console.error('从QQ聊天列表删除失败:', error);
-                alert('删除失败: ' + error.message);
-            }
-            
-            // 刷新好友列表弹窗
-            this.openOnlineFriendsModal();
         }
+        this.addFriendChat(friend);
+        this.renderChatList();
+        alert(`${friend.nickname} 已接受你的好友申请！`);
     }
 
-    // 关闭好友申请弹窗
-    closeFriendRequestsModal() {
-        const modal = document.getElementById('friend-requests-modal');
-        modal.classList.remove('visible');
+    onFriendRequestRejected(data) {
+        alert(`好友申请被拒绝`);
     }
 
-    // 关闭好友列表弹窗
-    closeOnlineFriendsModal() {
-        const modal = document.getElementById('online-friends-modal');
-        modal.classList.remove('visible');
-    }
-
-    // 更新好友申请徽章
     updateFriendRequestBadge() {
-        const badge = document.getElementById('friend-request-badge');
+        const badge = document.getElementById('online-app-friend-badge');
         if (badge) {
             if (this.friendRequests.length > 0) {
                 badge.textContent = this.friendRequests.length;
-                badge.style.display = 'inline-block';
+                badge.style.display = 'inline';
             } else {
                 badge.style.display = 'none';
             }
         }
     }
 
-    // 保存好友申请到localStorage
-    // 【修复】获取当前用户ID绑定的存储key，确保不同ID的数据隔离
-    _getFriendRequestsKey() {
-        const uid = this.userId || document.getElementById('my-online-id')?.value || '';
-        return uid ? `ephone-friend-requests-${uid}` : 'ephone-friend-requests';
-    }
+    // ==================== 独立聊天数据管理 ====================
 
-    _getOnlineFriendsKey() {
-        const uid = this.userId || document.getElementById('my-online-id')?.value || '';
-        return uid ? `ephone-online-friends-${uid}` : 'ephone-online-friends';
-    }
-
-    saveFriendRequests() {
-        localStorage.setItem(this._getFriendRequestsKey(), JSON.stringify(this.friendRequests));
-        // 兼容：清理旧的无ID key
-        if (this.userId) {
-            localStorage.removeItem('ephone-friend-requests');
-        }
-    }
-
-    // 加载好友申请
-    loadFriendRequests() {
-        let saved = localStorage.getItem(this._getFriendRequestsKey());
-        // 兼容：如果新key没有数据，尝试从旧key迁移
-        if (!saved && this.userId) {
-            saved = localStorage.getItem('ephone-friend-requests');
-            if (saved) {
-                localStorage.setItem(this._getFriendRequestsKey(), saved);
-                localStorage.removeItem('ephone-friend-requests');
-                console.log('已将好友申请数据迁移到用户ID绑定的key');
-            }
-        }
-        if (saved) {
-            try {
-                this.friendRequests = JSON.parse(saved);
-                this.updateFriendRequestBadge();
-            } catch (error) {
-                console.error('加载好友申请失败:', error);
-            }
-        }
-    }
-
-    // 保存好友列表到localStorage（绑定用户ID）
-    saveOnlineFriends() {
-        localStorage.setItem(this._getOnlineFriendsKey(), JSON.stringify(this.onlineFriends));
-        // 兼容：清理旧的无ID key
-        if (this.userId) {
-            localStorage.removeItem('ephone-online-friends');
-        }
-    }
-
-    // 加载好友列表（绑定用户ID）
-    loadOnlineFriends() {
-        let saved = localStorage.getItem(this._getOnlineFriendsKey());
-        // 兼容：如果新key没有数据，尝试从旧key迁移
-        if (!saved && this.userId) {
-            saved = localStorage.getItem('ephone-online-friends');
-            if (saved) {
-                localStorage.setItem(this._getOnlineFriendsKey(), saved);
-                localStorage.removeItem('ephone-online-friends');
-                console.log('已将好友列表数据迁移到用户ID绑定的key');
-            }
-        }
-        if (saved) {
-            try {
-                this.onlineFriends = JSON.parse(saved);
-            } catch (error) {
-                console.error('加载好友列表失败:', error);
-            }
-        }
-    }
-
-    // 启动心跳
-    startHeartbeat() {
-        // 清除已有的心跳定时器
-        if (this.heartbeatTimer) {
-            clearInterval(this.heartbeatTimer);
-        }
-        
-        // 每60秒发送一次心跳，仅用于保活，不主动断连
-        this.heartbeatTimer = setInterval(() => {
-            if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.send({ type: 'heartbeat' });
-                console.log('发送心跳包');
-            } else if (this.shouldAutoReconnect && (!this.ws || this.ws.readyState === WebSocket.CLOSED)) {
-                // 连接已断但应该保持，触发重连
-                console.log('检测到连接断开，触发重连');
-                this.scheduleReconnect();
-            }
-        }, 60000); // 每60秒一次，轻量保活
-        
-        // 初始化心跳时间
-        this.lastHeartbeatTime = Date.now();
-    }
-
-    // 计划重连
-    scheduleReconnect() {
-        // 如果不应该自动重连，直接返回
-        if (!this.shouldAutoReconnect) {
-            return;
-        }
-        
-        // 【修复】如果联机开关是关的，不要重连
-        const enableSwitch = document.getElementById('enable-online-chat-switch');
-        if (enableSwitch && !enableSwitch.checked) {
-            this.shouldAutoReconnect = false;
-            console.log('联机开关未开启，停止重连');
-            return;
-        }
-        
-        // 检查是否超过最大重连次数
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.error('已达到最大重连次数');
-            return;
-        }
-        
-        // 清除已有的重连定时器
-        if (this.reconnectTimer) {
-            clearTimeout(this.reconnectTimer);
-        }
-        
-        // 【优化】使用指数退避算法，但最长不超过30秒
-        this.reconnectAttempts++;
-        const delay = Math.min(3000 + this.reconnectAttempts * 2000, 30000);
-        
-        console.log(`${delay/1000}秒后尝试第${this.reconnectAttempts}次重连...`);
-        
-        const statusSpan = document.getElementById('online-connection-status');
-        if (statusSpan) {
-            statusSpan.textContent = `重连中(${this.reconnectAttempts})...`;
-            statusSpan.className = 'connecting';
-        }
-        
-        this.reconnectTimer = setTimeout(() => {
-            console.log(`执行第${this.reconnectAttempts}次重连`);
-            this.connect();
-        }, delay);
-    }
-
-    // 【新增】监听页面可见性变化
-    setupVisibilityListener() {
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                console.log('页面已隐藏（切换到其他应用）');
-            } else {
-                console.log('页面已显示（切换回应用）');
-                
-                // 【修复】如果联机开关是关的，不做任何事
-                const enableSwitch = document.getElementById('enable-online-chat-switch');
-                if (enableSwitch && !enableSwitch.checked) {
-                    return;
-                }
-                
-                // 【优化】只有在连接断开时才重连，避免重复注册
-                if (this.shouldAutoReconnect && !this.isConnected && 
-                    this.ws && this.ws.readyState !== WebSocket.OPEN && 
-                    this.ws.readyState !== WebSocket.CONNECTING) {
-                    console.log('检测到页面重新显示且连接已断开，尝试重新连接...');
-                    this.reconnectAttempts = 0; // 重置重连次数
-                    // 延迟500ms重连，确保旧连接完全关闭
-                    setTimeout(() => {
-                        if (!this.isConnected) {
-                            this.connect();
-                        }
-                    }, 500);
-                } else if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    // 已连接且连接正常，只发送心跳检查健康
-                    console.log('连接正常，发送心跳检查');
-                    this.send({ type: 'heartbeat' });
-                } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-                    console.log('连接正在建立中，无需重连');
-                }
-            }
-        });
-    }
-
-    // 【新增】监听页面刷新/关闭前保存状态
-    setupBeforeUnloadListener() {
-        window.addEventListener('beforeunload', () => {
-            // 保存当前连接状态，以便刷新后自动重连
-            this.saveSettings();
-        });
-    }
-
-    // 【新增】如果之前已连接，自动重连
-    autoReconnectIfNeeded() {
-        // 页面加载完成后，检查是否需要自动重连
-        setTimeout(() => {
-            // 【修复】如果联机开关是关的，不要自动重连
-            const enableSwitch = document.getElementById('enable-online-chat-switch');
-            if (enableSwitch && !enableSwitch.checked) {
-                this.shouldAutoReconnect = false;
-                console.log('联机开关未开启，跳过自动重连');
-                return;
-            }
-            
-            if (this.shouldAutoReconnect && !this.isConnected) {
-                const userIdInput = document.getElementById('my-online-id');
-                const nicknameInput = document.getElementById('my-online-nickname');
-                const serverUrlInput = document.getElementById('online-server-url');
-                
-                // 只有配置完整时才自动重连
-                if (userIdInput?.value && nicknameInput?.value && serverUrlInput?.value) {
-                    console.log('检测到之前已连接，正在自动重连...');
-                    this.connect();
-                }
-            }
-        }, 1000); // 延迟1秒确保页面完全加载
-    }
-
-    // 格式化时间
-    formatTime(timestamp) {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-        
-        if (diff < 60000) {
-            return '刚刚';
-        } else if (diff < 3600000) {
-            return Math.floor(diff / 60000) + '分钟前';
-        } else if (diff < 86400000) {
-            return Math.floor(diff / 3600000) + '小时前';
-        } else {
-            return date.toLocaleDateString();
-        }
-    }
-
-    // 收到消息
-    async onReceiveMessage(data) {
-        console.log('收到联机消息:', data);
-        console.log('消息内容:', {
-            fromUserId: data.fromUserId,
-            message: data.message,
-            timestamp: data.timestamp
-        });
-        
-        const chatId = `online_${data.fromUserId}`;
-        console.log('计算的chatId:', chatId);
-        
-        try {
-            // 【修复】等待数据库完全就绪
-            const db = await this.waitForDatabase();
-            console.log('数据库已就绪，准备保存消息');
-            
-            // 获取或创建聊天对象
-            let chat = await db.chats.get(chatId);
-            console.log('获取到的chat对象:', chat ? '存在' : '不存在');
-            
-            if (!chat) {
-                // 如果聊天不存在，创建一个新的
-                console.warn('收到消息但聊天不存在，创建新聊天');
-                const friend = this.onlineFriends.find(f => f.userId === data.fromUserId);
-                const friendAvatar = friend ? friend.avatar : 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                const myAvatar = this.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                chat = {
-                    id: chatId,
-                    name: friend ? friend.nickname : '联机好友',
-                    avatar: friendAvatar,
-                    lastMessage: data.message,
-                    timestamp: data.timestamp,
-                    unread: 1,
-                    unreadCount: 1,
-                    isPinned: false,
-                    isOnlineFriend: true,
-                    onlineUserId: data.fromUserId,
-                    history: [],
-                    settings: {
-                        aiAvatar: friendAvatar,
-                        myAvatar: myAvatar
-                    }
-                };
-                console.log('创建了新chat对象');
-            } else {
-                // 【修复】对已有聊天，补全 settings 中缺失的头像（兼容旧数据）
-                if (!chat.settings) chat.settings = {};
-                if (!chat.settings.aiAvatar) {
-                    const friend = this.onlineFriends.find(f => f.userId === data.fromUserId);
-                    chat.settings.aiAvatar = chat.avatar || (friend ? friend.avatar : '') || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                    console.log('已补全 settings.aiAvatar:', chat.settings.aiAvatar);
-                }
-                if (!chat.settings.myAvatar) {
-                    chat.settings.myAvatar = this.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-                    console.log('已补全 settings.myAvatar:', chat.settings.myAvatar);
-                }
-            }
-            
-            // 确保 history 数组存在
-            if (!Array.isArray(chat.history)) {
-                chat.history = [];
-                console.log('初始化了history数组');
-            }
-            
-            console.log('添加消息前，history长度:', chat.history.length);
-            
-            // 创建消息对象
-            const msg = {
-                role: 'ai', // 对方发送的消息
-                content: data.message,
-                timestamp: data.timestamp
+    addFriendChat(friend) {
+        const chatId = `online_${friend.userId}`;
+        if (!this.chats[chatId]) {
+            this.chats[chatId] = {
+                id: chatId,
+                name: friend.nickname,
+                avatar: friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg',
+                lastMessage: '已添加为联机好友',
+                timestamp: Date.now(),
+                unread: 0,
+                isGroup: false,
+                history: [{ role: 'system', content: '你们已成为联机好友，现在可以开始聊天了！', timestamp: Date.now() }]
             };
-            
-            // 添加消息到 history
-            chat.history.push(msg);
-            
-            console.log('添加消息后，history长度:', chat.history.length);
-            console.log('最后一条消息:', chat.history[chat.history.length - 1]);
-            
-            // 更新最后消息和未读数
-            chat.lastMessage = data.message;
-            chat.timestamp = data.timestamp;
-            chat.unread = (chat.unread || 0) + 1;
-            
-            // 保存到数据库
-            await db.chats.put(chat);
-            console.log('chat对象已保存到数据库');
-            
-            // 【关键】同步更新 state.chats（尝试多种方式）
-            let stateUpdated = false;
-            
-            if (typeof state !== 'undefined' && state && state.chats) {
-                state.chats[chatId] = chat;
-                console.log('已同步更新 state.chats 中的消息');
-                stateUpdated = true;
-            }
-            
-            if (typeof window.state !== 'undefined' && window.state && window.state.chats) {
-                window.state.chats[chatId] = chat;
-                console.log('已同步更新 window.state.chats 中的消息');
-                stateUpdated = true;
-            }
-            
-            if (!stateUpdated) {
-                console.warn('⚠️ 无法同步到 state.chats - state 不存在');
-            }
-            
-            // 刷新聊天列表
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-                console.log('已刷新聊天列表');
-            } else {
-                console.warn('window.renderChatListProxy 不存在');
-            }
-            
-            // 如果当前正在与该好友聊天，使用 appendMessage 立即显示消息
-            let currentChatId = null;
-            if (typeof state !== 'undefined' && state && state.activeChatId) {
-                currentChatId = state.activeChatId;
-            } else if (typeof window.state !== 'undefined' && window.state && window.state.activeChatId) {
-                currentChatId = window.state.activeChatId;
-            }
-            
-            console.log('当前activeChatId:', currentChatId, '期望:', chatId);
-            
-            if (currentChatId === chatId) {
-                console.log('✅ 当前正在与该好友聊天，准备显示消息');
-                
-                // 使用 appendMessage 立即显示消息，而不是重新渲染整个界面
-                if (typeof window.appendMessage === 'function') {
-                    await window.appendMessage(msg, chat);
-                    console.log('✅ 已通过 appendMessage 显示对方的消息');
-                } else {
-                    console.warn('appendMessage 函数不存在，尝试重新渲染界面');
-                    if (typeof window.renderChatInterface === 'function') {
-                        await window.renderChatInterface(chatId);
-                        console.log('已重新渲染聊天界面');
-                    } else {
-                        console.warn('window.renderChatInterface 不存在');
-                    }
-                }
-            } else {
-                console.log('当前未打开该好友的聊天界面');
-            }
-            
-            // 【修复】发送系统通知 —— 页面在后台或不在当前聊天时弹通知
-            const isPageHidden = document.hidden || document.visibilityState === 'hidden';
-            const isNotInChat = currentChatId !== chatId;
-
-            if (isPageHidden || isNotInChat) {
-                const friend = this.onlineFriends.find(f => f.userId === data.fromUserId);
-                const senderName = friend ? friend.nickname : '联机好友';
-
-                // 优先通过 Service Worker postMessage 发送通知（后台页面 JS 可能被暂停）
-                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    try {
-                        navigator.serviceWorker.controller.postMessage({
-                            type: 'SHOW_NOTIFICATION',
-                            title: senderName,
-                            options: {
-                                body: data.message,
-                                icon: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
-                                badge: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
-                                tag: `chat-${chatId}-${Date.now()}`,
-                                requireInteraction: true,
-                                renotify: true,
-                                silent: false,
-                                vibrate: [200, 100, 200, 100, 200],
-                                data: { type: 'chat', chatId: chatId, timestamp: Date.now() }
-                            }
-                        });
-                        console.log('[通知] 已通过 SW postMessage 发送通知');
-                    } catch (swErr) {
-                        console.warn('[通知] SW postMessage 失败，回退到 notificationManager:', swErr);
-                        if (window.notificationManager) {
-                            window.notificationManager.notifyNewMessage(senderName, data.message, chatId);
-                        }
-                    }
-                } else if (window.notificationManager) {
-                    // 回退：直接用 notificationManager
-                    window.notificationManager.notifyNewMessage(senderName, data.message, chatId);
-                    console.log('[通知] 已通过 notificationManager 发送通知');
-                }
-            }
-
-            console.log('联机消息已保存');
-        } catch (error) {
-            console.error('保存联机消息失败:', error);
-            console.error('错误堆栈:', error.stack);
+        } else {
+            // 更新信息
+            this.chats[chatId].name = friend.nickname;
+            this.chats[chatId].avatar = friend.avatar || this.chats[chatId].avatar;
         }
+        this.saveChats();
     }
 
-    // 发送消息给联机好友
-    async sendMessageToFriend(friendUserId, message) {
+    addGroupChat(groupId, groupName, members) {
+        if (!this.chats[groupId]) {
+            const memberNames = members.map(m => m.nickname).join('、');
+            this.chats[groupId] = {
+                id: groupId,
+                name: groupName,
+                avatar: '',
+                lastMessage: `群聊已创建，成员：${memberNames}`,
+                timestamp: Date.now(),
+                unread: 0,
+                isGroup: true,
+                members: members,
+                history: [{ role: 'system', content: `群聊已创建，成员：${memberNames}`, timestamp: Date.now() }]
+            };
+        } else {
+            this.chats[groupId].name = groupName;
+            this.chats[groupId].members = members;
+        }
+        this.saveChats();
+    }
+
+    // ==================== 收发消息 (独立，不碰QQ) ====================
+
+    sendCurrentMessage() {
+        const input = document.getElementById('online-app-chat-input');
+        const content = input?.value.trim();
+        if (!content || !this.activeChatId) return;
+
         if (!this.isConnected) {
-            throw new Error('未连接到服务器');
+            alert('未连接到服务器，无法发送消息');
+            return;
         }
-        
+
+        const chat = this.chats[this.activeChatId];
+        if (!chat) return;
+
         // 发送到服务器
-        this.send({
-            type: 'send_message',
-            toUserId: friendUserId,
-            fromUserId: this.userId,
-            message: message,
-            timestamp: Date.now()
-        });
-        
-        console.log(`已发送消息给 ${friendUserId}`);
-    }
-
-    // 清理所有旧数据（解决头像不同步等问题）
-    async clearAllOldData() {
-        try {
-            const confirmed = confirm(
-                '🧹 清理所有旧数据\n\n' +
-                '此操作将清除所有联机聊天中缓存的旧头像和旧数据，\n' +
-                '解决头像更换后部分好友看不到新头像的问题。\n\n' +
-                '清理内容：\n' +
-                '• 聊天记录中缓存的旧头像数据\n' +
-                '• 好友列表中缓存的旧头像数据\n' +
-                '• 本地存储中的旧缓存\n\n' +
-                '注意：不会删除好友关系和聊天记录。\n' +
-                '清理后重新连接服务器即可同步最新头像。\n\n' +
-                '确定要清理吗？'
-            );
-
-            if (!confirmed) return;
-
-            console.log('开始清理所有旧数据...');
-
-            const db = await this.waitForDatabase();
-
-            // 1. 清理数据库中所有联机聊天的缓存头像
-            const allChats = await db.chats.toArray();
-            const onlineChats = allChats.filter(chat => chat.id && chat.id.startsWith('online_'));
-            const defaultAvatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-            let cleanedCount = 0;
-
-            for (const chat of onlineChats) {
-                const updates = {
-                    avatar: defaultAvatar
-                };
-                // 重置 settings 中缓存的头像
-                if (chat.settings) {
-                    updates.settings = {
-                        ...chat.settings,
-                        aiAvatar: defaultAvatar,
-                        myAvatar: defaultAvatar
-                    };
-                } else {
-                    updates.settings = {
-                        aiAvatar: defaultAvatar,
-                        myAvatar: defaultAvatar
-                    };
-                }
-                await db.chats.update(chat.id, updates);
-
-                // 同步更新内存中的 state.chats
-                if (window.state && window.state.chats && window.state.chats[chat.id]) {
-                    window.state.chats[chat.id].avatar = defaultAvatar;
-                    if (!window.state.chats[chat.id].settings) window.state.chats[chat.id].settings = {};
-                    window.state.chats[chat.id].settings.aiAvatar = defaultAvatar;
-                    window.state.chats[chat.id].settings.myAvatar = defaultAvatar;
-                }
-                cleanedCount++;
-                console.log(`已清理聊天缓存: ${chat.id}`);
-            }
-
-            // 2. 清理好友列表中缓存的旧头像
-            for (const friend of this.onlineFriends) {
-                friend.avatar = defaultAvatar;
-            }
-            this.saveOnlineFriends();
-            console.log('已清理好友列表中的旧头像缓存');
-
-            // 3. 清理自己的头像缓存，重置为默认
-            this.avatar = defaultAvatar;
-            const avatarPreview = document.getElementById('my-online-avatar-preview');
-            if (avatarPreview) avatarPreview.src = defaultAvatar;
-            this.saveSettings();
-            console.log('已清理自己的头像缓存');
-
-            // 4. 刷新聊天列表
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-                console.log('已刷新聊天列表');
-            }
-
-            // 5. 如果已连接，重新注册以同步最新头像
-            if (this.isConnected) {
-                this.send({
-                    type: 'register',
-                    userId: this.userId,
-                    nickname: this.nickname,
-                    avatar: this.getSafeAvatar()
-                });
-                console.log('已重新注册以同步最新头像');
-            }
-
-            console.log(`清理完成，共清理了 ${cleanedCount} 个聊天的旧数据`);
-            alert(`✅ 旧数据清理完成！\n\n已清理 ${cleanedCount} 个联机聊天的缓存数据。\n\n请重新上传头像并连接服务器，好友将看到你的最新头像。`);
-
-        } catch (error) {
-            console.error('清理旧数据失败:', error);
-            alert('清理失败: ' + error.message);
-        }
-    }
-
-    // 重置联机数据
-    async resetOnlineData() {
-        try {
-            // 第1层：确认对话框
-            const confirmed = confirm(
-                '⚠️ 警告：重置联机数据\n\n' +
-                '此操作将永久删除：\n' +
-                '✗ 所有联机好友\n' +
-                '✗ 所有联机聊天记录\n' +
-                '✗ 用户ID、昵称、头像\n' +
-                '✗ 服务器连接信息\n\n' +
-                '确定要继续吗？'
-            );
-            
-            if (!confirmed) return;
-
-            // 第2层：输入验证
-            const verification = prompt('为确认这不是误操作，请输入"重置联机"四个字：');
-            if (verification !== '重置联机') {
-                alert('验证失败，操作已取消。');
-                return;
-            }
-
-            console.log('开始重置联机数据...');
-
-            // 1. 断开WebSocket连接
-            if (this.isConnected && this.ws) {
-                this.shouldAutoReconnect = false; // 禁止自动重连
-                this.ws.close();
-                this.ws = null;
-                this.isConnected = false;
-                console.log('已断开WebSocket连接');
-            }
-
-            // 2. 清除定时器
-            if (this.reconnectTimer) {
-                clearTimeout(this.reconnectTimer);
-                this.reconnectTimer = null;
-            }
-            if (this.heartbeatTimer) {
-                clearInterval(this.heartbeatTimer);
-                this.heartbeatTimer = null;
-            }
-
-            // 3. 等待数据库就绪
-            const db = await this.waitForDatabase();
-
-            // 4. 删除数据库中所有联机好友的聊天记录
-            const allChats = await db.chats.toArray();
-            const onlineChats = allChats.filter(chat => chat.id && chat.id.startsWith('online_'));
-            
-            for (const chat of onlineChats) {
-                await db.chats.delete(chat.id);
-                console.log(`已删除联机聊天: ${chat.id}`);
-                
-                // 同时从 state.chats 中删除
-                if (window.state && window.state.chats && window.state.chats[chat.id]) {
-                    delete window.state.chats[chat.id];
-                }
-            }
-
-            // 5. 清空内存中的数据
-            this.userId = null;
-            this.nickname = null;
-            this.avatar = null;
-            this.serverUrl = null;
-            this.friendRequests = [];
-            this.onlineFriends = [];
-            this.reconnectAttempts = 0;
-            this.heartbeatMissed = 0;
-
-            // 6. 清除localStorage中的联机设置（包括用户ID绑定的数据）
-            const oldUserId = this.userId;
-            if (oldUserId) {
-                localStorage.removeItem(`ephone-friend-requests-${oldUserId}`);
-                localStorage.removeItem(`ephone-online-friends-${oldUserId}`);
-                console.log(`已清除用户 ${oldUserId} 绑定的好友数据`);
-            }
-            localStorage.removeItem('ephone-online-settings');
-            localStorage.removeItem('ephone-online-friends');
-            localStorage.removeItem('ephone-friend-requests');
-            console.log('已清除localStorage中的联机数据');
-
-            // 7. 重置UI
-            const enableSwitch = document.getElementById('enable-online-chat-switch');
-            const detailsDiv = document.getElementById('online-chat-details');
-            const myOnlineId = document.getElementById('my-online-id');
-            const myOnlineNickname = document.getElementById('my-online-nickname');
-            const myOnlineAvatarPreview = document.getElementById('my-online-avatar-preview');
-            const onlineServerUrl = document.getElementById('online-server-url');
-            const connectionStatus = document.getElementById('online-connection-status');
-            const connectBtn = document.getElementById('connect-online-btn');
-            const disconnectBtn = document.getElementById('disconnect-online-btn');
-
-            if (enableSwitch) enableSwitch.checked = false;
-            if (detailsDiv) detailsDiv.style.display = 'none';
-            if (myOnlineId) myOnlineId.value = '';
-            if (myOnlineNickname) myOnlineNickname.value = '';
-            if (myOnlineAvatarPreview) myOnlineAvatarPreview.src = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
-            if (onlineServerUrl) onlineServerUrl.value = '';
-            if (connectionStatus) {
-                connectionStatus.textContent = '未连接';
-                connectionStatus.style.color = '#999';
-            }
-            if (connectBtn) connectBtn.style.display = 'inline-block';
-            if (disconnectBtn) disconnectBtn.style.display = 'none';
-
-            // 8. 刷新聊天列表
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-                console.log('已刷新聊天列表');
-            }
-
-            console.log('联机数据重置完成');
-            alert('✅ 联机数据已完全重置！');
-
-            // 9. 询问用户是否要注销当前ID并生成新ID
-            const discardId = confirm(
-                '是否要丢弃当前的用户ID？\n\n' +
-                '选择"确定"：注销旧ID，立即生成一个全新的ID\n' +
-                '选择"取消"：保留原来的ID（刷新后会恢复）'
-            );
-
-            if (discardId) {
-                // 生成一个全新的随机ID（12位，字母+数字）
-                const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-                let newId = '';
-                const randomValues = crypto.getRandomValues(new Uint8Array(12));
-                for (let i = 0; i < 12; i++) {
-                    newId += chars[randomValues[i] % chars.length];
-                }
-
-                // 更新内存和UI
-                this.userId = newId;
-                const myOnlineIdAfter = document.getElementById('my-online-id');
-                if (myOnlineIdAfter) myOnlineIdAfter.value = newId;
-
-                // 保存新ID到localStorage，这样刷新后不会回退到设备ID
-                const newSettings = {
-                    enabled: false,
-                    userId: newId,
-                    nickname: '',
-                    avatar: '',
-                    serverUrl: '',
-                    wasConnected: false
-                };
-                localStorage.setItem('ephone-online-settings', JSON.stringify(newSettings));
-
-                console.log(`旧ID已注销，新ID已生成: ${newId}`);
-                alert(`✅ 旧ID已注销！\n\n你的新ID是: ${newId}\n\n请设置昵称和头像后重新连接服务器。`);
-            }
-
-        } catch (error) {
-            console.error('重置联机数据失败:', error);
-            alert('重置失败: ' + error.message);
-        }
-    }
-    // ========================================
-    // 群聊功能
-    // ========================================
-
-    // 获取群聊存储key（绑定用户ID）
-    _getGroupChatsKey() {
-        const uid = this.userId || document.getElementById('my-online-id')?.value || '';
-        return uid ? `ephone-group-chats-${uid}` : 'ephone-group-chats';
-    }
-
-    // 保存群聊列表
-    saveGroupChats() {
-        try {
-            localStorage.setItem(this._getGroupChatsKey(), JSON.stringify(this.groupChats));
-        } catch (error) {
-            console.error('保存群聊列表失败:', error);
-        }
-    }
-
-    // 加载群聊列表
-    loadGroupChats() {
-        let saved = localStorage.getItem(this._getGroupChatsKey());
-        if (!saved && this.userId) {
-            saved = localStorage.getItem('ephone-group-chats');
-            if (saved) {
-                localStorage.setItem(this._getGroupChatsKey(), saved);
-                localStorage.removeItem('ephone-group-chats');
-            }
-        }
-        if (saved) {
-            try {
-                this.groupChats = JSON.parse(saved);
-            } catch (error) {
-                console.error('加载群聊列表失败:', error);
-                this.groupChats = [];
-            }
-        }
-    }
-
-    // 同步所有群聊到服务器（重连后调用）
-    syncAllGroups() {
-        if (!this.isConnected || this.groupChats.length === 0) return;
-        
-        for (const group of this.groupChats) {
+        if (chat.isGroup) {
             this.send({
-                type: 'sync_group',
-                groupId: group.groupId,
-                groupName: group.name,
-                members: group.members,
-                userId: this.userId
+                type: 'send_group_message',
+                groupId: this.activeChatId,
+                fromUserId: this.userId,
+                fromNickname: this.nickname,
+                fromAvatar: this.getSafeAvatar(),
+                message: content,
+                timestamp: Date.now()
+            });
+        } else {
+            const friendUserId = this.activeChatId.replace('online_', '');
+            this.send({
+                type: 'send_message',
+                toUserId: friendUserId,
+                fromUserId: this.userId,
+                message: content,
+                timestamp: Date.now()
             });
         }
-        console.log(`已同步 ${this.groupChats.length} 个群聊到服务器`);
+
+        // 保存到本地
+        const msg = {
+            role: 'user',
+            content: content,
+            timestamp: Date.now()
+        };
+        if (chat.isGroup) {
+            msg.senderUserId = this.userId;
+            msg.senderNickname = this.nickname;
+            msg.senderAvatar = this.getSafeAvatar();
+        }
+
+        if (!Array.isArray(chat.history)) chat.history = [];
+        chat.history.push(msg);
+        chat.lastMessage = content;
+        chat.timestamp = Date.now();
+        this.saveChats();
+
+        // 显示消息
+        this.appendMessageToUI(msg, chat);
+
+        // 清空输入
+        input.value = '';
+        input.style.height = 'auto';
+        input.focus();
     }
 
-    // 打开创建群聊弹窗
+    async onReceiveMessage(data) {
+        const chatId = `online_${data.fromUserId}`;
+        let chat = this.chats[chatId];
+
+        if (!chat) {
+            const friend = this.onlineFriends.find(f => f.userId === data.fromUserId);
+            chat = {
+                id: chatId,
+                name: friend ? friend.nickname : '联机好友',
+                avatar: friend ? friend.avatar : 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg',
+                lastMessage: data.message,
+                timestamp: data.timestamp,
+                unread: 0,
+                isGroup: false,
+                history: []
+            };
+            this.chats[chatId] = chat;
+        }
+
+        if (!Array.isArray(chat.history)) chat.history = [];
+
+        const msg = { role: 'ai', content: data.message, timestamp: data.timestamp };
+        chat.history.push(msg);
+        chat.lastMessage = data.message;
+        chat.timestamp = data.timestamp;
+
+        // 未读计数
+        if (this.activeChatId !== chatId) {
+            chat.unread = (chat.unread || 0) + 1;
+        }
+
+        this.saveChats();
+
+        // 如果当前正在看这个聊天，立即显示
+        if (this.activeChatId === chatId) {
+            this.appendMessageToUI(msg, chat);
+        }
+
+        // 刷新列表
+        this.renderChatList();
+
+        // 通知
+        this.sendNotification(chat.name, data.message, chatId);
+    }
+
+    async onReceiveGroupMessage(data) {
+        const { groupId, fromUserId, fromNickname, fromAvatar, message, timestamp } = data;
+        let chat = this.chats[groupId];
+
+        if (!chat) {
+            const group = this.groupChats.find(g => g.groupId === groupId);
+            chat = {
+                id: groupId,
+                name: group ? group.name : '群聊',
+                avatar: '',
+                lastMessage: `${fromNickname}: ${message}`,
+                timestamp: timestamp,
+                unread: 0,
+                isGroup: true,
+                members: group ? group.members : [],
+                history: []
+            };
+            this.chats[groupId] = chat;
+        }
+
+        if (!Array.isArray(chat.history)) chat.history = [];
+
+        const msg = {
+            role: 'ai',
+            content: message,
+            timestamp: timestamp,
+            senderUserId: fromUserId,
+            senderNickname: fromNickname,
+            senderAvatar: fromAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
+        };
+
+        chat.history.push(msg);
+        chat.lastMessage = `${fromNickname}: ${message}`;
+        chat.timestamp = timestamp;
+
+        if (this.activeChatId !== groupId) {
+            chat.unread = (chat.unread || 0) + 1;
+        }
+
+        this.saveChats();
+
+        if (this.activeChatId === groupId) {
+            this.appendMessageToUI(msg, chat);
+        }
+
+        this.renderChatList();
+        this.sendNotification(chat.name, `${fromNickname}: ${message}`, groupId);
+    }
+
+    sendNotification(title, body, chatId) {
+        const isPageHidden = document.hidden || document.visibilityState === 'hidden';
+        const isNotInChat = this.activeChatId !== chatId;
+        if (!isPageHidden && !isNotInChat) return;
+
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            try {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    title: title,
+                    options: {
+                        body: body,
+                        icon: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
+                        tag: `online-${chatId}-${Date.now()}`,
+                        requireInteraction: true,
+                        renotify: true,
+                        vibrate: [200, 100, 200]
+                    }
+                });
+            } catch(e) {
+                if (window.notificationManager) window.notificationManager.notifyNewMessage(title, body, chatId);
+            }
+        } else if (window.notificationManager) {
+            window.notificationManager.notifyNewMessage(title, body, chatId);
+        }
+    }
+
+    // ==================== 群聊管理 ====================
+
+    syncAllGroups() {
+        this.groupChats.forEach(group => {
+            this.send({ type: 'sync_group', groupId: group.groupId, userId: this.userId });
+        });
+    }
+
     openCreateGroupModal() {
-        if (!this.isConnected) {
-            alert('请先连接服务器');
-            return;
-        }
-        
-        if (this.onlineFriends.length === 0) {
-            alert('你还没有联机好友，先添加好友吧');
-            return;
-        }
-        
         const modal = document.getElementById('create-group-modal');
-        const listDiv = document.getElementById('create-group-friend-list');
+        const list = document.getElementById('create-group-friend-list');
         const nameInput = document.getElementById('group-name-input');
-        
-        if (!modal || !listDiv) return;
-        
-        // 清空群名输入
+        if (!modal || !list) return;
+
         if (nameInput) nameInput.value = '';
-        
-        // 渲染好友多选列表
-        listDiv.innerHTML = this.onlineFriends.map((friend, index) => {
-            // 安全处理头像，避免base64破坏HTML属性
-            const safeAvatar = (friend.avatar || '').replace(/"/g, '&quot;');
-            return `
-            <label class="shugo-list-item" style="cursor: pointer; display: flex; align-items: center; padding: 10px 15px;">
-                <input type="checkbox" class="group-friend-checkbox" value="${friend.userId}" 
-                       data-nickname="${escapeHTML(friend.nickname)}" 
-                       data-avatar-index="${index}"
-                       style="margin-right: 12px; width: 18px; height: 18px; accent-color: #007aff;">
-                <div class="shugo-avatar-wrapper" style="margin-right: 10px;">
-                    <img src="${friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                         class="shugo-avatar" alt="头像" style="width: 40px; height: 40px; border-radius: 50%;">
-                </div>
-                <div class="shugo-info">
-                    <div class="shugo-nickname">${escapeHTML(friend.nickname)}</div>
-                    <div class="shugo-id" style="font-size: 11px; color: #999;">ID: ${escapeHTML(friend.userId)}</div>
-                </div>
-            </label>
-            `;
-        }).join('');
-        
+
+        if (this.onlineFriends.length === 0) {
+            list.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">暂无好友，请先添加好友</div>';
+        } else {
+            list.innerHTML = this.onlineFriends.map(f => `
+                <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;cursor:pointer;">
+                    <input type="checkbox" value="${f.userId}" data-nickname="${f.nickname}" data-avatar="${f.avatar || ''}">
+                    <img src="${f.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                    <span>${f.nickname}</span>
+                </label>
+            `).join('');
+        }
         modal.classList.add('visible');
     }
 
-    // 关闭创建群聊弹窗
-    closeCreateGroupModal() {
+    async confirmCreateGroup() {
+        const nameInput = document.getElementById('group-name-input');
+        const groupName = nameInput?.value.trim();
+        if (!groupName) { alert('请输入群名称'); return; }
+
+        const checkboxes = document.querySelectorAll('#create-group-friend-list input[type="checkbox"]:checked');
+        if (checkboxes.length === 0) { alert('请至少选择一个好友'); return; }
+
+        const members = [{ userId: this.userId, nickname: this.nickname, avatar: this.getSafeAvatar() }];
+        checkboxes.forEach(cb => {
+            members.push({ userId: cb.value, nickname: cb.dataset.nickname, avatar: cb.dataset.avatar || '' });
+        });
+
+        this.send({ type: 'create_group', groupName, members, creatorId: this.userId });
         const modal = document.getElementById('create-group-modal');
         if (modal) modal.classList.remove('visible');
     }
 
-    // 确认创建群聊
-    async confirmCreateGroup() {
-        const nameInput = document.getElementById('group-name-input');
-        const checkboxes = document.querySelectorAll('.group-friend-checkbox:checked');
-        
-        const groupName = nameInput?.value.trim();
-        if (!groupName) {
-            alert('请输入群名称');
-            return;
-        }
-        
-        if (checkboxes.length < 1) {
-            alert('请至少选择1个好友');
-            return;
-        }
-        
-        // 收集选中的成员（头像不发送base64，避免超过WebSocket消息大小限制）
-        const myAvatar = this.getSafeAvatar();
-        const safeSelfAvatar = (myAvatar && myAvatar.startsWith('data:image/')) ? '' : myAvatar;
-        const members = [{
-            userId: this.userId,
-            nickname: this.nickname,
-            avatar: safeSelfAvatar
-        }];
-        
-        checkboxes.forEach(cb => {
-            const friendIndex = parseInt(cb.dataset.avatarIndex);
-            const friend = this.onlineFriends[friendIndex];
-            // 如果头像是base64，不发送给服务器（太大），用空字符串代替
-            let avatar = friend ? friend.avatar : '';
-            if (avatar && avatar.startsWith('data:image/')) {
-                avatar = ''; // 不发送base64头像，避免超过100KB限制
-            }
-            members.push({
-                userId: cb.value,
-                nickname: cb.dataset.nickname,
-                avatar: avatar
-            });
-        });
-        
-        // 生成群ID
-        const groupId = 'group_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
-        
-        // 发送创建群聊请求
-        this.send({
-            type: 'create_group',
-            groupId,
-            groupName,
-            creatorId: this.userId,
-            members
-        });
-        
-        // 关闭弹窗
-        this.closeCreateGroupModal();
-    }
-
-    // 服务器确认群创建成功
     async onGroupCreated(data) {
-        console.log('群聊创建成功:', data);
-        
         const { groupId, groupName, members } = data;
-        
-        // 保存到本地群聊列表
-        this.groupChats.push({
-            groupId,
-            name: groupName,
-            members,
-            createdAt: Date.now()
-        });
+        this.groupChats.push({ groupId, name: groupName, members, createdAt: Date.now() });
         this.saveGroupChats();
-        console.log('群聊已保存到本地列表，当前群数:', this.groupChats.length);
-        
-        // 添加到聊天列表
-        try {
-            await this.addGroupToChatList(groupId, groupName, members);
-            console.log('群聊已添加到聊天列表');
-        } catch (error) {
-            console.error('添加群聊到聊天列表失败:', error);
-        }
-        
+        this.addGroupChat(groupId, groupName, members);
+        this.renderChatList();
         alert(`群聊「${groupName}」创建成功！`);
     }
 
-    // 被邀请入群
     async onGroupInvite(data) {
-        console.log('收到群聊邀请:', data);
-        
         const { groupId, groupName, creatorNickname, members } = data;
-        
-        // 检查是否已在群里
-        if (this.groupChats.some(g => g.groupId === groupId)) {
-            console.log('已在该群中，忽略重复邀请');
-            return;
-        }
-        
-        // 保存到本地群聊列表
-        this.groupChats.push({
-            groupId,
-            name: groupName,
-            members,
-            createdAt: Date.now()
-        });
+        if (this.groupChats.some(g => g.groupId === groupId)) return;
+        this.groupChats.push({ groupId, name: groupName, members, createdAt: Date.now() });
         this.saveGroupChats();
-        
-        // 添加到聊天列表
-        await this.addGroupToChatList(groupId, groupName, members);
-        
+        this.addGroupChat(groupId, groupName, members);
+        this.renderChatList();
         alert(`${creatorNickname} 邀请你加入群聊「${groupName}」`);
     }
 
-    // 添加群聊到聊天列表
-    async addGroupToChatList(groupId, groupName, members) {
-        try {
-            const db = await this.waitForDatabase();
-            const chatId = groupId;
-            
-            // 补全成员头像（服务器传输时可能省略了base64头像）
-            const fullMembers = members.map(m => {
-                if (!m.avatar || m.avatar === '') {
-                    // 尝试从好友列表获取完整头像
-                    if (m.userId === this.userId) {
-                        return { ...m, avatar: this.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg' };
-                    }
-                    const friend = this.onlineFriends.find(f => f.userId === m.userId);
-                    return { ...m, avatar: (friend ? friend.avatar : '') || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg' };
-                }
-                return m;
-            });
-            
-            const existingChat = await db.chats.get(chatId);
-            if (existingChat) {
-                await db.chats.update(chatId, {
-                    name: groupName,
-                    timestamp: Date.now()
-                });
-                if (window.state && window.state.chats && window.state.chats[chatId]) {
-                    window.state.chats[chatId].name = groupName;
-                    window.state.chats[chatId].timestamp = Date.now();
-                }
-            } else {
-                const memberNames = fullMembers.map(m => m.nickname).join('、');
-                const newChat = {
-                    id: chatId,
-                    name: groupName,
-                    avatar: '',
-                    lastMessage: `群聊已创建，成员：${memberNames}`,
-                    timestamp: Date.now(),
-                    unread: 0,
-                    unreadCount: 0,
-                    isPinned: false,
-                    isGroupChat: true,
-                    groupId: groupId,
-                    history: [{
-                        role: 'system',
-                        content: `群聊已创建，成员：${memberNames}`,
-                        timestamp: Date.now()
-                    }],
-                    settings: {
-                        myAvatar: this.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
-                    }
-                };
-                
-                await db.chats.add(newChat);
-                
-                if (window.state && window.state.chats) {
-                    window.state.chats[chatId] = newChat;
-                }
-            }
-            
-            // 同时更新本地群聊列表中的成员头像
-            const localGroup = this.groupChats.find(g => g.groupId === groupId);
-            if (localGroup) {
-                localGroup.members = fullMembers;
-                this.saveGroupChats();
-            }
-            
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-            }
-        } catch (error) {
-            console.error('添加群聊到聊天列表失败:', error);
-        }
-    }
-
-    // 收到群消息
-    async onReceiveGroupMessage(data) {
-        console.log('收到群消息:', data);
-        
-        const { groupId, fromUserId, fromNickname, fromAvatar, message, timestamp } = data;
-        const chatId = groupId;
-        
-        try {
-            const db = await this.waitForDatabase();
-            let chat = await db.chats.get(chatId);
-            
-            if (!chat) {
-                // 群聊不在本地，可能是新加入的
-                const group = this.groupChats.find(g => g.groupId === groupId);
-                chat = {
-                    id: chatId,
-                    name: group ? group.name : '群聊',
-                    avatar: '',
-                    lastMessage: message,
-                    timestamp: timestamp,
-                    unread: 1,
-                    unreadCount: 1,
-                    isPinned: false,
-                    isGroupChat: true,
-                    groupId: groupId,
-                    history: [],
-                    settings: {
-                        myAvatar: this.getSafeAvatar() || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
-                    }
-                };
-            }
-            
-            if (!Array.isArray(chat.history)) chat.history = [];
-            
-            // 群消息用特殊格式，带上发送者信息
-            const msg = {
-                role: 'ai',
-                content: message,
-                timestamp: timestamp,
-                // 群消息额外字段
-                senderUserId: fromUserId,
-                senderNickname: fromNickname,
-                senderAvatar: fromAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
-            };
-            
-            chat.history.push(msg);
-            chat.lastMessage = `${fromNickname}: ${message}`;
-            chat.timestamp = timestamp;
-            chat.unread = (chat.unread || 0) + 1;
-            
-            await db.chats.put(chat);
-            
-            // 同步到 state
-            if (typeof state !== 'undefined' && state && state.chats) {
-                state.chats[chatId] = chat;
-            }
-            if (typeof window.state !== 'undefined' && window.state && window.state.chats) {
-                window.state.chats[chatId] = chat;
-            }
-            
-            // 刷新聊天列表
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-            }
-            
-            // 如果当前正在看这个群聊，立即显示消息
-            let currentChatId = null;
-            if (typeof state !== 'undefined' && state && state.activeChatId) {
-                currentChatId = state.activeChatId;
-            } else if (typeof window.state !== 'undefined' && window.state && window.state.activeChatId) {
-                currentChatId = window.state.activeChatId;
-            }
-            
-            if (currentChatId === chatId) {
-                if (typeof window.appendMessage === 'function') {
-                    await window.appendMessage(msg, chat);
-                } else if (typeof window.renderChatInterface === 'function') {
-                    await window.renderChatInterface(chatId);
-                }
-            }
-            
-            // 后台通知
-            const isPageHidden = document.hidden || document.visibilityState === 'hidden';
-            const isNotInChat = currentChatId !== chatId;
-            
-            if (isPageHidden || isNotInChat) {
-                const group = this.groupChats.find(g => g.groupId === groupId);
-                const groupDisplayName = group ? group.name : '群聊';
-                
-                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    try {
-                        navigator.serviceWorker.controller.postMessage({
-                            type: 'SHOW_NOTIFICATION',
-                            title: `${groupDisplayName}`,
-                            options: {
-                                body: `${fromNickname}: ${message}`,
-                                icon: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
-                                tag: `group-${chatId}-${Date.now()}`,
-                                requireInteraction: true,
-                                renotify: true,
-                                silent: false,
-                                vibrate: [200, 100, 200],
-                                data: { type: 'group_chat', chatId: chatId }
-                            }
-                        });
-                    } catch (swErr) {
-                        if (window.notificationManager) {
-                            window.notificationManager.notifyNewMessage(groupDisplayName, `${fromNickname}: ${message}`, chatId);
-                        }
-                    }
-                } else if (window.notificationManager) {
-                    window.notificationManager.notifyNewMessage(groupDisplayName, `${fromNickname}: ${message}`, chatId);
-                }
-            }
-            
-        } catch (error) {
-            console.error('处理群消息失败:', error);
-        }
-    }
-
-    // 发送群消息
-    async sendGroupMessageToServer(groupId, message) {
-        if (!this.isConnected) {
-            throw new Error('未连接到服务器');
-        }
-        
-        this.send({
-            type: 'send_group_message',
-            groupId,
-            fromUserId: this.userId,
-            fromNickname: this.nickname,
-            fromAvatar: this.getSafeAvatar(),
-            message,
-            timestamp: Date.now()
-        });
-    }
-
-    // 群成员加入通知
     async onGroupMemberJoined(data) {
         const { groupId, newMembers, inviterNickname, allMembers } = data;
-        
-        // 更新本地群成员列表
         const group = this.groupChats.find(g => g.groupId === groupId);
-        if (group) {
-            group.members = allMembers;
-            this.saveGroupChats();
-        }
-        
-        // 在聊天中显示系统消息
-        const newNames = newMembers.map(m => m.nickname).join('、');
-        const systemMsg = `${inviterNickname} 邀请 ${newNames} 加入了群聊`;
-        
-        try {
-            const db = await this.waitForDatabase();
-            const chat = await db.chats.get(groupId);
-            if (chat) {
-                if (!Array.isArray(chat.history)) chat.history = [];
-                chat.history.push({
-                    role: 'system',
-                    content: systemMsg,
-                    timestamp: Date.now()
-                });
-                chat.lastMessage = systemMsg;
-                chat.timestamp = Date.now();
-                await db.chats.put(chat);
-                
-                if (window.state && window.state.chats) {
-                    window.state.chats[groupId] = chat;
-                }
-                if (typeof window.renderChatListProxy === 'function') {
-                    await window.renderChatListProxy();
-                }
-            }
-        } catch (error) {
-            console.error('处理群成员加入通知失败:', error);
+        if (group) { group.members = allMembers; this.saveGroupChats(); }
+
+        const chat = this.chats[groupId];
+        if (chat) {
+            const names = newMembers.map(m => m.nickname).join('、');
+            const sysMsg = { role: 'system', content: `${inviterNickname} 邀请 ${names} 加入了群聊`, timestamp: Date.now() };
+            if (!Array.isArray(chat.history)) chat.history = [];
+            chat.history.push(sysMsg);
+            chat.lastMessage = sysMsg.content;
+            chat.timestamp = Date.now();
+            chat.members = allMembers;
+            this.saveChats();
+            if (this.activeChatId === groupId) this.appendMessageToUI(sysMsg, chat);
+            this.renderChatList();
         }
     }
 
-    // 群成员退出通知
     async onGroupMemberLeft(data) {
-        const { groupId, userId, leaverNickname, allMembers } = data;
-        
-        // 更新本地群成员列表
+        const { groupId, leaverNickname, allMembers } = data;
         const group = this.groupChats.find(g => g.groupId === groupId);
-        if (group) {
-            group.members = allMembers;
-            this.saveGroupChats();
-        }
-        
-        const systemMsg = `${leaverNickname} 退出了群聊`;
-        
-        try {
-            const db = await this.waitForDatabase();
-            const chat = await db.chats.get(groupId);
-            if (chat) {
-                if (!Array.isArray(chat.history)) chat.history = [];
-                chat.history.push({
-                    role: 'system',
-                    content: systemMsg,
-                    timestamp: Date.now()
-                });
-                chat.lastMessage = systemMsg;
-                chat.timestamp = Date.now();
-                await db.chats.put(chat);
-                
-                if (window.state && window.state.chats) {
-                    window.state.chats[groupId] = chat;
-                }
-                if (typeof window.renderChatListProxy === 'function') {
-                    await window.renderChatListProxy();
-                }
-            }
-        } catch (error) {
-            console.error('处理群成员退出通知失败:', error);
+        if (group) { group.members = allMembers; this.saveGroupChats(); }
+
+        const chat = this.chats[groupId];
+        if (chat) {
+            const sysMsg = { role: 'system', content: `${leaverNickname} 退出了群聊`, timestamp: Date.now() };
+            if (!Array.isArray(chat.history)) chat.history = [];
+            chat.history.push(sysMsg);
+            chat.lastMessage = sysMsg.content;
+            chat.timestamp = Date.now();
+            chat.members = allMembers;
+            this.saveChats();
+            if (this.activeChatId === groupId) this.appendMessageToUI(sysMsg, chat);
+            this.renderChatList();
         }
     }
 
-    // 退出群聊
     async leaveGroup(groupId) {
         const group = this.groupChats.find(g => g.groupId === groupId);
         if (!group) return;
-        
         if (!confirm(`确定要退出群聊「${group.name}」吗？`)) return;
-        
-        // 通知服务器
-        if (this.isConnected) {
-            this.send({
-                type: 'leave_group',
-                groupId,
-                userId: this.userId
-            });
-        }
-        
-        // 从本地群列表移除
+
+        this.send({ type: 'leave_group', groupId, userId: this.userId });
         this.groupChats = this.groupChats.filter(g => g.groupId !== groupId);
         this.saveGroupChats();
-        
-        // 从聊天列表删除
-        try {
-            const db = await this.waitForDatabase();
-            await db.chats.delete(groupId);
-            
-            if (window.state && window.state.chats && window.state.chats[groupId]) {
-                delete window.state.chats[groupId];
-            }
-            
-            if (typeof window.renderChatListProxy === 'function') {
-                await window.renderChatListProxy();
-            }
-            
-            alert(`已退出群聊「${group.name}」`);
-        } catch (error) {
-            console.error('退出群聊失败:', error);
+        delete this.chats[groupId];
+        this.saveChats();
+
+        if (this.activeChatId === groupId) {
+            this.activeChatId = null;
+            this.showView('online-app-list-view');
         }
+        this.renderChatList();
     }
 
-    // 打开群聊信息弹窗
     openGroupInfoModal(groupId) {
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        if (!group) {
-            alert('群聊信息不存在');
-            return;
-        }
-        
         const modal = document.getElementById('group-info-modal');
-        const contentDiv = document.getElementById('group-info-content');
-        
-        if (!modal || !contentDiv) return;
-        
-        contentDiv.innerHTML = `
-            <div style="padding: 15px;">
-                <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">${escapeHTML(group.name)}</div>
-                <div style="font-size: 13px; color: #999; margin-bottom: 15px;">群成员 (${group.members.length}人)</div>
-                <div style="max-height: 300px; overflow-y: auto;">
-                    ${group.members.map(m => `
-                        <div style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">
-                            <img src="${m.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                                 style="width: 36px; height: 36px; border-radius: 50%; margin-right: 10px;" alt="头像">
-                            <div>
-                                <div style="font-size: 14px;">${escapeHTML(m.nickname)}</div>
-                                <div style="font-size: 11px; color: #999;">ID: ${escapeHTML(m.userId)}</div>
-                            </div>
-                            ${m.userId === this.userId ? '<span style="margin-left: auto; font-size: 11px; color: #007aff;">我</span>' : ''}
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="margin-top: 20px; display: flex; gap: 10px;">
-                    <button class="shugo-btn shugo-btn-primary" style="flex: 1;" 
-                            onclick="onlineChatManager.openInviteToGroupModal('${groupId}')">邀请好友</button>
-                    <button class="shugo-btn shugo-btn-danger" style="flex: 1;" 
-                            onclick="onlineChatManager.leaveGroup('${groupId}')">退出群聊</button>
-                </div>
-            </div>
-        `;
-        
+        const content = document.getElementById('group-info-content');
+        if (!modal || !content) return;
+
+        const group = this.groupChats.find(g => g.groupId === groupId);
+        const chat = this.chats[groupId];
+        if (!group && !chat) return;
+
+        const members = group?.members || chat?.members || [];
+        const groupName = group?.name || chat?.name || '群聊';
+
+        content.innerHTML = `
+            <div style="padding:15px;">
+                <h3 style="margin:0 0 15px 0;">${groupName}</h3>
+                <div style="font-size:13px;color:#999;margin-bottom:10px;">成员 (${members.length})</div>
+                ${members.map(m => `
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">
+                        <img src="${m.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                        <span>${m.nickname}${m.userId === this.userId ? ' (我)' : ''}</span>
+                    </div>
+                `).join('')}
+                <button onclick="onlineChatManager.openInviteToGroupModal('${groupId}')" 
+                        style="width:100%;margin-top:15px;padding:12px;background:#007aff;color:white;border:none;border-radius:8px;cursor:pointer;">邀请好友</button>
+                <button onclick="onlineChatManager.leaveGroup('${groupId}')" 
+                        style="width:100%;margin-top:10px;padding:12px;background:#ff3b30;color:white;border:none;border-radius:8px;cursor:pointer;">退出群聊</button>
+            </div>`;
         modal.classList.add('visible');
     }
 
-    // 关闭群聊信息弹窗
-    closeGroupInfoModal() {
-        const modal = document.getElementById('group-info-modal');
-        if (modal) modal.classList.remove('visible');
-    }
-
-    // 打开邀请好友入群弹窗
     openInviteToGroupModal(groupId) {
         const group = this.groupChats.find(g => g.groupId === groupId);
         if (!group) return;
-        
-        // 过滤掉已在群里的好友
-        const existingMemberIds = group.members.map(m => m.userId);
-        const availableFriends = this.onlineFriends.filter(f => !existingMemberIds.includes(f.userId));
-        
-        if (availableFriends.length === 0) {
-            alert('所有好友都已在群里了');
-            return;
-        }
-        
-        // 复用创建群聊弹窗
-        const modal = document.getElementById('create-group-modal');
-        const listDiv = document.getElementById('create-group-friend-list');
-        const nameInput = document.getElementById('group-name-input');
-        const confirmBtn = document.getElementById('confirm-create-group-btn');
-        const titleSpan = document.querySelector('#create-group-modal .modal-header span:first-child');
-        
-        if (!modal || !listDiv) return;
-        
-        // 修改标题和按钮
-        if (titleSpan) titleSpan.textContent = '邀请好友入群';
-        if (nameInput) nameInput.style.display = 'none';
-        if (confirmBtn) {
-            confirmBtn.textContent = '确认邀请';
-            confirmBtn.onclick = () => this.confirmInviteToGroup(groupId);
-        }
-        
-        listDiv.innerHTML = availableFriends.map((friend, idx) => {
-            const friendIndex = this.onlineFriends.indexOf(friend);
-            return `
-            <label class="shugo-list-item" style="cursor: pointer; display: flex; align-items: center; padding: 10px 15px;">
-                <input type="checkbox" class="group-friend-checkbox" value="${friend.userId}" 
-                       data-nickname="${escapeHTML(friend.nickname)}" 
-                       data-avatar-index="${friendIndex}"
-                       style="margin-right: 12px; width: 18px; height: 18px; accent-color: #007aff;">
-                <div class="shugo-avatar-wrapper" style="margin-right: 10px;">
-                    <img src="${friend.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" 
-                         class="shugo-avatar" alt="头像" style="width: 40px; height: 40px; border-radius: 50%;">
-                </div>
-                <div class="shugo-info">
-                    <div class="shugo-nickname">${escapeHTML(friend.nickname)}</div>
-                    <div class="shugo-id" style="font-size: 11px; color: #999;">ID: ${escapeHTML(friend.userId)}</div>
-                </div>
+
+        const existingIds = new Set(group.members.map(m => m.userId));
+        const available = this.onlineFriends.filter(f => !existingIds.has(f.userId));
+
+        if (available.length === 0) { alert('没有可邀请的好友'); return; }
+
+        const html = available.map(f => `
+            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;">
+                <input type="checkbox" value="${f.userId}" data-nickname="${f.nickname}" data-avatar="${f.avatar || ''}">
+                <img src="${f.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+                <span>${f.nickname}</span>
             </label>
-            `;
-        }).join('');
-        
-        modal.classList.add('visible');
+        `).join('');
+
+        const content = document.getElementById('group-info-content');
+        if (content) {
+            content.innerHTML = `
+                <div style="padding:15px;">
+                    <h3 style="margin:0 0 15px 0;">邀请好友加入群聊</h3>
+                    <div id="invite-group-list">${html}</div>
+                    <button onclick="onlineChatManager.confirmInviteToGroup('${groupId}')"
+                            style="width:100%;margin-top:15px;padding:12px;background:#007aff;color:white;border:none;border-radius:8px;cursor:pointer;">确认邀请</button>
+                </div>`;
+        }
     }
 
-    // 确认邀请好友入群
-    async confirmInviteToGroup(groupId) {
-        const checkboxes = document.querySelectorAll('.group-friend-checkbox:checked');
-        
-        if (checkboxes.length === 0) {
-            alert('请至少选择1个好友');
-            return;
-        }
-        
+    confirmInviteToGroup(groupId) {
+        const checkboxes = document.querySelectorAll('#invite-group-list input[type="checkbox"]:checked');
+        if (checkboxes.length === 0) { alert('请选择要邀请的好友'); return; }
+
         const newMembers = [];
         checkboxes.forEach(cb => {
-            const friendIndex = parseInt(cb.dataset.avatarIndex);
-            const friend = this.onlineFriends[friendIndex];
-            let avatar = friend ? friend.avatar : '';
-            if (avatar && avatar.startsWith('data:image/')) {
-                avatar = '';
+            newMembers.push({ userId: cb.value, nickname: cb.dataset.nickname, avatar: cb.dataset.avatar || '' });
+        });
+
+        this.send({ type: 'invite_to_group', groupId, inviterId: this.userId, inviterNickname: this.nickname, newMembers });
+
+        const modal = document.getElementById('group-info-modal');
+        if (modal) modal.classList.remove('visible');
+        alert('邀请已发送');
+    }
+
+    // ==================== UI渲染 (独立于QQ) ====================
+
+    renderChatList() {
+        const listEl = document.getElementById('online-app-chat-list');
+        if (!listEl) return;
+
+        const allChats = Object.values(this.chats).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        if (allChats.length === 0) {
+            listEl.innerHTML = `<div class="online-app-empty-hint">
+                <p>暂无联机好友</p>
+                <p style="font-size:12px;color:#999;">点击右上角 ⚙ 配置联机，点击 + 添加好友</p>
+            </div>`;
+            return;
+        }
+
+        listEl.innerHTML = '';
+        allChats.forEach(chat => {
+            const item = document.createElement('div');
+            item.className = 'online-chat-list-item';
+            item.dataset.chatId = chat.id;
+
+            const avatar = chat.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+            const lastMsg = chat.lastMessage || '...';
+            const unread = chat.unread || 0;
+
+            item.innerHTML = `
+                <div class="avatar-group">
+                    <img src="${avatar}" class="avatar" onerror="this.src='https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'">
+                </div>
+                <div class="info">
+                    <div class="name-line">
+                        <span class="name">${chat.name}</span>
+                        ${chat.isGroup ? '<span class="group-tag">群聊</span>' : ''}
+                    </div>
+                    <div class="last-msg">${lastMsg.substring(0, 30)}</div>
+                </div>
+                <div class="unread-count-wrapper">
+                    <span class="unread-count" style="display:${unread > 0 ? 'inline-flex' : 'none'};">${unread > 99 ? '99+' : unread}</span>
+                </div>`;
+
+            item.addEventListener('click', () => this.openChat(chat.id));
+
+            // 长按删除
+            let pressTimer = null;
+            item.addEventListener('touchstart', (e) => {
+                pressTimer = setTimeout(() => {
+                    if (confirm(`删除与「${chat.name}」的对话？`)) {
+                        delete this.chats[chat.id];
+                        this.saveChats();
+                        this.renderChatList();
+                    }
+                }, 600);
+            }, { passive: true });
+            item.addEventListener('touchend', () => { if (pressTimer) clearTimeout(pressTimer); });
+            item.addEventListener('touchmove', () => { if (pressTimer) clearTimeout(pressTimer); });
+
+            listEl.appendChild(item);
+        });
+    }
+
+    openChat(chatId) {
+        const chat = this.chats[chatId];
+        if (!chat) return;
+
+        this.activeChatId = chatId;
+        chat.unread = 0;
+        this.saveChats();
+
+        // 更新标题
+        const titleEl = document.getElementById('online-app-chat-title');
+        if (titleEl) titleEl.textContent = chat.name;
+
+        // 群信息按钮
+        const groupInfoBtn = document.getElementById('online-app-group-info-btn');
+        if (groupInfoBtn) groupInfoBtn.style.display = chat.isGroup ? 'inline' : 'none';
+
+        // 渲染消息
+        this.renderMessages(chat);
+
+        // 切换视图
+        this.showView('online-app-chat-view');
+    }
+
+    renderMessages(chat) {
+        const container = document.getElementById('online-app-messages');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const history = chat.history || [];
+        history.forEach(msg => {
+            this.appendMessageToUI(msg, chat, false);
+        });
+
+        // 滚动到底部
+        requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+    }
+
+    appendMessageToUI(msg, chat, scroll = true) {
+        const container = document.getElementById('online-app-messages');
+        if (!container) return;
+
+        const div = document.createElement('div');
+
+        if (msg.role === 'system') {
+            div.className = 'online-msg system';
+            div.textContent = msg.content;
+        } else if (msg.role === 'user') {
+            div.className = 'online-msg user';
+            if (chat.isGroup && msg.senderNickname) {
+                div.innerHTML = `<div class="sender-name" style="color:rgba(255,255,255,0.7);">${msg.senderNickname}</div>`;
             }
-            newMembers.push({
-                userId: cb.value,
-                nickname: cb.dataset.nickname,
-                avatar: avatar
-            });
+            div.innerHTML += `<div>${this.escapeHtml(msg.content)}</div>`;
+            div.innerHTML += `<div class="msg-time">${this.formatTime(msg.timestamp)}</div>`;
+        } else {
+            div.className = 'online-msg friend';
+            if (chat.isGroup && msg.senderNickname) {
+                div.innerHTML = `<div class="sender-name">${msg.senderNickname}</div>`;
+            }
+            div.innerHTML += `<div>${this.escapeHtml(msg.content)}</div>`;
+            div.innerHTML += `<div class="msg-time">${this.formatTime(msg.timestamp)}</div>`;
+        }
+
+        container.appendChild(div);
+
+        if (scroll) {
+            requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    formatTime(timestamp) {
+        if (!timestamp) return '';
+        const d = new Date(timestamp);
+        return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    }
+
+    // ==================== 心跳/重连/保活 ====================
+
+    startHeartbeat() {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.heartbeatMissed++;
+                if (this.heartbeatMissed > this.maxHeartbeatMissed) {
+                    console.log('心跳超时，断开重连');
+                    this.ws.close();
+                    return;
+                }
+                this.send({ type: 'heartbeat', userId: this.userId });
+            }
+        }, 25000);
+    }
+
+    scheduleReconnect() {
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
+        const delay = Math.min(3000 * Math.pow(1.5, this.reconnectAttempts), 60000);
+        this.reconnectAttempts++;
+        console.log(`[连接APP] ${delay / 1000}秒后重连 (第${this.reconnectAttempts}次)`);
+        this.reconnectTimer = setTimeout(() => {
+            if (this.shouldAutoReconnect && !this.isConnected) {
+                this.connect();
+            }
+        }, delay);
+    }
+
+    setupVisibilityListener() {
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.shouldAutoReconnect && !this.isConnected) {
+                console.log('[连接APP] 页面恢复可见，尝试重连');
+                this.connect();
+            }
         });
-        
-        // 发送邀请请求
-        this.send({
-            type: 'invite_to_group',
-            groupId,
-            inviterId: this.userId,
-            newMembers
+    }
+
+    setupBeforeUnloadListener() {
+        window.addEventListener('beforeunload', () => {
+            this.saveSettings();
+            this.saveChats();
         });
-        
-        // 本地也更新成员列表
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        if (group) {
-            for (const m of newMembers) {
-                if (!group.members.some(existing => existing.userId === m.userId)) {
-                    group.members.push(m);
+    }
+
+    autoReconnectIfNeeded() {
+        if (this.shouldAutoReconnect && !this.isConnected) {
+            const enableSwitch = document.getElementById('online-app-enable-switch');
+            if (enableSwitch && enableSwitch.checked) {
+                const idInput = document.getElementById('online-app-my-id');
+                const serverInput = document.getElementById('online-app-server-url');
+                if (idInput?.value && serverInput?.value) {
+                    console.log('[连接APP] 自动重连...');
+                    setTimeout(() => this.connect(), 1000);
                 }
             }
-            this.saveGroupChats();
         }
-        
-        // 关闭弹窗并恢复原始状态
-        this.closeCreateGroupModal();
-        this.resetCreateGroupModal();
-        
-        alert(`已邀请 ${newMembers.map(m => m.nickname).join('、')} 加入群聊`);
     }
 
-    // 恢复创建群聊弹窗的原始状态
-    resetCreateGroupModal() {
-        const titleSpan = document.querySelector('#create-group-modal .modal-header span:first-child');
-        const nameInput = document.getElementById('group-name-input');
-        const confirmBtn = document.getElementById('confirm-create-group-btn');
-        
-        if (titleSpan) titleSpan.textContent = '创建群聊';
-        if (nameInput) nameInput.style.display = '';
-        if (confirmBtn) {
-            confirmBtn.textContent = '创建群聊';
-            confirmBtn.onclick = () => onlineChatManager.confirmCreateGroup();
+    // ==================== 清理/重置 ====================
+
+    async clearAllOldData() {
+        if (!confirm('清理所有旧数据？\n\n将清除缓存的旧头像数据，不会删除好友关系和聊天记录。')) return;
+
+        // 更新好友列表中的头像
+        for (const friend of this.onlineFriends) {
+            if (friend.avatar && friend.avatar.startsWith('data:image/') && friend.avatar.length > 50000) {
+                friend.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+            }
         }
+        this.saveOnlineFriends();
+
+        // 更新聊天中的头像
+        for (const chatId in this.chats) {
+            const chat = this.chats[chatId];
+            if (chat.avatar && chat.avatar.startsWith('data:image/') && chat.avatar.length > 50000) {
+                chat.avatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+            }
+        }
+        this.saveChats();
+
+        alert('旧数据已清理完成');
+        this.renderChatList();
+    }
+
+    async resetOnlineData() {
+        if (!confirm('⚠️ 重置联机数据\n\n将删除所有联机好友、聊天记录和群聊数据。\n此操作不可撤销！')) return;
+
+        this.disconnect();
+        this.friendRequests = [];
+        this.onlineFriends = [];
+        this.groupChats = [];
+        this.chats = {};
+        this.activeChatId = null;
+
+        this.saveFriendRequests();
+        this.saveOnlineFriends();
+        this.saveGroupChats();
+        this.saveChats();
+
+        this.renderChatList();
+        this.showView('online-app-list-view');
+        alert('联机数据已重置');
+    }
+
+    // ==================== 好友删除 ====================
+
+    async deleteFriend(index) {
+        const friend = this.onlineFriends[index];
+        if (!friend) return;
+        if (!confirm(`确定要删除好友「${friend.nickname}」吗？\n聊天记录也会被删除。`)) return;
+
+        const chatId = `online_${friend.userId}`;
+        this.onlineFriends.splice(index, 1);
+        this.saveOnlineFriends();
+        delete this.chats[chatId];
+        this.saveChats();
+
+        if (this.activeChatId === chatId) {
+            this.activeChatId = null;
+            this.showView('online-app-list-view');
+        }
+        this.renderChatList();
     }
 }
 
-// 创建全局实例
+// ==================== 全局实例和初始化 ====================
+
 const onlineChatManager = new OnlineChatManager();
 
-// 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', () => {
-    onlineChatManager.initUI();
-});
-
-// 全局函数供HTML调用
+// 关闭弹窗的全局函数
 function closeFriendRequestsModal() {
-    onlineChatManager.closeFriendRequestsModal();
+    const modal = document.getElementById('friend-requests-modal');
+    if (modal) modal.classList.remove('visible');
 }
-
 function closeOnlineFriendsModal() {
-    onlineChatManager.closeOnlineFriendsModal();
+    const modal = document.getElementById('online-friends-modal');
+    if (modal) modal.classList.remove('visible');
 }
-
 function closeCreateGroupModal() {
-    onlineChatManager.closeCreateGroupModal();
-    onlineChatManager.resetCreateGroupModal();
+    const modal = document.getElementById('create-group-modal');
+    if (modal) modal.classList.remove('visible');
 }
-
 function closeGroupInfoModal() {
-    onlineChatManager.closeGroupInfoModal();
+    const modal = document.getElementById('group-info-modal');
+    if (modal) modal.classList.remove('visible');
+}
+function openOnlineHelpLink(type) {
+    const urls = {
+        explain: 'online-help-explain.html',
+        guide: 'online-help-guide.html',
+        deploy: 'online-help-deploy.html'
+    };
+    window.open(urls[type] || urls.explain, '_blank');
 }
 
-// 打开联机功能帮助外链
-function openOnlineHelpLink(type) {
-    let url;
-    if (type === 'explain') {
-        url = 'online-help-explain.html';
-    } else if (type === 'guide') {
-        url = 'online-help-guide.html';
-    } else if (type === 'deploy') {
-        url = 'online-help-deploy.html';
-    }
-    
-    if (url) {
-        window.open(url, '_blank');
-    }
+// DOM加载后初始化
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => onlineChatManager.initUI());
+} else {
+    onlineChatManager.initUI();
 }
