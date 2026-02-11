@@ -25177,9 +25177,9 @@
                margin-top: -12px;
            }
 
-           /* 下半区：APP网格推到底部，间距30px模拟第一页gap */
+           /* 下半区：APP网格，固定间距 */
            #page-3-app-grid {
-               margin-top: auto;
+               margin-top: 20px;
                flex-shrink: 0;
                gap: 10px;
            }
