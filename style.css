@@ -24651,3 +24651,397 @@
                    padding: 15px 20px;
                }
            }
+
+
+           /* ========================================
+              第三页 - 个人资料小组件 & 布局
+              ======================================== */
+
+           #page-3-content {
+               padding: 20px;
+               display: flex;
+               flex-direction: column;
+               gap: 20px;
+               align-content: start;
+               height: 100%;
+               box-sizing: border-box;
+           }
+
+           /* --- 顶部个人资料卡片 --- */
+           .p3-profile-widget {
+               display: flex;
+               align-items: center;
+               gap: 20px;
+               width: 100%;
+               padding: 18px 16px;
+               box-sizing: border-box;
+               background: rgba(255, 255, 255, 0.65);
+               backdrop-filter: blur(12px);
+               -webkit-backdrop-filter: blur(12px);
+               border-radius: 22px;
+               border: 1px solid rgba(255, 255, 255, 0.5);
+               flex-shrink: 0;
+           }
+
+           /* 左侧：头像 + 名字 */
+           .p3-profile-left {
+               display: flex;
+               flex-direction: column;
+               align-items: center;
+               gap: 6px;
+               flex-shrink: 0;
+           }
+
+           .p3-name-tag {
+               background: rgba(255, 255, 255, 0.95);
+               padding: 3px 14px;
+               border-radius: 10px;
+               box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+               font-size: 13px;
+               font-weight: 600;
+               color: #1c1c1e;
+               white-space: nowrap;
+           }
+
+           .p3-avatar-wrapper {
+               width: 90px;
+               height: 90px;
+               border-radius: 50%;
+               overflow: hidden;
+               box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+               border: 3px solid rgba(255, 255, 255, 0.8);
+               flex-shrink: 0;
+           }
+
+           .p3-avatar-wrapper img {
+               width: 100%;
+               height: 100%;
+               object-fit: cover;
+               display: block;
+           }
+
+           .p3-profile-title {
+               font-size: 13px;
+               font-weight: 600;
+               color: #1c1c1e;
+               text-align: center;
+               letter-spacing: 2px;
+           }
+
+           /* 右侧：装饰文字区域 */
+           .p3-profile-right {
+               flex: 1;
+               display: flex;
+               flex-direction: column;
+               gap: 8px;
+               min-width: 0;
+           }
+
+           .p3-deco-line {
+               margin: 0;
+               font-size: 12px;
+               color: #555;
+               line-height: 1.6;
+               word-break: break-word;
+           }
+
+           .p3-studio-line {
+               font-weight: 700;
+               font-size: 13px;
+               color: #333;
+               letter-spacing: 1px;
+               font-style: italic;
+           }
+
+           .p3-dotted-divider {
+               border: none;
+               border-top: 1.5px dashed rgba(0, 0, 0, 0.15);
+               width: 100%;
+           }
+
+           /* --- 第三页 App 网格 --- */
+           #page-3-app-grid {
+               display: grid;
+               grid-template-columns: 1fr 1fr;
+               gap: 25px;
+               align-content: start;
+               justify-items: center;
+           }
+
+
+           /* =============================================
+              餐盘图片小组件 — 白色蕾丝风格
+              ============================================= */
+           .p3-plate-widget {
+               width: 100%;
+               flex-shrink: 0;
+               background: rgba(255,255,255,0.7);
+               backdrop-filter: blur(10px);
+               -webkit-backdrop-filter: blur(10px);
+               border-radius: 18px;
+               border: 1px solid rgba(255,255,255,0.6);
+               position: relative;
+               overflow: hidden;
+               box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+           }
+
+           /* ---- 束腰绑带 (左右边缘) ---- */
+           .plate-corset {
+               position: absolute;
+               top: 0;
+               bottom: 0;
+               width: 32px;
+               z-index: 3;
+           }
+           .plate-corset-left {
+               left: 0;
+           }
+           .plate-corset-right {
+               right: 0;
+           }
+           .plate-corset svg {
+               display: block;
+           }
+
+           /* ---- 蕾丝花边 ---- */
+           .plate-lace {
+               width: 100%;
+               line-height: 0;
+           }
+           .plate-lace-bottom {
+               transform: scaleY(-1);
+           }
+
+           /* ---- 顶部蝴蝶结 ---- */
+           .plate-top-bow {
+               display: flex;
+               justify-content: center;
+               margin: -4px 0 2px;
+               position: relative;
+               z-index: 2;
+           }
+
+           /* ---- 主内容区 ---- */
+           .plate-center {
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               padding: 2px 36px 8px;
+               gap: 8px;
+           }
+
+           /* 刀叉容器 */
+           .plate-utensil {
+               flex-shrink: 0;
+               line-height: 0;
+           }
+
+           /* ---- 盘子 ---- */
+           .plate-dish {
+               position: relative;
+               display: flex;
+               flex-direction: column;
+               align-items: center;
+               flex-shrink: 0;
+           }
+           .plate-dish-bow {
+               margin-bottom: -6px;
+               position: relative;
+               z-index: 3;
+           }
+           .plate-dish-outer {
+               width: 120px;
+               height: 120px;
+               border-radius: 50%;
+               background: linear-gradient(145deg, #f8f8f8, #e8e8e8);
+               box-shadow:
+                   0 3px 10px rgba(0,0,0,0.08),
+                   0 1px 3px rgba(0,0,0,0.05),
+                   inset 0 2px 0 rgba(255,255,255,0.95),
+                   inset 0 -1px 3px rgba(0,0,0,0.04);
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               border: 1.5px solid rgba(255,255,255,0.7);
+           }
+           .plate-dish-inner {
+               width: 85px;
+               height: 85px;
+               border-radius: 50%;
+               overflow: hidden;
+               background: #fafafa;
+               box-shadow:
+                   inset 0 2px 5px rgba(0,0,0,0.06),
+                   0 0 0 1.5px rgba(255,255,255,0.5);
+               border: 1px solid rgba(0,0,0,0.03);
+           }
+           .plate-dish-inner img {
+               width: 100%;
+               height: 100%;
+               object-fit: cover;
+               display: block;
+           }
+
+           /* =============================================
+              第三页左右分栏：纪念日 + 微博
+              ============================================= */
+           .p3-split-row {
+               width: 100%;
+               display: flex;
+               gap: 8px;
+               flex-shrink: 0;
+           }
+
+           /* -- 左：纪念日 -- */
+           .p3-anniversary-widget {
+               flex: 1;
+               display: flex;
+               flex-direction: column;
+               align-items: center;
+               gap: 4px;
+               padding: 8px 0;
+           }
+           .anni-day-counter {
+               display: flex;
+               align-items: baseline;
+               gap: 3px;
+           }
+           .anni-day-counter span:first-child {
+               font-size: 28px;
+               font-weight: 700;
+               color: #fff;
+               text-shadow: 0 1px 6px rgba(0,0,0,0.18);
+               letter-spacing: 2px;
+           }
+           .anni-day-unit {
+               font-size: 13px;
+               font-weight: 500;
+               color: rgba(255,255,255,0.9);
+               text-shadow: 0 1px 4px rgba(0,0,0,0.12);
+           }
+           .anni-photos {
+               display: flex;
+               justify-content: center;
+           }
+           .anni-photo {
+               width: 70px;
+               height: 70px;
+               border-radius: 50%;
+               overflow: hidden;
+               border: 2.5px solid #fff;
+               box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+               flex-shrink: 0;
+               cursor: pointer;
+           }
+           .anni-photo:first-child {
+               margin-right: -8px;
+               z-index: 1;
+               position: relative;
+           }
+           .anni-photo img {
+               width: 100%;
+               height: 100%;
+               object-fit: cover;
+               display: block;
+           }
+           .anni-caption {
+               font-size: 11px;
+               color: #666;
+               margin-top: 2px;
+           }
+           .anni-date {
+               font-size: 10px;
+               color: #999;
+               letter-spacing: 0.5px;
+           }
+
+           /* -- 右：微博/小红书帖子 -- */
+           .p3-weibo-widget {
+               flex: 1;
+               display: flex;
+               flex-direction: column;
+               gap: 4px;
+               padding: 6px 0;
+               font-size: 9px;
+               color: #333;
+           }
+           .weibo-header {
+               display: flex;
+               align-items: center;
+               gap: 6px;
+           }
+           .weibo-avatar {
+               width: 24px;
+               height: 24px;
+               border-radius: 50%;
+               object-fit: cover;
+               flex-shrink: 0;
+           }
+           .weibo-user-info {
+               display: flex;
+               flex-direction: column;
+               line-height: 1.2;
+           }
+           .weibo-user-info span:first-child {
+               font-weight: 600;
+               font-size: 10px;
+               color: #333;
+           }
+           .weibo-post-date {
+               font-size: 8px;
+               color: #aaa;
+           }
+           .weibo-body {
+               line-height: 1.5;
+               color: #444;
+               font-size: 8.5px;
+           }
+           .weibo-body p {
+               margin: 0;
+           }
+           .weibo-footer {
+               font-size: 7.5px;
+               color: #bbb;
+           }
+           .weibo-image {
+               width: 55px;
+               height: 65px;
+               border-radius: 6px;
+               overflow: hidden;
+               align-self: flex-end;
+               margin-top: -20px;
+               cursor: pointer;
+               box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+           }
+           .weibo-image img {
+               width: 100%;
+               height: 100%;
+               object-fit: cover;
+               display: block;
+           }
+
+           /* --- 第三页 App 网格 改为 4 列 --- */
+           #page-3-app-grid {
+               display: grid;
+               grid-template-columns: repeat(4, 1fr);
+               gap: 15px;
+               align-content: start;
+               justify-items: center;
+           }
+
+           /* 占位 App 图标 */
+           .p3-placeholder-icon {
+               width: 100%;
+               height: 100%;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               font-size: 20px;
+               color: #ccc;
+               background: linear-gradient(135deg, #f0f0f0, #e5e5e5);
+               border-radius: 14px;
+           }
+
+           .p3-placeholder-app .label {
+               color: #bbb !important;
+           }
