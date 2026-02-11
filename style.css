@@ -24661,18 +24661,20 @@
                padding: 10px 20px;
                display: flex;
                flex-direction: column;
-               gap: 10px;
+               gap: 12px;
                align-content: start;
                box-sizing: border-box;
+               flex-grow: 1;
+               height: 100%;
            }
 
            /* --- 顶部个人资料卡片 --- */
            .p3-profile-widget {
                display: flex;
                align-items: center;
-               gap: 12px;
+               gap: 14px;
                width: 100%;
-               padding: 10px 14px;
+               padding: 14px 16px;
                box-sizing: border-box;
                background: rgba(255, 255, 255, 0.65);
                backdrop-filter: blur(12px);
@@ -24703,8 +24705,8 @@
            }
 
            .p3-avatar-wrapper {
-               width: 65px;
-               height: 65px;
+               width: 72px;
+               height: 72px;
                border-radius: 50%;
                overflow: hidden;
                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -24738,7 +24740,7 @@
 
            .p3-deco-line {
                margin: 0;
-               font-size: 11px;
+               font-size: 12px;
                color: #555;
                line-height: 1.4;
                word-break: break-word;
@@ -24746,7 +24748,7 @@
 
            .p3-studio-line {
                font-weight: 700;
-               font-size: 11.5px;
+               font-size: 12.5px;
                color: #333;
                letter-spacing: 1px;
                font-style: italic;
@@ -24887,7 +24889,7 @@
            .p3-split-row {
                width: 100%;
                display: flex;
-               gap: 8px;
+               gap: 10px;
                flex-shrink: 0;
            }
 
@@ -24897,8 +24899,8 @@
                display: flex;
                flex-direction: column;
                align-items: center;
-               gap: 2px;
-               padding: 4px 0;
+               gap: 4px;
+               padding: 8px 0;
            }
            .anni-day-counter {
                display: flex;
@@ -24906,14 +24908,14 @@
                gap: 3px;
            }
            .anni-day-counter span:first-child {
-               font-size: 24px;
+               font-size: 30px;
                font-weight: 700;
                color: #fff;
                text-shadow: 0 1px 6px rgba(0,0,0,0.18);
                letter-spacing: 2px;
            }
            .anni-day-unit {
-               font-size: 11px;
+               font-size: 13px;
                font-weight: 500;
                color: rgba(255,255,255,0.9);
                text-shadow: 0 1px 4px rgba(0,0,0,0.12);
@@ -24923,8 +24925,8 @@
                justify-content: center;
            }
            .anni-photo {
-               width: 55px;
-               height: 55px;
+               width: 65px;
+               height: 65px;
                border-radius: 50%;
                overflow: hidden;
                border: 2px solid #fff;
@@ -24944,12 +24946,12 @@
                display: block;
            }
            .anni-caption {
-               font-size: 10px;
+               font-size: 11px;
                color: #666;
-               margin-top: 1px;
+               margin-top: 2px;
            }
            .anni-date {
-               font-size: 9px;
+               font-size: 10px;
                color: #999;
                letter-spacing: 0.5px;
            }
@@ -24959,9 +24961,9 @@
                flex: 1;
                display: flex;
                flex-direction: column;
-               gap: 3px;
-               padding: 4px 0;
-               font-size: 9px;
+               gap: 4px;
+               padding: 8px 0;
+               font-size: 10px;
                color: #333;
            }
            .weibo-header {
@@ -24970,8 +24972,8 @@
                gap: 6px;
            }
            .weibo-avatar {
-               width: 24px;
-               height: 24px;
+               width: 28px;
+               height: 28px;
                border-radius: 50%;
                object-fit: cover;
                flex-shrink: 0;
@@ -24983,28 +24985,28 @@
            }
            .weibo-user-info span:first-child {
                font-weight: 600;
-               font-size: 10px;
+               font-size: 11px;
                color: #333;
            }
            .weibo-post-date {
-               font-size: 8px;
+               font-size: 9px;
                color: #aaa;
            }
            .weibo-body {
                line-height: 1.5;
                color: #444;
-               font-size: 8.5px;
+               font-size: 9.5px;
            }
            .weibo-body p {
                margin: 0;
            }
            .weibo-footer {
-               font-size: 7.5px;
+               font-size: 8.5px;
                color: #bbb;
            }
            .weibo-image {
-               width: 55px;
-               height: 65px;
+               width: 60px;
+               height: 72px;
                border-radius: 6px;
                overflow: hidden;
                align-self: flex-end;
@@ -25026,6 +25028,7 @@
                gap: 10px;
                align-content: start;
                justify-items: center;
+               margin-top: auto;
            }
 
            /* 占位 App 图标 */
