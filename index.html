@@ -37,6 +37,7 @@
   <script src="structured-memory.js" defer></script>
   <script src="script.js" defer="defer"></script>
   <script src="helper-assistant.js" defer></script>
+  <script src="force-update.js" defer></script>
   
   <style>
     /* 守护甜心风格验证界面 */
@@ -753,19 +754,19 @@
                 <!-- 第二行 - 占位 -->
                 <div class="desktop-app-icon p3-placeholder-app">
                   <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">未定</span>
+                  <span class="label">论坛</span>
                 </div>
                 <div class="desktop-app-icon p3-placeholder-app">
                   <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">未定</span>
+                  <span class="label">家居</span>
                 </div>
                 <div class="desktop-app-icon p3-placeholder-app">
                   <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">未定</span>
+                  <span class="label">宠物</span>
                 </div>
                 <div class="desktop-app-icon p3-placeholder-app">
                   <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">未定</span>
+                  <span class="label">新世界</span>
                 </div>
               </div>
             </div>
@@ -2673,6 +2674,17 @@
             </div>
         </div>
         
+        <!-- 检查更新 -->
+        <div class="settings-header">应用更新</div>
+        <div class="settings-section">
+            <div class="settings-item">
+                <label>检查并更新到最新版本</label>
+                <div class="settings-right">
+                    <button id="check-update-btn" class="settings-mini-btn" onclick="ForceUpdater.checkUpdate()">检查更新</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 底部垫高 -->
         <div style="height: 60px;"></div>
       </div>

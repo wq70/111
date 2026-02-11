@@ -25045,3 +25045,120 @@
            .p3-placeholder-app .label {
                color: #bbb !important;
            }
+
+           /* =============================================
+              第三页组件等比缩小 — 确保最后一行APP可见
+              ============================================= */
+
+           /* 缩小整体间距 */
+           #page-3-content {
+               gap: 10px;
+               padding: 12px 16px;
+           }
+
+           /* 缩小个人资料卡片 */
+           .p3-profile-widget {
+               padding: 10px 12px;
+               gap: 12px;
+               border-radius: 18px;
+           }
+
+           .p3-avatar-wrapper {
+               width: 68px;
+               height: 68px;
+               border-width: 2px;
+           }
+
+           .p3-name-tag {
+               font-size: 11px;
+               padding: 2px 10px;
+               border-radius: 8px;
+           }
+
+           .p3-profile-title {
+               font-size: 11px;
+           }
+
+           .p3-deco-line {
+               font-size: 10.5px;
+               line-height: 1.4;
+           }
+
+           .p3-studio-line {
+               font-size: 11px;
+           }
+
+           .p3-dotted-divider {
+               margin: 0;
+           }
+
+           /* 缩小左右分栏（纪念日 + 微博） */
+           .p3-split-row {
+               gap: 6px;
+           }
+
+           .p3-anniversary-widget {
+               padding: 4px 0;
+               gap: 2px;
+           }
+
+           .anni-day-counter span:first-child {
+               font-size: 22px;
+           }
+
+           .anni-day-unit {
+               font-size: 11px;
+           }
+
+           .anni-photo {
+               width: 54px;
+               height: 54px;
+               border-width: 2px;
+           }
+
+           .anni-caption {
+               font-size: 10px;
+           }
+
+           .anni-date {
+               font-size: 9px;
+           }
+
+           .p3-weibo-widget {
+               padding: 4px 0;
+               gap: 2px;
+               font-size: 8px;
+           }
+
+           .weibo-avatar {
+               width: 20px;
+               height: 20px;
+           }
+
+           .weibo-user-info span:first-child {
+               font-size: 9px;
+           }
+
+           .weibo-post-date {
+               font-size: 7px;
+           }
+
+           .weibo-body {
+               font-size: 7.5px;
+               line-height: 1.4;
+           }
+
+           .weibo-footer {
+               font-size: 7px;
+           }
+
+           .weibo-image {
+               width: 45px;
+               height: 52px;
+               margin-top: -15px;
+           }
+
+           /* 缩小APP网格间距 */
+           #page-3-app-grid {
+               gap: 10px;
+           }

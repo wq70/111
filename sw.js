@@ -9,6 +9,7 @@ const CACHE_NAME = `ephone-cache-${CACHE_VERSION}`;
 const URLS_TO_CACHE = [
   './index.html',
   './style.css',
+  './online-app.css',
   './script.js',
   'https://unpkg.com/dexie/dist/dexie.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
