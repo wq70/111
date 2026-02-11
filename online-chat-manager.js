@@ -13,7 +13,6 @@ class OnlineChatManager {
         this.isConnected = false;
         this.friendRequests = [];
         this.onlineFriends = [];
-        this.groupChats = [];
         this.reconnectTimer = null;
         this.heartbeatTimer = null;
         this.shouldAutoReconnect = false;
@@ -76,17 +75,6 @@ class OnlineChatManager {
             const data = localStorage.getItem(this._getStorageKey('friends'));
             if (data) this.onlineFriends = JSON.parse(data);
         } catch (e) { this.onlineFriends = []; }
-    }
-    saveGroupChats() {
-        try {
-            localStorage.setItem(this._getStorageKey('groups'), JSON.stringify(this.groupChats));
-        } catch (e) { console.error('保存群聊列表失败:', e); }
-    }
-    loadGroupChats() {
-        try {
-            const data = localStorage.getItem(this._getStorageKey('groups'));
-            if (data) this.groupChats = JSON.parse(data);
-        } catch (e) { this.groupChats = []; }
     }
 
     // ==================== 图片压缩 ====================
@@ -192,9 +180,6 @@ class OnlineChatManager {
         const reqBtn = document.getElementById('online-app-friend-requests-btn');
         if (reqBtn) reqBtn.addEventListener('click', () => this.openFriendRequestsModal());
 
-        // 创建群聊
-        const createGroupBtn = document.getElementById('online-app-create-group-btn');
-        if (createGroupBtn) createGroupBtn.addEventListener('click', () => this.openCreateGroupModal());
 
         // 清理旧数据
         const clearBtn = document.getElementById('online-app-clear-cache-btn');
@@ -242,12 +227,6 @@ class OnlineChatManager {
                 chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
             });
         }
-
-        // 群信息按钮
-        const groupInfoBtn = document.getElementById('online-app-group-info-btn');
-        if (groupInfoBtn) groupInfoBtn.addEventListener('click', () => {
-            if (this.activeChatId) this.openGroupInfoModal(this.activeChatId);
-        });
 
         // 加载设置
         this.loadSettings();
@@ -387,7 +366,6 @@ class OnlineChatManager {
         // 加载好友数据和聊天数据
         this.loadFriendRequests();
         this.loadOnlineFriends();
-        this.loadGroupChats();
         this.loadChats();
     }
 
@@ -409,10 +387,8 @@ class OnlineChatManager {
         // 重新加载该ID绑定的数据
         this.friendRequests = [];
         this.onlineFriends = [];
-        this.groupChats = [];
         this.loadFriendRequests();
         this.loadOnlineFriends();
-        this.loadGroupChats();
         this.loadChats();
 
         // 关闭旧连接
@@ -484,12 +460,6 @@ class OnlineChatManager {
             case 'friend_request_accepted': this.onFriendRequestAccepted(data); break;
             case 'friend_request_rejected': this.onFriendRequestRejected(data); break;
             case 'receive_message': this.onReceiveMessage(data); break;
-            case 'group_created': this.onGroupCreated(data); break;
-            case 'group_invite': this.onGroupInvite(data); break;
-            case 'receive_group_message': this.onReceiveGroupMessage(data); break;
-            case 'group_member_joined': this.onGroupMemberJoined(data); break;
-            case 'group_member_left': this.onGroupMemberLeft(data); break;
-            case 'group_synced': break;
             case 'heartbeat_ack':
                 this.heartbeatMissed = 0;
                 this.lastHeartbeatTime = Date.now();
@@ -505,7 +475,6 @@ class OnlineChatManager {
         this.heartbeatMissed = 0;
         this.updateConnectionUI(true);
         this.startHeartbeat();
-        this.syncAllGroups();
         this.saveSettings();
         this.renderChatList();
     }
@@ -708,27 +677,6 @@ class OnlineChatManager {
         this.saveChats();
     }
 
-    addGroupChat(groupId, groupName, members) {
-        if (!this.chats[groupId]) {
-            const memberNames = members.map(m => m.nickname).join('、');
-            this.chats[groupId] = {
-                id: groupId,
-                name: groupName,
-                avatar: '',
-                lastMessage: `群聊已创建，成员：${memberNames}`,
-                timestamp: Date.now(),
-                unread: 0,
-                isGroup: true,
-                members: members,
-                history: [{ role: 'system', content: `群聊已创建，成员：${memberNames}`, timestamp: Date.now() }]
-            };
-        } else {
-            this.chats[groupId].name = groupName;
-            this.chats[groupId].members = members;
-        }
-        this.saveChats();
-    }
-
     // ==================== 收发消息 (独立，不碰QQ) ====================
 
     sendCurrentMessage() {
@@ -745,26 +693,14 @@ class OnlineChatManager {
         if (!chat) return;
 
         // 发送到服务器
-        if (chat.isGroup) {
-            this.send({
-                type: 'send_group_message',
-                groupId: this.activeChatId,
-                fromUserId: this.userId,
-                fromNickname: this.nickname,
-                fromAvatar: this.getSafeAvatar(),
-                message: content,
-                timestamp: Date.now()
-            });
-        } else {
-            const friendUserId = this.activeChatId.replace('online_', '');
-            this.send({
-                type: 'send_message',
-                toUserId: friendUserId,
-                fromUserId: this.userId,
-                message: content,
-                timestamp: Date.now()
-            });
-        }
+        const friendUserId = this.activeChatId.replace('online_', '');
+        this.send({
+            type: 'send_message',
+            toUserId: friendUserId,
+            fromUserId: this.userId,
+            message: content,
+            timestamp: Date.now()
+        });
 
         // 保存到本地
         const msg = {
@@ -772,11 +708,6 @@ class OnlineChatManager {
             content: content,
             timestamp: Date.now()
         };
-        if (chat.isGroup) {
-            msg.senderUserId = this.userId;
-            msg.senderNickname = this.nickname;
-            msg.senderAvatar = this.getSafeAvatar();
-        }
 
         if (!Array.isArray(chat.history)) chat.history = [];
         chat.history.push(msg);
@@ -838,54 +769,6 @@ class OnlineChatManager {
         this.sendNotification(chat.name, data.message, chatId);
     }
 
-    async onReceiveGroupMessage(data) {
-        const { groupId, fromUserId, fromNickname, fromAvatar, message, timestamp } = data;
-        let chat = this.chats[groupId];
-
-        if (!chat) {
-            const group = this.groupChats.find(g => g.groupId === groupId);
-            chat = {
-                id: groupId,
-                name: group ? group.name : '群聊',
-                avatar: '',
-                lastMessage: `${fromNickname}: ${message}`,
-                timestamp: timestamp,
-                unread: 0,
-                isGroup: true,
-                members: group ? group.members : [],
-                history: []
-            };
-            this.chats[groupId] = chat;
-        }
-
-        if (!Array.isArray(chat.history)) chat.history = [];
-
-        const msg = {
-            role: 'ai',
-            content: message,
-            timestamp: timestamp,
-            senderUserId: fromUserId,
-            senderNickname: fromNickname,
-            senderAvatar: fromAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'
-        };
-
-        chat.history.push(msg);
-        chat.lastMessage = `${fromNickname}: ${message}`;
-        chat.timestamp = timestamp;
-
-        if (this.activeChatId !== groupId) {
-            chat.unread = (chat.unread || 0) + 1;
-        }
-
-        this.saveChats();
-
-        if (this.activeChatId === groupId) {
-            this.appendMessageToUI(msg, chat);
-        }
-
-        this.renderChatList();
-        this.sendNotification(chat.name, `${fromNickname}: ${message}`, groupId);
-    }
 
     sendNotification(title, body, chatId) {
         const isPageHidden = document.hidden || document.visibilityState === 'hidden';
@@ -912,205 +795,6 @@ class OnlineChatManager {
         } else if (window.notificationManager) {
             window.notificationManager.notifyNewMessage(title, body, chatId);
         }
-    }
-
-    // ==================== 群聊管理 ====================
-
-    syncAllGroups() {
-        this.groupChats.forEach(group => {
-            this.send({ type: 'sync_group', groupId: group.groupId, userId: this.userId });
-        });
-    }
-
-    openCreateGroupModal() {
-        const modal = document.getElementById('create-group-modal');
-        const list = document.getElementById('create-group-friend-list');
-        const nameInput = document.getElementById('group-name-input');
-        if (!modal || !list) return;
-
-        if (nameInput) nameInput.value = '';
-
-        if (this.onlineFriends.length === 0) {
-            list.innerHTML = '<div style="text-align:center;color:#999;padding:20px;">暂无好友，请先添加好友</div>';
-        } else {
-            list.innerHTML = this.onlineFriends.map(f => `
-                <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee;cursor:pointer;">
-                    <input type="checkbox" value="${f.userId}" data-nickname="${f.nickname}" data-avatar="${f.avatar || ''}">
-                    <img src="${f.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
-                    <span>${f.nickname}</span>
-                </label>
-            `).join('');
-        }
-        modal.classList.add('visible');
-    }
-
-    async confirmCreateGroup() {
-        const nameInput = document.getElementById('group-name-input');
-        const groupName = nameInput?.value.trim();
-        if (!groupName) { alert('请输入群名称'); return; }
-
-        const checkboxes = document.querySelectorAll('#create-group-friend-list input[type="checkbox"]:checked');
-        if (checkboxes.length === 0) { alert('请至少选择一个好友'); return; }
-
-        const members = [{ userId: this.userId, nickname: this.nickname, avatar: this.getSafeAvatar() }];
-        checkboxes.forEach(cb => {
-            members.push({ userId: cb.value, nickname: cb.dataset.nickname, avatar: cb.dataset.avatar || '' });
-        });
-
-        this.send({ type: 'create_group', groupName, members, creatorId: this.userId });
-        const modal = document.getElementById('create-group-modal');
-        if (modal) modal.classList.remove('visible');
-    }
-
-    async onGroupCreated(data) {
-        const { groupId, groupName, members } = data;
-        this.groupChats.push({ groupId, name: groupName, members, createdAt: Date.now() });
-        this.saveGroupChats();
-        this.addGroupChat(groupId, groupName, members);
-        this.renderChatList();
-        alert(`群聊「${groupName}」创建成功！`);
-    }
-
-    async onGroupInvite(data) {
-        const { groupId, groupName, creatorNickname, members } = data;
-        if (this.groupChats.some(g => g.groupId === groupId)) return;
-        this.groupChats.push({ groupId, name: groupName, members, createdAt: Date.now() });
-        this.saveGroupChats();
-        this.addGroupChat(groupId, groupName, members);
-        this.renderChatList();
-        alert(`${creatorNickname} 邀请你加入群聊「${groupName}」`);
-    }
-
-    async onGroupMemberJoined(data) {
-        const { groupId, newMembers, inviterNickname, allMembers } = data;
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        if (group) { group.members = allMembers; this.saveGroupChats(); }
-
-        const chat = this.chats[groupId];
-        if (chat) {
-            const names = newMembers.map(m => m.nickname).join('、');
-            const sysMsg = { role: 'system', content: `${inviterNickname} 邀请 ${names} 加入了群聊`, timestamp: Date.now() };
-            if (!Array.isArray(chat.history)) chat.history = [];
-            chat.history.push(sysMsg);
-            chat.lastMessage = sysMsg.content;
-            chat.timestamp = Date.now();
-            chat.members = allMembers;
-            this.saveChats();
-            if (this.activeChatId === groupId) this.appendMessageToUI(sysMsg, chat);
-            this.renderChatList();
-        }
-    }
-
-    async onGroupMemberLeft(data) {
-        const { groupId, leaverNickname, allMembers } = data;
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        if (group) { group.members = allMembers; this.saveGroupChats(); }
-
-        const chat = this.chats[groupId];
-        if (chat) {
-            const sysMsg = { role: 'system', content: `${leaverNickname} 退出了群聊`, timestamp: Date.now() };
-            if (!Array.isArray(chat.history)) chat.history = [];
-            chat.history.push(sysMsg);
-            chat.lastMessage = sysMsg.content;
-            chat.timestamp = Date.now();
-            chat.members = allMembers;
-            this.saveChats();
-            if (this.activeChatId === groupId) this.appendMessageToUI(sysMsg, chat);
-            this.renderChatList();
-        }
-    }
-
-    async leaveGroup(groupId) {
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        if (!group) return;
-        if (!confirm(`确定要退出群聊「${group.name}」吗？`)) return;
-
-        this.send({ type: 'leave_group', groupId, userId: this.userId });
-        this.groupChats = this.groupChats.filter(g => g.groupId !== groupId);
-        this.saveGroupChats();
-        delete this.chats[groupId];
-        this.saveChats();
-
-        if (this.activeChatId === groupId) {
-            this.activeChatId = null;
-            this.showView('online-app-list-view');
-        }
-        this.renderChatList();
-    }
-
-    openGroupInfoModal(groupId) {
-        const modal = document.getElementById('group-info-modal');
-        const content = document.getElementById('group-info-content');
-        if (!modal || !content) return;
-
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        const chat = this.chats[groupId];
-        if (!group && !chat) return;
-
-        const members = group?.members || chat?.members || [];
-        const groupName = group?.name || chat?.name || '群聊';
-
-        content.innerHTML = `
-            <div style="padding:15px;">
-                <h3 style="margin:0 0 15px 0;">${groupName}</h3>
-                <div style="font-size:13px;color:#999;margin-bottom:10px;">成员 (${members.length})</div>
-                ${members.map(m => `
-                    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;">
-                        <img src="${m.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
-                        <span>${m.nickname}${m.userId === this.userId ? ' (我)' : ''}</span>
-                    </div>
-                `).join('')}
-                <button onclick="onlineChatManager.openInviteToGroupModal('${groupId}')" 
-                        style="width:100%;margin-top:15px;padding:12px;background:#007aff;color:white;border:none;border-radius:8px;cursor:pointer;">邀请好友</button>
-                <button onclick="onlineChatManager.leaveGroup('${groupId}')" 
-                        style="width:100%;margin-top:10px;padding:12px;background:#ff3b30;color:white;border:none;border-radius:8px;cursor:pointer;">退出群聊</button>
-            </div>`;
-        modal.classList.add('visible');
-    }
-
-    openInviteToGroupModal(groupId) {
-        const group = this.groupChats.find(g => g.groupId === groupId);
-        if (!group) return;
-
-        const existingIds = new Set(group.members.map(m => m.userId));
-        const available = this.onlineFriends.filter(f => !existingIds.has(f.userId));
-
-        if (available.length === 0) { alert('没有可邀请的好友'); return; }
-
-        const html = available.map(f => `
-            <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;">
-                <input type="checkbox" value="${f.userId}" data-nickname="${f.nickname}" data-avatar="${f.avatar || ''}">
-                <img src="${f.avatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
-                <span>${f.nickname}</span>
-            </label>
-        `).join('');
-
-        const content = document.getElementById('group-info-content');
-        if (content) {
-            content.innerHTML = `
-                <div style="padding:15px;">
-                    <h3 style="margin:0 0 15px 0;">邀请好友加入群聊</h3>
-                    <div id="invite-group-list">${html}</div>
-                    <button onclick="onlineChatManager.confirmInviteToGroup('${groupId}')"
-                            style="width:100%;margin-top:15px;padding:12px;background:#007aff;color:white;border:none;border-radius:8px;cursor:pointer;">确认邀请</button>
-                </div>`;
-        }
-    }
-
-    confirmInviteToGroup(groupId) {
-        const checkboxes = document.querySelectorAll('#invite-group-list input[type="checkbox"]:checked');
-        if (checkboxes.length === 0) { alert('请选择要邀请的好友'); return; }
-
-        const newMembers = [];
-        checkboxes.forEach(cb => {
-            newMembers.push({ userId: cb.value, nickname: cb.dataset.nickname, avatar: cb.dataset.avatar || '' });
-        });
-
-        this.send({ type: 'invite_to_group', groupId, inviterId: this.userId, inviterNickname: this.nickname, newMembers });
-
-        const modal = document.getElementById('group-info-modal');
-        if (modal) modal.classList.remove('visible');
-        alert('邀请已发送');
     }
 
     // ==================== UI渲染 (独立于QQ) ====================
@@ -1146,7 +830,6 @@ class OnlineChatManager {
                 <div class="info">
                     <div class="name-line">
                         <span class="name">${chat.name}</span>
-                        ${chat.isGroup ? '<span class="group-tag">群聊</span>' : ''}
                     </div>
                     <div class="last-msg">${lastMsg.substring(0, 30)}</div>
                 </div>
@@ -1186,10 +869,6 @@ class OnlineChatManager {
         const titleEl = document.getElementById('online-app-chat-title');
         if (titleEl) titleEl.textContent = chat.name;
 
-        // 群信息按钮
-        const groupInfoBtn = document.getElementById('online-app-group-info-btn');
-        if (groupInfoBtn) groupInfoBtn.style.display = chat.isGroup ? 'inline' : 'none';
-
         // 渲染消息
         this.renderMessages(chat);
 
@@ -1222,17 +901,11 @@ class OnlineChatManager {
             div.textContent = msg.content;
         } else if (msg.role === 'user') {
             div.className = 'online-msg user';
-            if (chat.isGroup && msg.senderNickname) {
-                div.innerHTML = `<div class="sender-name" style="color:rgba(255,255,255,0.7);">${msg.senderNickname}</div>`;
-            }
-            div.innerHTML += `<div>${this.escapeHtml(msg.content)}</div>`;
+            div.innerHTML = `<div>${this.escapeHtml(msg.content)}</div>`;
             div.innerHTML += `<div class="msg-time">${this.formatTime(msg.timestamp)}</div>`;
         } else {
             div.className = 'online-msg friend';
-            if (chat.isGroup && msg.senderNickname) {
-                div.innerHTML = `<div class="sender-name">${msg.senderNickname}</div>`;
-            }
-            div.innerHTML += `<div>${this.escapeHtml(msg.content)}</div>`;
+            div.innerHTML = `<div>${this.escapeHtml(msg.content)}</div>`;
             div.innerHTML += `<div class="msg-time">${this.formatTime(msg.timestamp)}</div>`;
         }
 
@@ -1346,13 +1019,11 @@ class OnlineChatManager {
         this.disconnect();
         this.friendRequests = [];
         this.onlineFriends = [];
-        this.groupChats = [];
         this.chats = {};
         this.activeChatId = null;
 
         this.saveFriendRequests();
         this.saveOnlineFriends();
-        this.saveGroupChats();
         this.saveChats();
 
         this.renderChatList();
@@ -1392,14 +1063,6 @@ function closeFriendRequestsModal() {
 }
 function closeOnlineFriendsModal() {
     const modal = document.getElementById('online-friends-modal');
-    if (modal) modal.classList.remove('visible');
-}
-function closeCreateGroupModal() {
-    const modal = document.getElementById('create-group-modal');
-    if (modal) modal.classList.remove('visible');
-}
-function closeGroupInfoModal() {
-    const modal = document.getElementById('group-info-modal');
     if (modal) modal.classList.remove('visible');
 }
 function openOnlineHelpLink(type) {

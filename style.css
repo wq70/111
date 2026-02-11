@@ -24658,12 +24658,11 @@
               ======================================== */
 
            #page-3-content {
-               padding: 20px;
+               padding: 10px 20px;
                display: flex;
                flex-direction: column;
-               gap: 20px;
+               gap: 10px;
                align-content: start;
-               height: 100%;
                box-sizing: border-box;
            }
 
@@ -24671,14 +24670,14 @@
            .p3-profile-widget {
                display: flex;
                align-items: center;
-               gap: 20px;
+               gap: 12px;
                width: 100%;
-               padding: 18px 16px;
+               padding: 10px 14px;
                box-sizing: border-box;
                background: rgba(255, 255, 255, 0.65);
                backdrop-filter: blur(12px);
                -webkit-backdrop-filter: blur(12px);
-               border-radius: 22px;
+               border-radius: 20px;
                border: 1px solid rgba(255, 255, 255, 0.5);
                flex-shrink: 0;
            }
@@ -24688,28 +24687,28 @@
                display: flex;
                flex-direction: column;
                align-items: center;
-               gap: 6px;
+               gap: 4px;
                flex-shrink: 0;
            }
 
            .p3-name-tag {
                background: rgba(255, 255, 255, 0.95);
-               padding: 3px 14px;
-               border-radius: 10px;
+               padding: 2px 10px;
+               border-radius: 8px;
                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-               font-size: 13px;
+               font-size: 11px;
                font-weight: 600;
                color: #1c1c1e;
                white-space: nowrap;
            }
 
            .p3-avatar-wrapper {
-               width: 90px;
-               height: 90px;
+               width: 65px;
+               height: 65px;
                border-radius: 50%;
                overflow: hidden;
                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-               border: 3px solid rgba(255, 255, 255, 0.8);
+               border: 2.5px solid rgba(255, 255, 255, 0.8);
                flex-shrink: 0;
            }
 
@@ -24721,7 +24720,7 @@
            }
 
            .p3-profile-title {
-               font-size: 13px;
+               font-size: 11px;
                font-weight: 600;
                color: #1c1c1e;
                text-align: center;
@@ -24733,21 +24732,21 @@
                flex: 1;
                display: flex;
                flex-direction: column;
-               gap: 8px;
+               gap: 5px;
                min-width: 0;
            }
 
            .p3-deco-line {
                margin: 0;
-               font-size: 12px;
+               font-size: 11px;
                color: #555;
-               line-height: 1.6;
+               line-height: 1.4;
                word-break: break-word;
            }
 
            .p3-studio-line {
                font-weight: 700;
-               font-size: 13px;
+               font-size: 11.5px;
                color: #333;
                letter-spacing: 1px;
                font-style: italic;
@@ -24898,8 +24897,8 @@
                display: flex;
                flex-direction: column;
                align-items: center;
-               gap: 4px;
-               padding: 8px 0;
+               gap: 2px;
+               padding: 4px 0;
            }
            .anni-day-counter {
                display: flex;
@@ -24907,14 +24906,14 @@
                gap: 3px;
            }
            .anni-day-counter span:first-child {
-               font-size: 28px;
+               font-size: 24px;
                font-weight: 700;
                color: #fff;
                text-shadow: 0 1px 6px rgba(0,0,0,0.18);
                letter-spacing: 2px;
            }
            .anni-day-unit {
-               font-size: 13px;
+               font-size: 11px;
                font-weight: 500;
                color: rgba(255,255,255,0.9);
                text-shadow: 0 1px 4px rgba(0,0,0,0.12);
@@ -24924,11 +24923,11 @@
                justify-content: center;
            }
            .anni-photo {
-               width: 70px;
-               height: 70px;
+               width: 55px;
+               height: 55px;
                border-radius: 50%;
                overflow: hidden;
-               border: 2.5px solid #fff;
+               border: 2px solid #fff;
                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
                flex-shrink: 0;
                cursor: pointer;
@@ -24945,12 +24944,12 @@
                display: block;
            }
            .anni-caption {
-               font-size: 11px;
+               font-size: 10px;
                color: #666;
-               margin-top: 2px;
+               margin-top: 1px;
            }
            .anni-date {
-               font-size: 10px;
+               font-size: 9px;
                color: #999;
                letter-spacing: 0.5px;
            }
@@ -24960,8 +24959,8 @@
                flex: 1;
                display: flex;
                flex-direction: column;
-               gap: 4px;
-               padding: 6px 0;
+               gap: 3px;
+               padding: 4px 0;
                font-size: 9px;
                color: #333;
            }
@@ -25024,7 +25023,7 @@
            #page-3-app-grid {
                display: grid;
                grid-template-columns: repeat(4, 1fr);
-               gap: 15px;
+               gap: 10px;
                align-content: start;
                justify-items: center;
            }
@@ -25044,126 +25043,4 @@
 
            .p3-placeholder-app .label {
                color: #bbb !important;
-           }
-
-           /* =============================================
-              第三页布局修复 — 模仿前两页的自然流式布局
-              去掉height:100%和margin-top:auto
-              让内容自然高度刚好合适
-              ============================================= */
-
-           /* 去掉height:100%，改为和前两页一样的自然流式布局 */
-           #page-3-content {
-               height: auto;
-               gap: 10px;
-               padding: 0;
-           }
-
-           /* 第一个组件：个人资料卡片 */
-           .p3-profile-widget {
-               padding: 10px 12px;
-               gap: 12px;
-               border-radius: 18px;
-           }
-
-           .p3-avatar-wrapper {
-               width: 60px;
-               height: 60px;
-               border-width: 2px;
-           }
-
-           .p3-profile-left {
-               gap: 3px;
-           }
-
-           .p3-name-tag {
-               font-size: 11px;
-               padding: 2px 10px;
-           }
-
-           .p3-profile-title {
-               font-size: 10.5px;
-           }
-
-           .p3-profile-right {
-               gap: 5px;
-           }
-
-           .p3-deco-line {
-               font-size: 10px;
-               line-height: 1.35;
-           }
-
-           .p3-studio-line {
-               font-size: 11px;
-           }
-
-           .p3-dotted-divider {
-               margin: 0;
-           }
-
-           /* 第二三个组件：纪念日+微博 */
-           .p3-split-row {
-               gap: 6px;
-           }
-
-           .p3-anniversary-widget {
-               padding: 3px 0;
-               gap: 2px;
-           }
-
-           .anni-day-counter span:first-child {
-               font-size: 22px;
-           }
-
-           .anni-day-unit {
-               font-size: 11px;
-           }
-
-           .anni-photo {
-               width: 52px;
-               height: 52px;
-               border-width: 2px;
-           }
-
-           .anni-caption {
-               font-size: 9.5px;
-           }
-
-           .anni-date {
-               font-size: 8.5px;
-           }
-
-           .p3-weibo-widget {
-               padding: 3px 0;
-               gap: 2px;
-           }
-
-           .weibo-avatar {
-               width: 20px;
-               height: 20px;
-           }
-
-           .weibo-user-info span:first-child {
-               font-size: 9px;
-           }
-
-           .weibo-body {
-               font-size: 7.5px;
-               line-height: 1.3;
-           }
-
-           .weibo-footer {
-               font-size: 7px;
-           }
-
-           .weibo-image {
-               width: 44px;
-               height: 50px;
-               margin-top: -14px;
-           }
-
-           /* APP网格 */
-           #page-3-app-grid {
-               gap: 10px;
            }
