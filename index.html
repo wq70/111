@@ -2821,43 +2821,6 @@
     </div>
   </div>
 </div>
-
-<!-- 批量重置壁纸对话框 -->
-<div id="batch-reset-wallpaper-modal" class="modal">
-  <div class="modal-content" style="height: auto; max-height: 80%;">
-    <div class="modal-header">
-      <span>选择要重置的壁纸</span>
-      <label style="font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;">
-        <input type="checkbox" id="select-all-wallpapers"> 全选
-      </label>
-    </div>
-    <div class="modal-body" style="padding: 15px;">
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <label class="wallpaper-reset-option">
-          <input type="checkbox" class="wallpaper-reset-checkbox" data-type="ephone">
-          <span>主屏幕壁纸</span>
-        </label>
-        <label class="wallpaper-reset-option">
-          <input type="checkbox" class="wallpaper-reset-checkbox" data-type="cphone">
-          <span>CPhone 壁纸</span>
-        </label>
-        <label class="wallpaper-reset-option">
-          <input type="checkbox" class="wallpaper-reset-checkbox" data-type="myphone">
-          <span>MYphone 壁纸</span>
-        </label>
-        <label class="wallpaper-reset-option">
-          <input type="checkbox" class="wallpaper-reset-checkbox" data-type="chat">
-          <span>聊天背景 (全局)</span>
-        </label>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="cancel" id="cancel-batch-reset-btn">取消</button>
-      <button class="save btn-danger" id="confirm-batch-reset-btn" style="background-color: #ff3b30;">确认重置</button>
-    </div>
-  </div>
-</div>
-
     <div id="data-clear-wizard-modal" class="modal">
       <div class="modal-content" style="height: 80%;">
         <div id="data-clear-step-1" class="wizard-step">
@@ -3423,10 +3386,7 @@
       <div class="settings-container ios-scroll-container">
 
         <!-- 1. 壁纸与背景 -->
-        <div class="settings-header">
-            壁纸与背景
-            <button id="batch-reset-wallpaper-btn" class="settings-header-btn">重置</button>
-        </div>
+        <div class="settings-header">壁纸与背景</div>
         <div class="settings-section">
             <!-- EPhone 主屏幕 -->
             <div class="settings-item">
@@ -3438,6 +3398,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('wallpaper-upload-input').click()">本地</button>
                         <button id="upload-ephone-bg-url-btn" class="settings-mini-btn">URL</button>
+                        <button id="reset-ephone-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <!-- 隐藏的文件输入 -->
                     <input type="file" id="wallpaper-upload-input" accept="image/*" class="hidden-input">
@@ -3452,6 +3413,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('cphone-wallpaper-upload-input').click()">本地</button>
                         <button id="upload-cphone-bg-url-btn" class="settings-mini-btn">URL</button>
+                        <button id="reset-cphone-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <input type="file" id="cphone-wallpaper-upload-input" accept="image/*" class="hidden-input">
                 </div>
@@ -3465,6 +3427,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('myphone-wallpaper-upload-input').click()">本地</button>
                         <button id="upload-myphone-bg-url-btn" class="settings-mini-btn">URL</button>
+                        <button id="reset-myphone-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <input type="file" id="myphone-wallpaper-upload-input" accept="image/*" class="hidden-input">
                 </div>
@@ -3478,6 +3441,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('global-bg-input').click()">本地</button>
                         <button id="upload-global-bg-url-btn" class="settings-mini-btn">URL</button>
+                        <button id="reset-global-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <input type="file" id="global-bg-input" accept="image/*" class="hidden-input">
                 </div>

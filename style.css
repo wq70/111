@@ -14291,73 +14291,10 @@
                color: #6d6d72;
                margin: 24px 0 8px 16px;
                text-transform: uppercase;
-               display: flex;
-               justify-content: space-between;
-               align-items: center;
-               padding-right: 16px;
            }
 
            #phone-screen.dark-mode .settings-header {
                color: #8d8d93;
-           }
-
-           .settings-header-btn {
-               background-color: #007aff;
-               color: white;
-               border: none;
-               border-radius: 8px;
-               padding: 4px 12px;
-               font-size: 13px;
-               font-weight: 500;
-               cursor: pointer;
-               text-transform: none;
-               transition: all 0.2s;
-           }
-
-           .settings-header-btn:hover {
-               opacity: 0.8;
-           }
-
-           .settings-header-btn:active {
-               transform: scale(0.95);
-           }
-
-           #phone-screen.dark-mode .settings-header-btn {
-               background-color: #0a84ff;
-           }
-
-           .wallpaper-reset-option {
-               display: flex;
-               align-items: center;
-               gap: 10px;
-               padding: 12px;
-               background-color: #f9f9f9;
-               border-radius: 8px;
-               cursor: pointer;
-               transition: background-color 0.2s;
-           }
-
-           .wallpaper-reset-option:hover {
-               background-color: #f0f0f0;
-           }
-
-           .wallpaper-reset-option input[type="checkbox"] {
-               width: 20px;
-               height: 20px;
-               cursor: pointer;
-           }
-
-           .wallpaper-reset-option span {
-               font-size: 15px;
-               flex: 1;
-           }
-
-           #phone-screen.dark-mode .wallpaper-reset-option {
-               background-color: #2c2c2e;
-           }
-
-           #phone-screen.dark-mode .wallpaper-reset-option:hover {
-               background-color: #3a3a3c;
            }
 
            /* 描述文本 */
@@ -24525,25 +24462,6 @@
                .voice-text-confirm-footer {
                    padding: 12px 20px;
                }
-
-               /* 移动端壁纸设置样式优化 */
-               .settings-header {
-                   margin: 20px 0 8px 12px;
-                   padding-right: 12px;
-               }
-
-               .settings-header-btn {
-                   padding: 4px 10px;
-                   font-size: 12px;
-               }
-
-               .wallpaper-reset-option {
-                   padding: 10px;
-               }
-
-               .wallpaper-reset-option span {
-                   font-size: 14px;
-               }
            }
 
 
@@ -25252,4 +25170,33 @@
 
            .p3-placeholder-app .label {
                color: #bbb !important;
+           }
+
+           /* 移动端壁纸设置布局优化 */
+           @media (max-width: 600px) {
+               /* 壁纸设置项的右侧区域改为换行布局 */
+               .settings-item:has(.wallpaper-thumbnail) .settings-right {
+                   flex-wrap: wrap;
+                   gap: 8px;
+               }
+
+               /* 预览图占据第一行 */
+               .settings-item .wallpaper-thumbnail {
+                   width: 40px !important;
+                   height: 70px !important;
+               }
+
+               /* 按钮组占据第二行，占满整行 */
+               .settings-item .action-btn-group {
+                   flex: 1 0 100%;
+                   display: flex;
+                   gap: 6px;
+                   justify-content: flex-start;
+               }
+
+               /* 按钮平分宽度 */
+               .settings-item .action-btn-group .settings-mini-btn {
+                   flex: 1;
+                   min-width: 0;
+               }
            }
