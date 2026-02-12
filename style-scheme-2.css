@@ -1,0 +1,482 @@
+
+/* ==========================================================================
+   方案 2：奶油樱花·浅粉梦境 (Cream Sakura Dream)
+   ========================================================================== */
+
+/* --- 1. 全局背景与字体 --- */
+#api-settings-screen.api-scheme-2 {
+    background: linear-gradient(180deg, #FEFEFE 0%, #FFF8FA 50%, #FFF5F8 100%) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif !important;
+    color: #6B5B5F !important;
+    position: relative !important;
+}
+
+/* 添加顶部装饰渐变条 */
+#api-settings-screen.api-scheme-2::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 3px !important;
+    background: linear-gradient(90deg, #FFE4E9 0%, #FFD1DC 50%, #FFE4E9 100%) !important;
+    opacity: 0.6 !important;
+    z-index: 1 !important;
+}
+
+/* 深色模式适配 */
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 {
+    background: linear-gradient(180deg, #2A2428 0%, #312A2E 100%) !important;
+    color: #EFE5E9 !important;
+}
+
+/* --- 2. 顶部导航栏 --- */
+#api-settings-screen.api-scheme-2 .header {
+    background: rgba(254, 254, 254, 0.88) !important;
+    border-bottom: 1px solid rgba(255, 228, 233, 0.4) !important;
+    color: #D8A7B5 !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .header {
+    background: rgba(42, 36, 40, 0.92) !important;
+    border-bottom: 1px solid rgba(255, 228, 233, 0.08) !important;
+    color: #E5C5D0 !important;
+}
+
+/* 返回按钮 */
+#api-settings-screen.api-scheme-2 .back-btn {
+    color: #D8A7B5 !important;
+    font-weight: 500 !important;
+    font-size: 22px !important;
+}
+
+/* 保存按钮 - 果冻质感 */
+#api-settings-screen.api-scheme-2 .save-btn {
+    background: linear-gradient(135deg, rgba(255, 209, 220, 0.9) 0%, rgba(255, 228, 233, 0.85) 100%) !important;
+    color: #D8A7B5 !important;
+    padding: 7px 18px !important;
+    border-radius: 50px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 8px rgba(255, 209, 220, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    letter-spacing: 0.5px !important;
+}
+
+#api-settings-screen.api-scheme-2 .save-btn:active {
+    transform: scale(0.96) !important;
+    box-shadow: 0 1px 4px rgba(255, 209, 220, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .save-btn {
+    background: linear-gradient(135deg, rgba(216, 167, 181, 0.3) 0%, rgba(229, 197, 208, 0.25) 100%) !important;
+    color: #E5C5D0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .back-btn {
+    color: #E5C5D0 !important;
+}
+
+/* --- 3. 去卡片化：Settings Section --- */
+#api-settings-screen.api-scheme-2 .settings-section {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-section {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* 分组标题 - 极简风格 */
+#api-settings-screen.api-scheme-2 .settings-header {
+    color: #C9A0AE !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    margin: 32px 24px 8px 24px !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    opacity: 0.7 !important;
+    position: relative !important;
+    padding-left: 12px !important;
+}
+
+/* 分组标题左侧装饰点 */
+#api-settings-screen.api-scheme-2 .settings-header::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 3px !important;
+    height: 3px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #FFD1DC, #FFE4E9) !important;
+    box-shadow: 0 0 6px rgba(255, 209, 220, 0.5) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-header {
+    color: #C9A0AE !important;
+}
+
+/* 列表项 - 轻盈气泡感 */
+#api-settings-screen.api-scheme-2 .settings-item {
+    border-bottom: 1px solid rgba(255, 228, 233, 0.15) !important;
+    padding: 16px 24px !important;
+    background: rgba(255, 255, 255, 0.3) !important;
+    margin: 0 16px !important;
+    border-radius: 0 !important;
+    transition: all 0.3s ease !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-item:first-child {
+    border-radius: 16px 16px 0 0 !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-item:last-child {
+    border-bottom: none !important;
+    border-radius: 0 0 16px 16px !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-item:only-child {
+    border-radius: 16px !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-item:hover {
+    background: rgba(255, 240, 245, 0.5) !important;
+    transform: translateX(2px) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-item {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+    background: rgba(255, 255, 255, 0.02) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-item:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* --- 4. 控件样式 (Input, Select) - 圆润胶囊 --- */
+#api-settings-screen.api-scheme-2 input[type="text"],
+#api-settings-screen.api-scheme-2 input[type="password"],
+#api-settings-screen.api-scheme-2 input[type="number"],
+#api-settings-screen.api-scheme-2 select.settings-select {
+    background: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid rgba(255, 228, 233, 0.4) !important;
+    border-radius: 50px !important;
+    color: #6B5B5F !important;
+    padding: 9px 16px !important;
+    font-size: 13px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 1px 3px rgba(255, 209, 220, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+}
+
+#api-settings-screen.api-scheme-2 input:focus,
+#api-settings-screen.api-scheme-2 select:focus {
+    border-color: #FFD1DC !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    box-shadow: 0 0 0 3px rgba(255, 209, 220, 0.15), 0 2px 8px rgba(255, 209, 220, 0.2) !important;
+    outline: none !important;
+    transform: translateY(-1px) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 input,
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 select {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #EFE5E9 !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 input:focus,
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 select:focus {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(216, 167, 181, 0.3) !important;
+}
+
+/* --- 5. 按钮样式 - 果冻质感 --- */
+#api-settings-screen.api-scheme-2 .settings-mini-btn {
+    background: linear-gradient(135deg, rgba(255, 228, 233, 0.8) 0%, rgba(255, 240, 245, 0.75) 100%) !important;
+    color: #C9A0AE !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
+    border-radius: 50px !important;
+    padding: 7px 16px !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 6px rgba(255, 209, 220, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    letter-spacing: 0.3px !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-mini-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 10px rgba(255, 209, 220, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-mini-btn:active {
+    transform: translateY(0) scale(0.97) !important;
+    box-shadow: 0 1px 3px rgba(255, 209, 220, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-mini-btn {
+    background: linear-gradient(135deg, rgba(216, 167, 181, 0.25) 0%, rgba(229, 197, 208, 0.2) 100%) !important;
+    color: #E5C5D0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* --- 6. 开关样式 - 圆润可爱 --- */
+#api-settings-screen.api-scheme-2 .toggle-switch {
+    width: 48px !important;
+    height: 28px !important;
+}
+
+#api-settings-screen.api-scheme-2 .slider {
+    background: rgba(230, 220, 225, 0.5) !important;
+    border: 1px solid rgba(255, 228, 233, 0.3) !important;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+#api-settings-screen.api-scheme-2 .toggle-switch input:checked + .slider {
+    background: linear-gradient(135deg, #FFD1DC 0%, #FFE4E9 100%) !important;
+    border: 1px solid rgba(255, 209, 220, 0.5) !important;
+    box-shadow: 0 0 8px rgba(255, 209, 220, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.6) !important;
+}
+
+#api-settings-screen.api-scheme-2 .slider:before {
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFFBFC 100%) !important;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(255, 209, 220, 0.2) !important;
+    width: 22px !important;
+    height: 22px !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .slider {
+    background: rgba(80, 70, 75, 0.5) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .toggle-switch input:checked + .slider {
+    background: linear-gradient(135deg, rgba(216, 167, 181, 0.5) 0%, rgba(229, 197, 208, 0.45) 100%) !important;
+}
+
+/* --- 7. 去除所有 Emoji --- */
+
+/* 通用规则：隐藏所有可能的emoji字符 */
+#api-settings-screen.api-scheme-2 button,
+#api-settings-screen.api-scheme-2 span,
+#api-settings-screen.api-scheme-2 a,
+#api-settings-screen.api-scheme-2 label {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* 1. 拉取按钮 */
+#api-settings-screen.api-scheme-2 #fetch-models-btn,
+#api-settings-screen.api-scheme-2 #fetch-secondary-models-btn,
+#api-settings-screen.api-scheme-2 #google-imagen-fetch-models-btn {
+    font-size: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 58px !important;
+}
+#api-settings-screen.api-scheme-2 #fetch-models-btn::before,
+#api-settings-screen.api-scheme-2 #fetch-secondary-models-btn::before,
+#api-settings-screen.api-scheme-2 #google-imagen-fetch-models-btn::before {
+    content: "拉取" !important;
+    font-size: 12px !important;
+    visibility: visible !important;
+}
+
+/* 2. 测试生成按钮 */
+#api-settings-screen.api-scheme-2 #google-imagen-test-btn,
+#api-settings-screen.api-scheme-2 #novelai-test-btn {
+    font-size: 0 !important;
+    min-width: 76px !important;
+}
+#api-settings-screen.api-scheme-2 #google-imagen-test-btn::before,
+#api-settings-screen.api-scheme-2 #novelai-test-btn::before {
+    content: "测试生成" !important;
+    font-size: 12px !important;
+    visibility: visible !important;
+}
+
+/* 3. 生成参数按钮 */
+#api-settings-screen.api-scheme-2 #novelai-settings-btn {
+    font-size: 0 !important;
+    min-width: 76px !important;
+}
+#api-settings-screen.api-scheme-2 #novelai-settings-btn::before {
+    content: "生成参数" !important;
+    font-size: 12px !important;
+    visibility: visible !important;
+}
+
+/* 4. 隐藏密码可见性切换的emoji */
+#api-settings-screen.api-scheme-2 #github-token-toggle,
+#api-settings-screen.api-scheme-2 #google-imagen-key-toggle,
+#api-settings-screen.api-scheme-2 #novelai-key-toggle,
+#api-settings-screen.api-scheme-2 #imgbb-key-toggle {
+    font-size: 0 !important;
+    width: 42px !important;
+    height: 24px !important;
+    text-align: center !important;
+    background: rgba(255, 228, 233, 0.3) !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    border: 1px solid rgba(255, 209, 220, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+#api-settings-screen.api-scheme-2 #github-token-toggle::before,
+#api-settings-screen.api-scheme-2 #google-imagen-key-toggle::before,
+#api-settings-screen.api-scheme-2 #novelai-key-toggle::before,
+#api-settings-screen.api-scheme-2 #imgbb-key-toggle::before {
+    content: "显示" !important;
+    font-size: 11px !important;
+    color: #C9A0AE !important;
+    visibility: visible !important;
+}
+
+#api-settings-screen.api-scheme-2 #github-token-toggle:hover,
+#api-settings-screen.api-scheme-2 #google-imagen-key-toggle:hover,
+#api-settings-screen.api-scheme-2 #novelai-key-toggle:hover,
+#api-settings-screen.api-scheme-2 #imgbb-key-toggle:hover {
+    background: rgba(255, 228, 233, 0.5) !important;
+}
+
+/* 5. Github 备份按钮组 */
+#api-settings-screen.api-scheme-2 #github-upload-btn { font-size: 0 !important; min-width: 76px !important; }
+#api-settings-screen.api-scheme-2 #github-upload-btn::before { content: "上传备份" !important; font-size: 12px !important; }
+
+#api-settings-screen.api-scheme-2 #github-upload-large-btn { font-size: 0 !important; min-width: 88px !important; }
+#api-settings-screen.api-scheme-2 #github-upload-large-btn::before { content: "大数据备份" !important; font-size: 12px !important; }
+
+#api-settings-screen.api-scheme-2 #github-download-btn { font-size: 0 !important; min-width: 76px !important; }
+#api-settings-screen.api-scheme-2 #github-download-btn::before { content: "恢复备份" !important; font-size: 12px !important; }
+
+/* 6. 链接样式 */
+#api-settings-screen.api-scheme-2 a[target="_blank"] {
+    text-decoration: none !important;
+    color: #D8A7B5 !important;
+    border-bottom: 1px solid rgba(255, 209, 220, 0.3) !important;
+    transition: all 0.2s ease !important;
+}
+
+#api-settings-screen.api-scheme-2 a[target="_blank"]:hover {
+    color: #C9A0AE !important;
+    border-bottom-color: rgba(255, 209, 220, 0.6) !important;
+}
+
+/* 7. 提示文本中的链接去emoji */
+#api-settings-screen.api-scheme-2 .settings-tip-content a {
+    font-size: 0 !important;
+}
+#api-settings-screen.api-scheme-2 .settings-tip-content a::before {
+    content: "点击此处注册并获取 API Key" !important;
+    font-size: 12px !important;
+    visibility: visible !important;
+}
+
+/* --- 8. 细节优化 --- */
+
+/* 标签 (Label) 样式 */
+#api-settings-screen.api-scheme-2 label {
+    color: #8B7075 !important;
+    font-weight: 400 !important;
+    font-size: 14px !important;
+    letter-spacing: 0.2px !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 label {
+    color: #D0BFC5 !important;
+}
+
+/* 提示文本 (Tips) - 轻盈风格 */
+#api-settings-screen.api-scheme-2 .settings-tip-wrapper,
+#api-settings-screen.api-scheme-2 .settings-desc {
+    background: rgba(255, 240, 245, 0.4) !important;
+    color: #A08A90 !important;
+    border-radius: 14px !important;
+    padding: 12px 16px !important;
+    margin: 12px 16px !important;
+    border: 1px solid rgba(255, 228, 233, 0.3) !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+    box-shadow: 0 2px 6px rgba(255, 209, 220, 0.1) !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-tip-wrapper,
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .settings-desc {
+    background: rgba(255, 255, 255, 0.03) !important;
+    color: #B09AA0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 滚动条样式 */
+#api-settings-screen.api-scheme-2 .ios-scroll-container::-webkit-scrollbar {
+    width: 3px !important;
+    background: transparent !important;
+}
+
+#api-settings-screen.api-scheme-2 .ios-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 209, 220, 0.3) !important;
+    border-radius: 10px !important;
+}
+
+#api-settings-screen.api-scheme-2 .ios-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 209, 220, 0.5) !important;
+}
+
+/* 详情展开区域样式 */
+#api-settings-screen.api-scheme-2 #novelai-details,
+#api-settings-screen.api-scheme-2 #google-imagen-details,
+#api-settings-screen.api-scheme-2 #imgbb-settings-details {
+    background: rgba(255, 248, 250, 0.5) !important;
+    border-top: 1px solid rgba(255, 228, 233, 0.2) !important;
+    border-radius: 0 0 12px 12px !important;
+}
+
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 #novelai-details,
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 #google-imagen-details,
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 #imgbb-settings-details {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.03) !important;
+}
+
+/* 全宽按钮样式 */
+#api-settings-screen.api-scheme-2 .settings-full-btn {
+    background: linear-gradient(135deg, rgba(255, 228, 233, 0.6) 0%, rgba(255, 240, 245, 0.5) 100%) !important;
+    color: #C9A0AE !important;
+    border: 1px solid rgba(255, 209, 220, 0.3) !important;
+    border-radius: 50px !important;
+    padding: 12px 20px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    box-shadow: 0 2px 8px rgba(255, 209, 220, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+    transition: all 0.3s ease !important;
+    letter-spacing: 0.5px !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-full-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(255, 209, 220, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+#api-settings-screen.api-scheme-2 .settings-full-btn:active {
+    transform: translateY(0) scale(0.98) !important;
+}
+
+/* 方案 2 结束 */

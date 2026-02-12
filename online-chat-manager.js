@@ -202,6 +202,16 @@ class OnlineChatManager {
         const groupInfoBtn = document.getElementById('online-app-group-info-btn');
         if (groupInfoBtn) groupInfoBtn.addEventListener('click', () => this.openGroupInfoModal());
 
+        // 教程按钮
+        const deployTutorialBtn = document.getElementById('online-app-deploy-tutorial-btn');
+        if (deployTutorialBtn) deployTutorialBtn.addEventListener('click', () => window.open('online-help-deploy.html', '_blank'));
+
+        const guideTutorialBtn = document.getElementById('online-app-guide-tutorial-btn');
+        if (guideTutorialBtn) guideTutorialBtn.addEventListener('click', () => window.open('online-help-guide.html', '_blank'));
+
+        const explainTutorialBtn = document.getElementById('online-app-explain-tutorial-btn');
+        if (explainTutorialBtn) explainTutorialBtn.addEventListener('click', () => window.open('online-help-explain.html', '_blank'));
+
         // 清理旧数据
         const clearBtn = document.getElementById('online-app-clear-cache-btn');
         if (clearBtn) clearBtn.addEventListener('click', () => this.clearAllOldData());
@@ -1595,7 +1605,7 @@ class OnlineChatManager {
                      style="width:36px;height:36px;border-radius:50%;object-fit:cover;"
                      onerror="this.src='https://i.postimg.cc/y8xWzCqj/anime-boy.jpg'">
                 <div style="flex:1;">
-                    <div style="font-size:14px;">${this.escapeHtml(m.nickname)}${m.isAiCharacter ? ' 🤖' : ''}</div>
+                    <div style="font-size:14px;">${this.escapeHtml(m.nickname)}</div>
                     <div style="font-size:12px;color:#999;">${m.isAiCharacter ? `AI角色 (${m.ownerUserId === this.userId ? '我的' : '其他人的'})` : m.userId}${m.userId === this.userId ? ' (我)' : ''}</div>
                 </div>
             </div>
@@ -1610,12 +1620,32 @@ class OnlineChatManager {
             : `<button class="settings-full-btn" style="margin-top:10px;color:#007aff;" 
                     onclick="onlineChatManager.openAddAiCharacterModal();closeGroupInfoModal();">拉入AI角色</button>`;
 
+        // AI角色上下文设置
+        const currentContextSize = chat.aiContextSize || 20;
+        const aiContextSettingHtml = `
+            <div style="margin-top:15px;padding-top:15px;border-top:1px solid #eee;">
+                <div style="font-size:14px;font-weight:600;margin-bottom:10px;">AI角色设置</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <span style="font-size:13px;color:#666;">AI角色上下文条数</span>
+                    <input type="number" id="group-ai-context-size" 
+                           value="${currentContextSize}" 
+                           min="5" max="100" step="1"
+                           style="width:70px;padding:5px;border:1px solid #ddd;border-radius:6px;text-align:center;font-size:13px;">
+                </div>
+                <div style="font-size:11px;color:#999;margin-top:5px;">
+                    控制AI角色能看到的群聊历史消息数量（独立设置，不影响主屏幕）
+                </div>
+                <button class="settings-full-btn" style="margin-top:10px;background:#34c759;" 
+                        onclick="onlineChatManager.saveGroupAiContextSize('${chat.id}')">保存设置</button>
+            </div>`;
+
         content.innerHTML = `
             <div style="padding:15px;">
                 <div style="font-size:16px;font-weight:600;margin-bottom:5px;">${this.escapeHtml(chat.name)}</div>
                 <div style="font-size:13px;color:#999;margin-bottom:15px;">群成员 (${(chat.members || []).length}人)</div>
                 <div>${membersHtml}</div>
                 ${aiButtonHtml}
+                ${aiContextSettingHtml}
                 <button class="settings-full-btn" style="margin-top:15px;color:#ff3b30;" 
                         onclick="onlineChatManager.leaveGroup('${chat.id}')">退出群聊</button>
             </div>`;
@@ -1638,6 +1668,26 @@ class OnlineChatManager {
         if (modal) modal.classList.remove('visible');
 
         this.renderChatList();
+    }
+
+    // 保存群聊AI上下文设置
+    saveGroupAiContextSize(groupId) {
+        const input = document.getElementById('group-ai-context-size');
+        if (!input) return;
+
+        const value = parseInt(input.value);
+        if (isNaN(value) || value < 5 || value > 100) {
+            alert('请输入5到100之间的数值');
+            return;
+        }
+
+        const chat = this.chats[groupId];
+        if (!chat) return;
+
+        chat.aiContextSize = value;
+        this.saveChats();
+
+        alert('设置已保存！');
     }
 
 
@@ -2058,8 +2108,9 @@ class OnlineChatManager {
                 }
             }).join('\n');
 
-            // 群聊独立记忆（最近的群聊上下文）
-            const recentGroupHistory = (groupChat.history || []).slice(-30).map(msg => {
+            // 群聊独立记忆（最近的群聊上下文）- 使用群聊设置的上下文数量
+            const contextSize = groupChat.aiContextSize || 20;
+            const recentGroupHistory = (groupChat.history || []).slice(-contextSize).map(msg => {
                 if (msg.role === 'system') return `[系统] ${msg.content}`;
                 const sender = msg.senderNickname || (msg.role === 'user' ? ownerNickname : charName);
                 return `${sender}: ${msg.content}`;
@@ -2102,7 +2153,9 @@ class OnlineChatManager {
 
         // 构建消息历史
         buildAiCharacterMessages(groupChat, myChar) {
-            const history = (groupChat.history || []).slice(-20);
+            // 使用群聊独立的AI上下文设置，默认20条
+            const contextSize = groupChat.aiContextSize || 20;
+            const history = (groupChat.history || []).slice(-contextSize);
             return history.filter(msg => msg.role !== 'system').map(msg => {
                 const sender = msg.senderNickname || (msg.role === 'user' ? this.nickname : '未知');
                 const isMyCharMsg = msg.senderUserId === myChar.characterId;

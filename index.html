@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>EPhone</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-scheme-2.css">
   <link rel="stylesheet" href="update-notification.css">
   <link rel="stylesheet" href="structured-memory.css">
   <link rel="stylesheet" href="online-app.css">
@@ -27,7 +28,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=0.0.15" defer></script>
+  <script src="update-notification.js?v=1.0.0" defer></script>
   <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
@@ -35,6 +36,7 @@
   <script src="notification-manager.js" defer></script>
   <script src="character-generator.js" defer></script>
   <script src="structured-memory.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script src="script.js" defer="defer"></script>
   <script src="helper-assistant.js" defer></script>
   <script src="force-update.js" defer></script>
@@ -2233,6 +2235,93 @@
 
         <!-- 联机功能已迁移到独立的连接APP -->
 
+        <!-- 截图水印 -->
+        <div class="settings-header">截图水印</div>
+        <div class="settings-section">
+            <div class="settings-item">
+                <label>
+                    <span style="display: block;">启用截图水印</span>
+                    <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-top: 4px;">截图时自动添加全屏水印效果</span>
+                </label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="watermark-enabled-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div id="watermark-settings-container" style="display: none;">
+                <!-- 水印文字 -->
+                <div class="settings-item">
+                    <label>水印文字</label>
+                    <input type="text" id="watermark-text" class="settings-input" placeholder="输入水印文字" value="保密内容 请勿外传" style="width: 200px; padding: 8px; border: 1px solid #ddd; border-radius: 6px;">
+                </div>
+                
+                <!-- 水印布局方式 -->
+                <div class="settings-item">
+                    <label>布局方式</label>
+                    <select id="watermark-layout" class="settings-select" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; min-width: 150px;">
+                        <option value="diagonal">斜向排列</option>
+                        <option value="grid">网格排列</option>
+                        <option value="sparse">稀疏排列</option>
+                        <option value="dense">密集排列</option>
+                    </select>
+                </div>
+                
+                <!-- 水印颜色 -->
+                <div class="settings-item">
+                    <label>水印颜色</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="color" id="watermark-color" value="#000000" style="width: 50px; height: 35px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer;">
+                        <span id="watermark-color-display" style="font-size: 12px; color: #666;">#000000</span>
+                    </div>
+                </div>
+                
+                <!-- 水印透明度 -->
+                <div class="settings-item">
+                    <label>透明度</label>
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <input type="range" id="watermark-opacity" min="0.05" max="0.5" step="0.05" value="0.1" style="flex: 1;">
+                        <span id="watermark-opacity-display" style="min-width: 40px; text-align: right; font-size: 14px;">10%</span>
+                    </div>
+                </div>
+                
+                <!-- 字体大小 -->
+                <div class="settings-item">
+                    <label>字体大小</label>
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <input type="range" id="watermark-font-size" min="12" max="48" step="2" value="20" style="flex: 1;">
+                        <span id="watermark-font-size-display" style="min-width: 40px; text-align: right; font-size: 14px;">20px</span>
+                    </div>
+                </div>
+                
+                <!-- 字体选择 -->
+                <div class="settings-item">
+                    <label>字体</label>
+                    <select id="watermark-font-family" class="settings-select" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; min-width: 150px;">
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="'Microsoft YaHei', sans-serif" selected>微软雅黑</option>
+                        <option value="'SimSun', serif">宋体</option>
+                        <option value="'KaiTi', serif">楷体</option>
+                        <option value="'Courier New', monospace">Courier New</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                    </select>
+                </div>
+                
+                <!-- 预览按钮 -->
+                <div class="settings-item">
+                    <label></label>
+                <button id="watermark-preview-btn" class="primary-btn" style="padding: 8px 16px; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                    预览水印效果
+                </button>
+                </div>
+                
+                <div style="font-size: 12px; color: #666; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 6px;">
+                    💡 提示：开启后，使用系统截图功能时会自动显示水印。水印仅用于截图，不影响正常使用。
+                </div>
+            </div>
+        </div>
+
         <!-- 后台保活 -->
         <div class="settings-header">后台保活</div>
         <div class="settings-section">
@@ -2471,7 +2560,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v0.0.15</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v1.0.0</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -2638,9 +2727,11 @@
             
             <!-- 列表按钮：黑色左对齐 -->
             <button class="settings-full-btn" id="clear-chat-images-btn">清空聊天的本地图片</button>
-            <button class="settings-full-btn" id="export-data-btn">导出所有数据</button>
+            <button class="settings-full-btn" id="clear-stickers-btn">一键清空表情包</button>
+            <button class="settings-full-btn" id="view-data-distribution-btn" data-lang-key="apiViewDataDistributionBtn">查看数据分布</button>
+            <button class="settings-full-btn" id="export-data-btn" data-lang-key="apiExportDataBtn">导出所有数据</button>
             <button class="settings-full-btn" id="advanced-export-btn">高级导出导入</button>
-            <button class="settings-full-btn" id="import-btn">导入备份文件</button>
+            <button class="settings-full-btn" id="import-btn" data-lang-key="apiImportDataBtn">导入备份文件</button>
             <input id="advanced-import-input" type="file" accept="application/json" hidden>
             <input id="import-data-input" type="file" accept="application/json" hidden>
             
@@ -3308,7 +3399,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('wallpaper-upload-input').click()">本地</button>
                         <button id="upload-ephone-bg-url-btn" class="settings-mini-btn">URL</button>
-                        <button id="remove-ephone-bg-btn" class="settings-mini-btn" style="display:none; color:#ff3b30;">×</button>
+                        <button id="reset-ephone-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <!-- 隐藏的文件输入 -->
                     <input type="file" id="wallpaper-upload-input" accept="image/*" class="hidden-input">
@@ -3323,7 +3414,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('cphone-wallpaper-upload-input').click()">本地</button>
                         <button id="upload-cphone-bg-url-btn" class="settings-mini-btn">URL</button>
-                        <button id="remove-cphone-bg-btn" class="settings-mini-btn" style="display:none; color:#ff3b30;">×</button>
+                        <button id="reset-cphone-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <input type="file" id="cphone-wallpaper-upload-input" accept="image/*" class="hidden-input">
                 </div>
@@ -3337,7 +3428,7 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('myphone-wallpaper-upload-input').click()">本地</button>
                         <button id="upload-myphone-bg-url-btn" class="settings-mini-btn">URL</button>
-                        <button id="remove-myphone-bg-btn" class="settings-mini-btn" style="display:none; color:#ff3b30;">×</button>
+                        <button id="reset-myphone-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <input type="file" id="myphone-wallpaper-upload-input" accept="image/*" class="hidden-input">
                 </div>
@@ -3351,9 +3442,24 @@
                     <div class="action-btn-group">
                         <button class="settings-mini-btn" onclick="document.getElementById('global-bg-input').click()">本地</button>
                         <button id="upload-global-bg-url-btn" class="settings-mini-btn">URL</button>
-                        <button id="remove-global-bg-btn" class="settings-mini-btn" style="display:none; color:#ff3b30;">×</button>
+                        <button id="reset-global-bg-btn" class="settings-mini-btn">重置</button>
                     </div>
                     <input type="file" id="global-bg-input" accept="image/*" class="hidden-input">
+                </div>
+            </div>
+        </div>
+
+        <!-- API界面方案 -->
+        <div class="settings-header">API界面方案</div>
+        <div class="settings-section">
+            <div class="settings-item">
+                <label for="api-ui-scheme-select">界面样式</label>
+                <div class="settings-right">
+                    <select id="api-ui-scheme-select" class="settings-select">
+                        <option value="1">方案1（当前）</option>
+                        <option value="2">方案2</option>
+                        <option value="3">方案3</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -3649,6 +3755,32 @@
           <div id="existing-sticker-categories-list" style="display: flex; flex-direction: column; gap: 10px;"> </div>
         </div>
         <div class="modal-footer"> <button class="save" id="close-sticker-category-manager-btn" style="width: 100%;"data-lang-key="done">完成</button> </div>
+      </div>
+    </div>
+    <div id="clear-stickers-modal" class="modal">
+      <div class="modal-content" style="height: 70%;">
+        <div class="modal-header"> <span>清空聊天中的表情包</span> </div>
+        <div class="modal-body">
+          <div style="margin-bottom: 15px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ff9800;">
+            <div style="font-weight: 600; color: #856404; margin-bottom: 8px;">📊 聊天表情包存储占用分析</div>
+            <div id="sticker-storage-stats" style="font-size: 13px; color: #856404; line-height: 1.6;">
+              正在计算...
+            </div>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <label style="font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="select-all-categories-checkbox" style="width: 18px; height: 18px; cursor: pointer;">
+              <span>全选所有角色</span>
+            </label>
+          </div>
+          <div id="clear-stickers-category-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto;">
+            <!-- 角色列表将在此处动态渲染 -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel" id="cancel-clear-stickers-btn" data-lang-key="cancel">取消</button>
+          <button class="save" id="confirm-clear-stickers-btn" style="background: #dc3545;">清空选中</button>
+        </div>
       </div>
     </div>
     <div id="incoming-call-modal" class="modal">
@@ -6980,6 +7112,15 @@
                 <button id="online-app-connect-btn" class="settings-mini-btn" style="width: 45%;">连接服务器</button>
                 <button id="online-app-disconnect-btn" class="settings-mini-btn" style="width: 45%; display: none;">断开连接</button>
               </div>
+
+              <!-- 教程区域 -->
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin: 15px 0; border: 1px solid #e0e0e0;">
+                <div style="color: #333; font-weight: bold; font-size: 16px; margin-bottom: 12px; text-align: center;">帮助与教程</div>
+                <button class="settings-full-btn" id="online-app-deploy-tutorial-btn" style="background: #007aff; color: white; font-weight: 500; margin-bottom: 8px;">服务器部署教程</button>
+                <button class="settings-full-btn" id="online-app-guide-tutorial-btn" style="background: #007aff; color: white; font-weight: 500; margin-bottom: 8px;">联机功能操作指南</button>
+                <button class="settings-full-btn" id="online-app-explain-tutorial-btn" style="background: #007aff; color: white; font-weight: 500; margin-bottom: 0;">联机功能解释说明</button>
+              </div>
+
               <button class="settings-full-btn" id="online-app-friend-requests-btn">
                 好友申请 <span id="online-app-friend-badge" style="display:none; background: #ff3b30; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 8px;">0</span>
               </button>

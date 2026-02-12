@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.15'; // 当前更新版本号
+    this.currentVersion = '1.0.0'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,15 +22,18 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.修复MYphone生成淘宝失败的BUG</div>
-      <div class="update-item tips" style="margin-top: 4px; font-size: 12px;">解释：有生成了但是查看不了的问题的，查手机的把调试层打开，可以看到角色查看了什么，每次查看都是看角色心情的，不一定他会查看全部APP，他想看哪部分看哪部分，想要他看哪一个APP直接和他说就好！</div>
-      <div class="update-item">2.修复NOVEL生图绑定失效的BUG，现在应该重新绑定即可</div>
-      <div class="update-item">3.修复语音电话读取顺序错乱的BUG</div>
-      <div class="update-item">4.尝试修复了一下动态回复错乱的问题，如果有不对一定要告诉我啊，不知道这个修复的效果如何！</div>
-      <div class="update-item">5.新增视频通话反转摄像头</div>
-      <div class="update-item">6.新增导出小手机角色，这样就可以直接转移角色和聊天记录了！</div>
-      <div class="update-item">7.新增表格式总结，可以和原来的长期记忆搭配使用，就算中途关掉也没事。仅测试</div>
-      <div class="update-item">8.新增谷歌生图（Google Imagen），支持官方API和第三方中转站，在生图设置中配置即可使用</div>
+      <div class="update-item">1.修复群聊掉头像的问题</div>
+      <div class="update-item">2.新增隐藏消息/解除消息</div>
+      <div class="update-item">3.新增TOKEN查看详细分布</div>
+      <div class="update-item">4.新增：线下「连续排版模式」打开后：对话和描写作为一个整体渲染，引号内容只加样式不换行，保持原文自然段落，默认关闭</div>
+      <div class="update-item">5.新增应用更新，可以手动拉取仓库更新，应该不用大退好多次浏览器刷新更新了</div>
+      <div class="update-item">6.角色后台活动也可以查看用户手机了，自动窥屏</div>
+      <div class="update-item">7.新增一个日记模式的手动总结，我不知道有没有效果，先试试吧。</div>
+      <div class="update-item">8.重置了整个联机功能，具体介绍看 <a href="https://discord.com/channels/1379304008157499423/1417316084465270854/1471416402366824531" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
+      <div class="update-item">9.修复一起看在线搜索不能看</div>
+      <div class="update-item">10.新增清空表情包功能</div>
+      <div class="update-item">11.新增数据分布，觉得数据太大的反正要清空哪部分自己清空吧</div>
+      <div class="update-item tips" style="margin-top: 8px;">优化了一些其他部分，尤其是数据闪退部分。</div>
     `;
 
     return `
@@ -38,7 +41,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.8 二次更新</div>
+            <div class="update-title">2.13 更新</div>
           </div>
           
           <div class="update-notification-body">
