@@ -388,7 +388,7 @@ class OnlineChatManager {
                     if (avatarPreview) avatarPreview.src = this.avatar;
                 }
 
-                if (s.wasConnected) this.shouldAutoReconnect = true;
+                if (s.wasConnected && s.enabled) this.shouldAutoReconnect = true;
 
                 // 如果是从旧版迁移，保存到新key
                 if (oldSaved && !saved) {
@@ -1272,25 +1272,35 @@ class OnlineChatManager {
     }
 
     scheduleReconnect() {
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
-        const delay = Math.min(3000 * Math.pow(1.5, this.reconnectAttempts), 60000);
-        this.reconnectAttempts++;
-        console.log(`[连接APP] ${delay / 1000}秒后重连 (第${this.reconnectAttempts}次)`);
-        this.reconnectTimer = setTimeout(() => {
-            if (this.shouldAutoReconnect && !this.isConnected) {
-                this.connect();
-            }
-        }, delay);
-    }
+            if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
+            const delay = Math.min(3000 * Math.pow(1.5, this.reconnectAttempts), 60000);
+            this.reconnectAttempts++;
+            console.log(`[连接APP] ${delay / 1000}秒后重连 (第${this.reconnectAttempts}次)`);
+            this.reconnectTimer = setTimeout(() => {
+                if (this.shouldAutoReconnect && !this.isConnected) {
+                    const enableSwitch = document.getElementById('online-app-enable-switch');
+                    if (enableSwitch && enableSwitch.checked) {
+                        this.connect();
+                    }
+                }
+            }, delay);
+        }
 
     setupVisibilityListener() {
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.shouldAutoReconnect && !this.isConnected) {
-                console.log('[连接APP] 页面恢复可见，尝试重连');
-                this.connect();
-            }
-        });
-    }
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden && this.shouldAutoReconnect && !this.isConnected) {
+                    const enableSwitch = document.getElementById('online-app-enable-switch');
+                    if (enableSwitch && enableSwitch.checked) {
+                        const idInput = document.getElementById('online-app-my-id');
+                        const serverInput = document.getElementById('online-app-server-url');
+                        if (idInput?.value && serverInput?.value) {
+                            console.log('[连接APP] 页面恢复可见，尝试重连');
+                            this.connect();
+                        }
+                    }
+                }
+            });
+        }
 
     setupBeforeUnloadListener() {
         window.addEventListener('beforeunload', () => {
