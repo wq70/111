@@ -15253,6 +15253,70 @@
                display: none !important;
            }
 
+           /* 移动端壁纸设置适配 */
+           @media (max-width: 550px) {
+               /* 壁纸设置项垂直布局 */
+               .settings-item:has(.wallpaper-thumbnail) {
+                   flex-direction: column;
+                   align-items: flex-start !important;
+               }
+
+               .settings-item:has(.wallpaper-thumbnail) label {
+                   width: 100%;
+                   margin-bottom: 10px;
+               }
+
+               .settings-item:has(.wallpaper-thumbnail) .settings-right {
+                   width: 100%;
+                   margin-left: 0 !important;
+                   justify-content: space-between;
+                   flex-wrap: nowrap;
+               }
+
+               /* 缩小预览图尺寸 */
+               .wallpaper-thumbnail {
+                   width: 35px !important;
+                   height: 62px !important;
+                   flex-shrink: 0;
+               }
+
+               /* 按钮组占据剩余空间 */
+               .action-btn-group {
+                   display: flex;
+                   gap: 6px;
+                   flex: 1;
+                   min-width: 0;
+               }
+
+               /* 按钮自适应宽度 */
+               .action-btn-group .settings-mini-btn {
+                   flex: 1;
+                   min-width: 0;
+                   padding: 6px 8px;
+                   font-size: 13px;
+                   white-space: nowrap;
+               }
+           }
+
+           /* 超小屏幕进一步优化 */
+           @media (max-width: 400px) {
+               /* 进一步缩小预览图 */
+               .wallpaper-thumbnail {
+                   width: 32px !important;
+                   height: 56px !important;
+               }
+
+               /* 按钮更紧凑 */
+               .action-btn-group {
+                   gap: 4px;
+               }
+
+               .action-btn-group .settings-mini-btn {
+                   padding: 6px 6px;
+                   font-size: 12px;
+               }
+           }
+
            /* 图标网格在白色卡片内的适配 */
            .settings-icon-grid {
                display: grid;
