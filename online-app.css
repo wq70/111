@@ -84,12 +84,15 @@
 .online-chat-list-item .avatar-group {
     flex-shrink: 0;
     margin-right: 12px;
+    width: 48px;
+    height: 48px;
 }
 .online-chat-list-item .avatar {
     width: 48px;
     height: 48px;
     border-radius: 8px;
     object-fit: cover;
+    display: block;
 }
 .online-chat-list-item .info {
     flex: 1;
@@ -158,25 +161,23 @@
     gap: 8px;
 }
 .online-msg {
-    max-width: 75%;
+    max-width: 65%;
     padding: 10px 14px;
-    border-radius: 16px;
+    border-radius: 18px;
     font-size: 15px;
     line-height: 1.5;
     word-break: break-word;
     position: relative;
 }
 .online-msg.user {
-    align-self: flex-end;
     background: #007aff;
     color: white;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: 6px;
 }
 .online-msg.friend {
-    align-self: flex-start;
     background: var(--bg-secondary, #f0f0f0);
     color: var(--text-primary, #333);
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: 6px;
 }
 .online-msg.system {
     align-self: center;
@@ -186,6 +187,30 @@
     padding: 4px 10px;
     max-width: 90%;
     text-align: center;
+}
+
+/* 消息行：头像 + 气泡 */
+.online-msg-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 85%;
+}
+.online-msg-row.user {
+    align-self: flex-end;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+.online-msg-row.friend {
+    align-self: flex-start;
+    flex-direction: row;
+}
+.online-msg-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
 }
 .online-msg .sender-name {
     font-size: 12px;
@@ -239,6 +264,27 @@
 #online-app-send-btn:active {
     opacity: 0.8;
 }
+#online-app-ai-call-btn {
+    background: #ff9500;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+#online-app-ai-call-btn:active {
+    opacity: 0.8;
+}
+#online-app-ai-call-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 
 /* 设置页面 */
 .online-app-settings-body {
@@ -246,4 +292,160 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 0 0 20px 0;
+}
+
+/* 联机表情面板 */
+#online-sticker-panel {
+    border-top: 1px solid var(--border-color, #eee);
+    background: var(--bg-primary, #fff);
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+#online-sticker-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+#online-sticker-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-color, #eee);
+    flex-shrink: 0;
+}
+#online-sticker-tabs .os-tab {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 14px;
+    border: none;
+    background: var(--bg-secondary, #f0f0f0);
+    color: var(--text-primary, #333);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+#online-sticker-tabs .os-tab.active {
+    background: #007aff;
+    color: white;
+}
+#online-sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 12px;
+    padding: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+}
+.online-sticker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+.online-sticker-item img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.online-sticker-item:active {
+    transform: scale(0.92);
+}
+.online-sticker-name {
+    font-size: 10px;
+    color: var(--text-secondary, #999);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+/* 聊天气泡中的表情图片 */
+.online-msg .sticker-in-msg {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 8px;
+    display: block;
+}
+
+/* 表情包气泡 - 无背景 */
+.online-msg.sticker-bubble {
+    background: transparent !important;
+    padding: 2px;
+    border-radius: 0;
+    max-width: 140px;
+}
+.online-msg.sticker-bubble .msg-time {
+    color: #999;
+}
+
+/* ==================== 群聊样式 ==================== */
+
+/* 群聊头像网格 */
+.group-avatar-grid {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: grid;
+    gap: 1px;
+    background: var(--border-color, #ddd);
+    flex-shrink: 0;
+    margin-right: 12px;
+}
+.group-avatar-grid.grid-1 {
+    grid-template-columns: 1fr;
+}
+.group-avatar-grid.grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+.group-avatar-grid.grid-3 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+.group-avatar-grid.grid-4 {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+}
+.group-avatar-grid.grid-3 img:first-child {
+    grid-column: 1 / -1;
+}
+.group-avatar-grid img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 群聊消息中的发送者昵称 */
+.group-msg-sender {
+    font-size: 11px;
+    color: #007aff;
+    margin-bottom: 2px;
+    font-weight: 500;
+}
+
+/* 创建群聊弹窗好友项 */
+.create-group-friend-item {
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+.create-group-friend-item:last-child {
+    border-bottom: none;
+}
+.create-group-friend-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #007aff;
 }

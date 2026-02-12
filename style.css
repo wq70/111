@@ -6700,6 +6700,21 @@
                color: inherit;
            }
 
+           .offline-continuous {
+               white-space: pre-wrap;
+               line-height: 1.8;
+               word-break: break-word;
+           }
+
+           .offline-continuous .offline-dialogue {
+               font-weight: 500;
+           }
+
+           .offline-continuous em {
+               color: var(--text-secondary);
+               font-style: italic;
+           }
+
            .message-bubble .content {
                transition: background-color 0.5s ease-out;
            }
@@ -22999,6 +23014,115 @@
                /* 深色下的半透明白 */
                color: #8d8d92 !important;
                /* 浅灰字 */
+           }
+
+           /* ========== 排除消息样式 (省Token) ========== */
+           .message-wrapper.msg-excluded {
+               opacity: 0.45;
+               position: relative;
+           }
+           .message-wrapper.msg-excluded .message-bubble {
+               border: 1.5px dashed #ff9500 !important;
+           }
+           .message-wrapper.msg-excluded::after {
+               content: '已排除';
+               position: absolute;
+               top: 2px;
+               right: 8px;
+               font-size: 10px;
+               color: #ff9500;
+               background: rgba(255, 149, 0, 0.12);
+               padding: 1px 6px;
+               border-radius: 8px;
+               pointer-events: none;
+               z-index: 5;
+           }
+           .message-wrapper.msg-excluded.user::after {
+               right: auto;
+               left: 8px;
+           }
+           #phone-screen.dark-mode .message-wrapper.msg-excluded .message-bubble {
+               border-color: #cc7a00 !important;
+           }
+           #phone-screen.dark-mode .message-wrapper.msg-excluded::after {
+               color: #cc7a00;
+               background: rgba(204, 122, 0, 0.15);
+           }
+           /* 排除按钮在消息操作菜单中的样式 */
+           #toggle-exclude-message-btn {
+               color: #ff9500;
+           }
+
+           /* ========== 批量管理排除消息列表样式 ========== */
+           .batch-exclude-item {
+               display: flex;
+               align-items: flex-start;
+               gap: 10px;
+               padding: 10px 15px;
+               border-bottom: 1px solid rgba(0,0,0,0.06);
+               cursor: pointer;
+               transition: background 0.15s;
+           }
+           .batch-exclude-item:active {
+               background: rgba(0,0,0,0.04);
+           }
+           .batch-exclude-item.is-excluded {
+               background: rgba(255, 149, 0, 0.06);
+           }
+           .batch-exclude-item .bei-checkbox {
+               width: 20px;
+               height: 20px;
+               border-radius: 50%;
+               border: 2px solid #ccc;
+               flex-shrink: 0;
+               margin-top: 2px;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               transition: all 0.15s;
+           }
+           .batch-exclude-item.checked .bei-checkbox {
+               border-color: #007aff;
+               background: #007aff;
+           }
+           .batch-exclude-item.checked .bei-checkbox::after {
+               content: '✓';
+               color: white;
+               font-size: 12px;
+               font-weight: bold;
+           }
+           .batch-exclude-item .bei-content {
+               flex: 1;
+               min-width: 0;
+           }
+           .batch-exclude-item .bei-meta {
+               font-size: 11px;
+               color: #8a8a8a;
+               margin-bottom: 2px;
+           }
+           .batch-exclude-item .bei-text {
+               font-size: 13px;
+               color: #333;
+               word-break: break-all;
+               display: -webkit-box;
+               -webkit-line-clamp: 2;
+               -webkit-box-orient: vertical;
+               overflow: hidden;
+           }
+           .batch-exclude-item .bei-tag {
+               font-size: 10px;
+               color: #ff9500;
+               background: rgba(255,149,0,0.1);
+               padding: 1px 6px;
+               border-radius: 6px;
+               flex-shrink: 0;
+               margin-top: 2px;
+           }
+           #phone-screen.dark-mode .batch-exclude-item .bei-text {
+               color: #ddd;
+           }
+           #phone-screen.dark-mode .batch-exclude-item.is-excluded {
+               background: rgba(255, 149, 0, 0.1);
            }
 
            /* ========== 一起看电影功能样式 ========== */

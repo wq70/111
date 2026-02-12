@@ -2969,7 +2969,8 @@
                   <path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"></path>
                   <path d="M17 17L7 7"></path>
                </svg>
-            </span> 
+            </span>
+            
           </div>
         </div>
       </div>
@@ -4066,6 +4067,15 @@
                  </div>
             </div>
             
+            <!-- 日记模式开关 -->
+            <div class="settings-item">
+                <div>
+                    <label>日记模式</label>
+                    <div class="settings-desc">开启后手动总结将自动总结上次总结之后的所有消息，适合每天写日记</div>
+                </div>
+                <label class="toggle-switch"> <input type="checkbox" id="diary-mode-toggle"> <span class="slider"></span> </label>
+            </div>
+
             <!-- 手动总结按钮 -->
             <div class="settings-item">
                  <button id="manual-summary-btn" style="width: 100%; padding: 10px; background: var(--accent-color); color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
@@ -4130,11 +4140,28 @@
                         <span id="message-count-value" style="color: #8a8a8a;">计算中...</span>
                     </div>
                 </div>
-                <div class="settings-item">
-                    <label>预估上下文 Token</label>
-                    <div class="settings-right">
+                <div class="settings-item" id="token-detail-trigger" style="cursor: pointer;">
+                    <label style="cursor: pointer;">预估上下文 Token</label>
+                    <div class="settings-right" style="display: flex; align-items: center; gap: 4px;">
                         <span id="token-count-value" style="color: #8a8a8a;">计算中...</span>
+                        <span style="font-size: 12px; color: #ccc;">▶</span>
                     </div>
+                </div>
+                <div class="settings-item">
+                    <label>已排除消息数</label>
+                    <div class="settings-right">
+                        <span id="excluded-count-value" style="color: var(--accent-color);">计算中...</span>
+                    </div>
+                </div>
+                <div class="settings-item" style="justify-content: center;">
+                    <button id="batch-exclude-manage-btn" style="width: 100%; padding: 10px; background: var(--accent-color); color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
+                        批量管理排除消息 (省Token)
+                    </button>
+                </div>
+                <div class="settings-item" style="justify-content: center;">
+                    <button id="view-excluded-detail-btn" style="width: 100%; padding: 10px; background: var(--secondary-bg); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; cursor: pointer;">
+                        查看排除详情
+                    </button>
                 </div>
             </div>
             
@@ -4527,6 +4554,13 @@
                      </div>
                      <label style="font-size:13px; color:#666;">文风预设:</label>
                      <select id="offline-preset-select" class="settings-select" style="width:100%; margin-top:5px;"></select>
+                     <div style="display:flex; align-items:center; justify-content:space-between; margin-top:12px;">
+                        <div>
+                           <span style="font-size:13px; color:#666;">连续排版模式</span>
+                           <div style="font-size:11px; color:#999; margin-top:2px;">对话与描写不分段，保持自然段落</div>
+                        </div>
+                        <label class="toggle-switch"> <input type="checkbox" id="offline-continuous-layout-toggle"> <span class="slider"></span> </label>
+                     </div>
                  </div>
              </div>
 
@@ -5866,6 +5900,54 @@
       <div class="custom-modal-footer"> <button id="edit-call-message-btn"data-lang-key="edit">编辑</button> <button id="delete-call-message-btn" class="btn-danger">删除</button> <button id="cancel-call-message-action-btn" style="margin-top: 8px; border-radius: 8px; background-color: #f0f0f0;"data-lang-key="cancel">取消</button> </div>
     </div>
   </div> <audio id="audio-player" style="display:none;"></audio>
+  <!-- 批量管理排除消息弹窗 -->
+  <div id="batch-exclude-modal" class="modal">
+    <div class="modal-content" style="height: 85%;">
+      <div class="modal-header">
+        <span>批量管理排除消息</span>
+      </div>
+      <div style="padding: 8px 15px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--border-color, #eee);">
+        <button id="batch-exclude-select-all" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 6px; background: #f5f5f5; font-size: 12px; cursor: pointer;">全选</button>
+        <button id="batch-exclude-deselect-all" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 6px; background: #f5f5f5; font-size: 12px; cursor: pointer;">取消全选</button>
+        <button id="batch-exclude-select-range" style="padding: 5px 10px; border: 1px solid #ccc; border-radius: 6px; background: #f5f5f5; font-size: 12px; cursor: pointer;">按范围选择</button>
+        <span id="batch-exclude-selected-count" style="font-size: 12px; color: #8a8a8a; margin-left: auto;">已选 0 条</span>
+      </div>
+      <div class="modal-body" id="batch-exclude-list" style="padding: 0; overflow-y: auto;">
+        <!-- 消息列表动态生成 -->
+      </div>
+      <div class="modal-footer" style="flex-wrap: wrap; gap: 6px;">
+        <button class="cancel" id="batch-exclude-cancel-btn">关闭</button>
+        <button id="batch-exclude-action-btn" style="background: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">排除选中</button>
+        <button id="batch-include-action-btn" style="background: #34c759; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">恢复选中</button>
+      </div>
+    </div>
+  </div>
+  <!-- 排除详情弹窗 -->
+  <div id="excluded-detail-modal" class="modal">
+    <div class="modal-content" style="height: 75%;">
+      <div class="modal-header">
+        <span>排除详情</span>
+      </div>
+      <div class="modal-body" id="excluded-detail-list" style="padding: 0; overflow-y: auto;">
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" id="excluded-detail-close-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+  <!-- Token详情弹窗 -->
+  <div id="token-breakdown-modal" class="modal">
+    <div class="modal-content" style="height: auto; max-height: 80%;">
+      <div class="modal-header">
+        <span>Token 占用详情</span>
+      </div>
+      <div class="modal-body" id="token-breakdown-body" style="padding: 0; overflow-y: auto;">
+      </div>
+      <div class="modal-footer">
+        <button class="cancel" id="token-breakdown-close-btn">关闭</button>
+      </div>
+    </div>
+  </div>
   <div id="create-post-modal" class="modal">
     <div class="modal-content" style="height: auto; max-height: 90%;">
       <div class="modal-header"> <span>发布动态</span> </div>
@@ -6821,10 +6903,23 @@
           </div>
         </div>
         <div id="online-app-messages"></div>
+        <!-- 联机表情面板 -->
+        <div id="online-sticker-panel" style="display:none;">
+          <div id="online-sticker-panel-header">
+            <span id="online-sticker-close-btn" style="cursor:pointer;color:#007aff;">取消</span>
+            <span style="font-weight:600;">表情包</span>
+            <span id="online-sticker-add-btn" style="cursor:pointer;color:#007aff;">添加</span>
+          </div>
+          <div id="online-sticker-tabs"></div>
+          <div id="online-sticker-grid"></div>
+        </div>
         <div id="online-app-input-area">
+          <button id="online-app-sticker-btn" title="表情包" style="background:none;border:none;font-size:24px;cursor:pointer;padding:4px 2px;flex-shrink:0;">😀</button>
           <textarea id="online-app-chat-input" placeholder="输入消息..." rows="1"></textarea>
+          <button id="online-app-ai-call-btn" style="display:none;" onclick="onlineChatManager.triggerAiCharacterResponse()">调用AI</button>
           <button id="online-app-send-btn">发送</button>
         </div>
+        <input type="file" id="online-sticker-upload-input" accept="image/*" hidden>
       </div>
       <!-- 设置视图 -->
       <div id="online-app-settings-view" class="online-app-view">
@@ -6888,16 +6983,8 @@
               <button class="settings-full-btn" id="online-app-friend-requests-btn">
                 好友申请 <span id="online-app-friend-badge" style="display:none; background: #ff3b30; color: white; padding: 2px 8px; border-radius: 10px; font-size: 12px; margin-left: 8px;">0</span>
               </button>
-              <div class="settings-item">
-                <label>搜索ID</label>
-                <div class="settings-right">
-                  <input type="text" id="online-app-search-id" placeholder="输入好友ID">
-                </div>
-              </div>
-              <div class="settings-item" style="justify-content: center;">
-                <button id="online-app-search-btn" class="settings-mini-btn" style="width: 100%;">搜索并添加好友</button>
-              </div>
-              <div id="online-app-search-result" style="display: none; padding: 15px; background: #f9f9f9; border-radius: 8px; margin-top: 10px;"></div>
+              <button class="settings-full-btn" id="online-app-search-btn">搜索并添加好友</button>
+              <button class="settings-full-btn" id="online-app-create-group-btn">创建群聊</button>
 
               <button class="settings-full-btn" id="online-app-clear-cache-btn" style="color: #ff9500;">清理所有旧数据</button>
               <button class="settings-full-btn" id="online-app-reset-btn" style="color: #ff3b30;">重置联机数据</button>
@@ -6937,6 +7024,29 @@
             <!-- JS动态填充好友申请列表 -->
             <div style="text-align: center; color: #999; padding: 40px 20px;">
               暂无好友申请
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 搜索好友弹窗 -->
+    <div id="search-friend-modal" class="modal">
+      <div class="modal-content" style="height: 50%;">
+        <div class="modal-header">
+          <span>搜索好友</span>
+          <span class="close-btn" onclick="document.getElementById('search-friend-modal').classList.remove('visible')">×</span>
+        </div>
+        <div class="modal-body" style="padding: 0;">
+          <div style="padding: 15px;">
+            <div style="display:flex;gap:8px;margin-bottom:15px;">
+              <input type="text" id="online-app-search-id" placeholder="输入好友ID" 
+                     style="flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;">
+              <button id="online-app-search-do-btn" 
+                      style="padding:10px 18px;background:#007aff;color:white;border:none;border-radius:8px;font-size:14px;cursor:pointer;white-space:nowrap;">搜索</button>
+            </div>
+            <div id="online-app-search-result" style="padding:0;">
+              <div style="text-align:center;color:#999;padding:30px 20px;">输入对方的ID进行搜索</div>
             </div>
           </div>
         </div>
