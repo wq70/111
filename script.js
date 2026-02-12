@@ -4448,22 +4448,34 @@ document.addEventListener('DOMContentLoaded', () => {
     SESSION_KEY: 'ephone-session-active',
     CRASH_FLAG_KEY: 'ephone-possible-crash',
     LAST_HEARTBEAT_KEY: 'ephone-last-heartbeat',
+    CRASH_TIME_THRESHOLD: 60 * 1000, // 1分钟内重启才算异常退出
     
     // 标记会话开始
     markSessionStart() {
       sessionStorage.setItem(this.SESSION_KEY, 'true');
-      localStorage.setItem(this.LAST_HEARTBEAT_KEY, Date.now().toString());
+      const now = Date.now();
       
       // 检查是否可能崩溃过
       const possibleCrash = localStorage.getItem(this.CRASH_FLAG_KEY);
-      if (possibleCrash === 'true') {
-        console.warn('⚠️ 检测到可能的异常退出');
-        return true; // 返回 true 表示检测到崩溃
+      const lastHeartbeat = localStorage.getItem(this.LAST_HEARTBEAT_KEY);
+      
+      let isCrash = false;
+      if (possibleCrash === 'true' && lastHeartbeat) {
+        const timeSinceLastHeartbeat = now - parseInt(lastHeartbeat);
+        // 只有在很短时间内（10秒）重启才认为是异常退出
+        if (timeSinceLastHeartbeat < this.CRASH_TIME_THRESHOLD) {
+          console.warn('⚠️ 检测到异常退出（距上次心跳 ' + Math.round(timeSinceLastHeartbeat / 1000) + ' 秒）');
+          isCrash = true;
+        } else {
+          console.log('✅ 正常关闭（距上次心跳 ' + Math.round(timeSinceLastHeartbeat / 1000) + ' 秒，超过阈值）');
+        }
       }
       
-      // 标记为可能崩溃（正常退出时会清除）
+      // 更新心跳和崩溃标记
+      localStorage.setItem(this.LAST_HEARTBEAT_KEY, now.toString());
       localStorage.setItem(this.CRASH_FLAG_KEY, 'true');
-      return false;
+      
+      return isCrash;
     },
     
     // 标记正常退出
