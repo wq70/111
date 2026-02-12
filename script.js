@@ -68722,14 +68722,18 @@ ${recentHistoryWithUser}
     });
 
     // 重置全局聊天背景
-    document.getElementById('reset-global-bg-btn').addEventListener('click', async () => {
-      const confirmed = await showCustomConfirm("重置确认", "确定要重置聊天背景为默认吗？");
-      if (confirmed) {
-        state.globalSettings.globalChatBackground = '';
-        renderWallpaperScreen();
-        await showCustomAlert("已重置", "聊天背景已恢复为默认（白色）！");
-      }
-    });
+    // 重置全局聊天背景（已移除单独按钮，保留代码以防其他地方调用）
+    const resetGlobalBgBtn = document.getElementById('reset-global-bg-btn');
+    if (resetGlobalBgBtn) {
+      resetGlobalBgBtn.addEventListener('click', async () => {
+        const confirmed = await showCustomConfirm("重置确认", "确定要重置聊天背景为默认吗？");
+        if (confirmed) {
+          state.globalSettings.globalChatBackground = '';
+          renderWallpaperScreen();
+          await showCustomAlert("已重置", "聊天背景已恢复为默认（白色）！");
+        }
+      });
+    }
 
 
     document.getElementById('save-wallpaper-btn').addEventListener('click', async () => {
@@ -68827,35 +68831,120 @@ ${recentHistoryWithUser}
 
 
 
-    // 重置主屏幕壁纸
-    document.getElementById('reset-ephone-bg-btn').addEventListener('click', async () => {
-      const confirmed = await showCustomConfirm("重置确认", "确定要重置主屏幕壁纸为默认吗？");
-      if (confirmed) {
-        newWallpaperBase64 = null;
-        state.globalSettings.wallpaper = '';
-        renderWallpaperScreen();
-        await showCustomAlert("已重置", "主屏幕壁纸已恢复为默认（白色）！");
-      }
+    // 重置主屏幕壁纸（已移除单独按钮，保留代码以防其他地方调用）
+    const resetEphoneBgBtn = document.getElementById('reset-ephone-bg-btn');
+    if (resetEphoneBgBtn) {
+      resetEphoneBgBtn.addEventListener('click', async () => {
+        const confirmed = await showCustomConfirm("重置确认", "确定要重置主屏幕壁纸为默认吗？");
+        if (confirmed) {
+          newWallpaperBase64 = null;
+          state.globalSettings.wallpaper = '';
+          renderWallpaperScreen();
+          await showCustomAlert("已重置", "主屏幕壁纸已恢复为默认（白色）！");
+        }
+      });
+    }
+
+    // 重置CPhone壁纸（已移除单独按钮，保留代码以防其他地方调用）
+    const resetCphoneBgBtn = document.getElementById('reset-cphone-bg-btn');
+    if (resetCphoneBgBtn) {
+      resetCphoneBgBtn.addEventListener('click', async () => {
+        const confirmed = await showCustomConfirm("重置确认", "确定要重置CPhone壁纸为默认吗？");
+        if (confirmed) {
+          state.globalSettings.cphoneWallpaper = '';
+          renderWallpaperScreen();
+          await showCustomAlert("已重置", "CPhone壁纸已恢复为默认（白色）！");
+        }
+      });
+    }
+
+    // 重置MYphone壁纸（已移除单独按钮，保留代码以防其他地方调用）
+    const resetMyphoneBgBtn = document.getElementById('reset-myphone-bg-btn');
+    if (resetMyphoneBgBtn) {
+      resetMyphoneBgBtn.addEventListener('click', async () => {
+        const confirmed = await showCustomConfirm("重置确认", "确定要重置MYphone壁纸为默认吗？");
+        if (confirmed) {
+          state.globalSettings.myphoneWallpaper = '';
+          renderWallpaperScreen();
+          applyMyPhoneWallpaper();
+          await showCustomAlert("已重置", "MYphone壁纸已恢复为默认（白色）！");
+        }
+      });
+    }
+
+    // 批量重置壁纸 - 打开选择对话框
+    document.getElementById('batch-reset-wallpaper-btn').addEventListener('click', () => {
+      const modal = document.getElementById('batch-reset-wallpaper-modal');
+      // 清空之前的选择
+      document.querySelectorAll('.wallpaper-reset-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('select-all-wallpapers').checked = false;
+      modal.classList.add('visible');
     });
 
-    // 重置CPhone壁纸
-    document.getElementById('reset-cphone-bg-btn').addEventListener('click', async () => {
-      const confirmed = await showCustomConfirm("重置确认", "确定要重置CPhone壁纸为默认吗？");
-      if (confirmed) {
-        state.globalSettings.cphoneWallpaper = '';
-        renderWallpaperScreen();
-        await showCustomAlert("已重置", "CPhone壁纸已恢复为默认（白色）！");
-      }
+    // 全选壁纸
+    document.getElementById('select-all-wallpapers').addEventListener('change', (e) => {
+      const checkboxes = document.querySelectorAll('.wallpaper-reset-checkbox');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
     });
 
-    // 重置MYphone壁纸
-    document.getElementById('reset-myphone-bg-btn').addEventListener('click', async () => {
-      const confirmed = await showCustomConfirm("重置确认", "确定要重置MYphone壁纸为默认吗？");
+    // 取消批量重置
+    document.getElementById('cancel-batch-reset-btn').addEventListener('click', () => {
+      document.getElementById('batch-reset-wallpaper-modal').classList.remove('visible');
+    });
+
+    // 确认批量重置
+    document.getElementById('confirm-batch-reset-btn').addEventListener('click', async () => {
+      const checkboxes = document.querySelectorAll('.wallpaper-reset-checkbox:checked');
+      if (checkboxes.length === 0) {
+        await showCustomAlert("提示", "请至少选择一项要重置的壁纸！");
+        return;
+      }
+
+      const resetItems = Array.from(checkboxes).map(cb => {
+        const type = cb.dataset.type;
+        const labels = {
+          'ephone': '主屏幕壁纸',
+          'cphone': 'CPhone壁纸',
+          'myphone': 'MYphone壁纸',
+          'chat': '聊天背景'
+        };
+        return labels[type];
+      });
+
+      const confirmed = await showCustomConfirm(
+        "批量重置确认", 
+        `确定要重置以下项目吗？\n\n${resetItems.join('\n')}\n\n重置后将恢复为默认壁纸。`
+      );
+
       if (confirmed) {
-        state.globalSettings.myphoneWallpaper = '';
+        let resetCount = 0;
+        checkboxes.forEach(cb => {
+          const type = cb.dataset.type;
+          switch(type) {
+            case 'ephone':
+              newWallpaperBase64 = null;
+              state.globalSettings.wallpaper = '';
+              resetCount++;
+              break;
+            case 'cphone':
+              state.globalSettings.cphoneWallpaper = '';
+              resetCount++;
+              break;
+            case 'myphone':
+              state.globalSettings.myphoneWallpaper = '';
+              applyMyPhoneWallpaper();
+              resetCount++;
+              break;
+            case 'chat':
+              state.globalSettings.globalChatBackground = '';
+              resetCount++;
+              break;
+          }
+        });
+
         renderWallpaperScreen();
-        applyMyPhoneWallpaper();
-        await showCustomAlert("已重置", "MYphone壁纸已恢复为默认（白色）！");
+        document.getElementById('batch-reset-wallpaper-modal').classList.remove('visible');
+        await showCustomAlert("重置完成", `已成功重置 ${resetCount} 项壁纸设置！`);
       }
     });
 
