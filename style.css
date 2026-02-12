@@ -25199,4 +25199,29 @@
                    flex: 1;
                    min-width: 0;
                }
+               
+               /* 数据分析统计界面移动端优化 */
+               #data-distribution-container {
+                   padding: 10px !important;
+               }
+               
+               /* 表格在移动端横向滚动 */
+               #data-distribution-container table {
+                   display: block;
+                   overflow-x: auto;
+                   white-space: nowrap;
+               }
+               
+               /* 调整字体大小 */
+               #data-distribution-container th,
+               #data-distribution-container td {
+                   font-size: 12px !important;
+                   padding: 6px !important;
+               }
+               
+               /* 清理按钮适配 */
+               #data-distribution-container .cleanup-btn {
+                   padding: 4px 8px !important;
+                   font-size: 11px !important;
+               }
            }

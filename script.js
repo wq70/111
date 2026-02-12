@@ -6042,91 +6042,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 查看数据分布统计（增强版）
+  // 查看数据分布统计（改为显示全屏界面）
   async function viewDataDistribution() {
-    // 创建自定义宽弹窗
-    const modal = document.createElement('div');
-    modal.className = 'data-distribution-modal';
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    `;
-
-    const modalContent = document.createElement('div');
-    modalContent.style.cssText = `
-      background: var(--bg-primary, white);
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 90%;
-      width: 800px;
-      max-height: 85vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    `;
-
-    // 标题栏
-    const header = document.createElement('div');
-    header.style.cssText = `
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid var(--border-color, #ddd);
-    `;
-    header.innerHTML = `
-      <h3 style="margin: 0; color: var(--text-primary);">📊 数据分布统计</h3>
-      <button id="close-distribution-modal" style="
-        background: none;
-        border: none;
-        font-size: 24px;
-        cursor: pointer;
-        color: var(--text-secondary);
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        line-height: 30px;
-        text-align: center;
-      ">×</button>
-    `;
-
-    // 内容区域
-    const contentArea = document.createElement('div');
-    contentArea.id = 'distribution-content-area';
-    contentArea.style.cssText = `
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-    `;
-
-    modalContent.appendChild(header);
-    modalContent.appendChild(contentArea);
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-
-    // 关闭按钮事件
-    document.getElementById('close-distribution-modal').addEventListener('click', () => {
-      modal.remove();
-    });
-
-    // 点击背景关闭
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.remove();
-      }
-    });
-
-    // 渲染统计数据
-    await renderDistributionData(contentArea);
+    // 显示数据分析统计界面
+    showScreen('data-distribution-screen');
+    
+    // 获取容器并渲染数据
+    const container = document.getElementById('data-distribution-container');
+    await renderDistributionData(container);
   }
 
   // 渲染数据分布内容
@@ -62160,6 +62083,17 @@ ${recentHistoryWithUser}
     });
     // 查看数据分布按钮
     document.getElementById('view-data-distribution-btn').addEventListener('click', viewDataDistribution);
+    
+    // 数据分析统计界面按钮
+    document.getElementById('data-distribution-back-btn').addEventListener('click', () => {
+      showScreen('api-settings-screen');
+    });
+    
+    document.getElementById('refresh-distribution-btn').addEventListener('click', async () => {
+      const container = document.getElementById('data-distribution-container');
+      await renderDistributionData(container);
+      showToast('数据已刷新', 'success');
+    });
 
     document.getElementById('export-data-btn').addEventListener('click', async () => {
 
