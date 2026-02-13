@@ -1149,6 +1149,8 @@
                font-size: 14px;
                color: #333;
                line-height: 1.5;
+               max-height: 60vh;
+               overflow-y: auto;
            }
 
            .custom-modal-body p {
@@ -24800,11 +24802,8 @@
                width: 100%;
                padding: 12px 15px;
                box-sizing: border-box;
-               background: rgba(255, 255, 255, 0.65);
-               backdrop-filter: blur(12px);
-               -webkit-backdrop-filter: blur(12px);
+               background: transparent;
                border-radius: 20px;
-               border: 1px solid rgba(255, 255, 255, 0.5);
                flex-shrink: 0;
            }
 
@@ -24882,6 +24881,16 @@
                border: none;
                border-top: 1.5px dashed rgba(0, 0, 0, 0.15);
                width: 100%;
+           }
+
+           /* 可编辑文本样式 */
+           .p3-profile-widget .editable-text {
+               cursor: pointer;
+               transition: opacity 0.2s;
+           }
+
+           .p3-profile-widget .editable-text:hover {
+               opacity: 0.7;
            }
 
            /* --- 第三页 App 网格 --- */
@@ -25143,6 +25152,18 @@
                height: 100%;
                object-fit: cover;
                display: block;
+           }
+
+           /* 纪念日和微博小组件的可编辑文本样式 */
+           .p3-anniversary-widget .editable-text,
+           .p3-weibo-widget .editable-text {
+               cursor: pointer;
+               transition: opacity 0.2s;
+           }
+
+           .p3-anniversary-widget .editable-text:hover,
+           .p3-weibo-widget .editable-text:hover {
+               opacity: 0.7;
            }
 
            /* --- 第三页 App 网格 改为 4 列 --- */

@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '1.0.0'; // 当前更新版本号
+    this.currentVersion = '0.0.15'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -147,6 +147,87 @@ class UpdateNotification {
         e.stopPropagation();
       });
     }
+
+    // 🎯 紧急跳过功能：连续点击3次屏幕跳过弹窗
+    this.setupEmergencySkip();
+  }
+
+  // 紧急跳过功能实现
+  setupEmergencySkip() {
+    const overlay = document.getElementById('update-notification-overlay');
+    if (!overlay) return;
+
+    let clickCount = 0;
+    let clickTimer = null;
+
+    overlay.addEventListener('click', (e) => {
+      // 只在点击遮罩层时触发（不是点击弹窗内容）
+      if (e.target !== overlay) return;
+
+      clickCount++;
+
+      // 清除之前的定时器
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+      }
+
+      // 如果2秒内点击3次，触发跳过
+      if (clickCount >= 3) {
+        console.log('[UpdateNotification] 检测到紧急跳过手势');
+        this.emergencySkip();
+        clickCount = 0;
+        return;
+      }
+
+      // 2秒后重置计数
+      clickTimer = setTimeout(() => {
+        clickCount = 0;
+      }, 2000);
+    });
+  }
+
+  // 紧急跳过方法
+  emergencySkip() {
+    // 显示跳过提示（可选）
+    const modal = document.getElementById('update-notification-modal');
+    if (modal) {
+      const skipHint = document.createElement('div');
+      skipHint.textContent = '已跳过更新通知';
+      skipHint.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 184, 197, 0.95);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10;
+        animation: skipHintAnim 0.4s ease;
+      `;
+      modal.appendChild(skipHint);
+
+      // 添加动画样式
+      if (!document.querySelector('#skip-hint-style')) {
+        const style = document.createElement('style');
+        style.id = 'skip-hint-style';
+        style.textContent = `
+          @keyframes skipHintAnim {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    // 0.5秒后关闭弹窗
+    setTimeout(() => {
+      this.closeNotification();
+    }, 500);
   }
 
   // 显示弹窗

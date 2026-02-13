@@ -27,7 +27,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=1.0.0" defer></script>
+  <script src="update-notification.js?v=0.0.15" defer></script>
   <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
@@ -521,10 +521,10 @@
               <div id="profile-widget"> <img id="profile-banner-img" src="https://i.imgur.com/1n3a43H.jpeg" class="editable-image">
                 <div class="profile-avatar-container"> <img id="profile-avatar-img" src="https://i.postimg.cc/y8xWzCqj/anime-boy.jpg" class="editable-image"> </div>
                 <div class="profile-info">
-                  <p id="profile-username" class="editable-text">@ insonneve 🪦</p>
-                  <p id="profile-sub-username" class="editable-text">@ insonneve</p>
-                  <p id="profile-bio" class="editable-text">你好像过得很好 迫不及待的抹去我存在的痕迹</p>
-                  <p id="profile-location" class="editable-text"> <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <p id="profile-username" class="editable-text" onclick="editBubbleText('profile-username')">@ insonneve 🪦</p>
+                  <p id="profile-sub-username" class="editable-text" onclick="editBubbleText('profile-sub-username')">@ insonneve</p>
+                  <p id="profile-bio" class="editable-text" onclick="editBubbleText('profile-bio')">你好像过得很好 迫不及待的抹去我存在的痕迹</p>
+                  <p id="profile-location" class="editable-text" onclick="editBubbleText('profile-location')"> <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5-2.5-1.12 2.5-2.5 2.5z"></path>
                     </svg> <span>北海道</span> </p>
                 </div>
@@ -532,10 +532,10 @@
               <div id="desktop-layout">
                 <div id="desktop-widget-column">
                   <div class="desktop-widget text-only">
-                    <p id="widget-text-1" class="editable-text">Be fearless in pursuit of happiness</p>
+                    <p id="widget-text-1" class="editable-text" onclick="editBubbleText('widget-text-1')">Be fearless in pursuit of happiness</p>
                   </div>
-                  <div class="desktop-widget icon-left"> <img id="widget-avatar-1" src="https://i.imgur.com/1n3a43H.jpeg" class="editable-image"> <span id="widget-text-2" class="editable-text">Dare to be different</span> </div>
-                  <div class="desktop-widget icon-right"> <span id="widget-text-3" class="editable-text">* Keep your spirit free</span> <img id="widget-avatar-2" src="https://i.imgur.com/5A0tE9a.jpeg" class="editable-image"> </div>
+                  <div class="desktop-widget icon-left"> <img id="widget-avatar-1" src="https://i.imgur.com/1n3a43H.jpeg" class="editable-image"> <span id="widget-text-2" class="editable-text" onclick="editBubbleText('widget-text-2')">Dare to be different</span> </div>
+                  <div class="desktop-widget icon-right"> <span id="widget-text-3" class="editable-text" onclick="editBubbleText('widget-text-3')">* Keep your spirit free</span> <img id="widget-avatar-2" src="https://i.imgur.com/5A0tE9a.jpeg" class="editable-image"> </div>
                 </div>
                 <div id="desktop-app-container">
                   <div class="desktop-app-icon" onclick="showScreen('chat-list-screen')">
@@ -657,26 +657,26 @@
               <div class="p3-profile-widget">
                 <div class="p3-profile-left">
                   <div class="p3-name-tag">
-                    <span id="p3-profile-name" class="editable-text">Mochi</span>
+                    <span id="p3-profile-name" class="editable-text" onclick="editBubbleText('p3-profile-name')">Mochi</span>
                   </div>
                   <div class="p3-avatar-wrapper">
                     <img id="p3-avatar-img" src="https://i.imgur.com/Bv63o3h.jpg" class="editable-image" onclick="handleWidgetImageChange('p3-avatar-img')">
                   </div>
-                  <div class="p3-profile-title" id="p3-profile-title">
-                    <span class="editable-text">星屑收集者</span>
+                  <div class="p3-profile-title">
+                    <span id="p3-profile-title-text" class="editable-text" onclick="editBubbleText('p3-profile-title-text')">星屑收集者</span>
                   </div>
                 </div>
                 <div class="p3-profile-right">
-                  <p class="p3-deco-line" id="p3-deco-line-1">
-                    <span class="editable-text">✦.⁺ 月が静かに歌っている ✦.°</span>
+                  <p class="p3-deco-line">
+                    <span id="p3-deco-line-1" class="editable-text" onclick="editBubbleText('p3-deco-line-1')">✦.⁺ 月が静かに歌っている ✦.°</span>
                   </p>
                   <div class="p3-dotted-divider"></div>
-                  <p class="p3-deco-line" id="p3-deco-line-2">
-                    <span class="editable-text">今天也要元气满满地摸鱼🐟✨</span>
+                  <p class="p3-deco-line">
+                    <span id="p3-deco-line-2" class="editable-text" onclick="editBubbleText('p3-deco-line-2')">今天也要元气满满地摸鱼🐟✨</span>
                   </p>
                   <div class="p3-dotted-divider"></div>
-                  <p class="p3-deco-line p3-studio-line" id="p3-deco-line-3">
-                    <span class="editable-text">✕✕ ✕⸳ Neko_lab ⸳✕ ✕✕</span>
+                  <p class="p3-deco-line p3-studio-line">
+                    <span id="p3-deco-line-3" class="editable-text" onclick="editBubbleText('p3-deco-line-3')">✕✕ ✕⸳ Neko_lab ⸳✕ ✕✕</span>
                   </p>
                 </div>
               </div>
@@ -686,7 +686,7 @@
                 <!-- 左：纪念日组件 -->
                 <div class="p3-anniversary-widget">
                   <div class="anni-day-counter">
-                    <span id="p3-day-count" class="editable-text">128</span>
+                    <span id="p3-day-count" class="editable-text" onclick="editBubbleText('p3-day-count')">128</span>
                     <span class="anni-day-unit">天</span>
                   </div>
                   <div class="anni-photos">
@@ -698,10 +698,10 @@
                     </div>
                   </div>
                   <div class="anni-caption">
-                    <span id="p3-circle-caption" class="editable-text">with kitty🐱</span>
+                    <span id="p3-circle-caption" class="editable-text" onclick="editBubbleText('p3-circle-caption')">with kitty🐱</span>
                   </div>
                   <div class="anni-date">
-                    <span id="p3-circle-date" class="editable-text">2025.10.08</span>
+                    <span id="p3-circle-date" class="editable-text" onclick="editBubbleText('p3-circle-date')">2025.10.08</span>
                   </div>
                 </div>
                 <!-- 右：微博/小红书帖子组件 -->
@@ -709,15 +709,15 @@
                   <div class="weibo-header">
                     <img id="p3-weibo-avatar" src="https://i.imgur.com/Bv63o3h.jpg" class="weibo-avatar editable-image" onclick="handleWidgetImageChange('p3-weibo-avatar')">
                     <div class="weibo-user-info">
-                      <span id="p3-weibo-username" class="editable-text">MochiDiary</span>
-                      <span id="p3-weibo-date" class="weibo-post-date editable-text">02-10</span>
+                      <span id="p3-weibo-username" class="editable-text" onclick="editBubbleText('p3-weibo-username')">MochiDiary</span>
+                      <span id="p3-weibo-date" class="weibo-post-date editable-text" onclick="editBubbleText('p3-weibo-date')">02-10</span>
                     </div>
                   </div>
                   <div class="weibo-body">
-                    <p id="p3-weibo-text" class="editable-text">· 窗外の「薄暮色Twilight」<br>· 藏在云层背后的金色边<br>· 好多的故事像蒲公英飘散<br>· 闭上眼の刹那..<br>· 都化成了一首温柔的晚安曲.</p>
+                    <p id="p3-weibo-text" class="editable-text" onclick="editBubbleText('p3-weibo-text')">· 窗外の「薄暮色Twilight」<br>· 藏在云层背后的金色边<br>· 好多的故事像蒲公英飘散<br>· 闭上眼の刹那..<br>· 都化成了一首温柔的晚安曲.</p>
                   </div>
                   <div class="weibo-footer">
-                    <span id="p3-weibo-device" class="editable-text">来自 iPhone 15 Pro Max</span>
+                    <span id="p3-weibo-device" class="editable-text" onclick="editBubbleText('p3-weibo-device')">来自 iPhone 15 Pro Max</span>
                   </div>
                   <div class="weibo-image" onclick="handleWidgetImageChange('p3-weibo-img')">
                     <img id="p3-weibo-img" src="https://i.imgur.com/5A0tE9a.jpeg" class="editable-image">
@@ -2188,6 +2188,16 @@
                     <input type="number" id="chat-render-window-input" class="settings-num-input">
                 </div>
             </div>
+            <div class="settings-item">
+                <div>
+                    <div style="font-weight: 500;">启用API历史记录</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">用于调试API请求，关闭可减小数据库体积（推荐关闭）</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="enable-api-history-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
 
         <!-- AI行为控制 (全局默认) -->
@@ -2726,6 +2736,7 @@
             
             <!-- 列表按钮：黑色左对齐 -->
             <button class="settings-full-btn" id="clear-chat-images-btn">清空聊天的本地图片</button>
+            <button class="settings-full-btn" id="clear-api-history-btn">清空所有API历史记录</button>
             <button class="settings-full-btn" id="clear-stickers-btn">一键清空表情包</button>
             <button class="settings-full-btn" id="view-data-distribution-btn" data-lang-key="apiViewDataDistributionBtn">查看数据分布</button>
             <button class="settings-full-btn" id="export-data-btn" data-lang-key="apiExportDataBtn">导出所有数据</button>
