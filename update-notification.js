@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.15'; // 当前更新版本号
+    this.currentVersion = '0.0.16'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,18 +22,14 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.修复群聊掉头像的问题</div>
-      <div class="update-item">2.新增隐藏消息/解除消息</div>
-      <div class="update-item">3.新增TOKEN查看详细分布</div>
-      <div class="update-item">4.新增：线下「连续排版模式」打开后：对话和描写作为一个整体渲染，引号内容只加样式不换行，保持原文自然段落，默认关闭</div>
-      <div class="update-item">5.新增应用更新，可以手动拉取仓库更新，应该不用大退好多次浏览器刷新更新了</div>
-      <div class="update-item">6.角色后台活动也可以查看用户手机了，自动窥屏</div>
-      <div class="update-item">7.新增一个日记模式的手动总结，我不知道有没有效果，先试试吧。</div>
-      <div class="update-item">8.重置了整个联机功能，具体介绍看 <a href="https://discord.com/channels/1379304008157499423/1417316084465270854/1471416402366824531" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
-      <div class="update-item">9.修复一起看在线搜索不能看</div>
-      <div class="update-item">10.新增清空表情包功能</div>
-      <div class="update-item">11.新增数据分布，觉得数据太大的反正要清空哪部分自己清空吧</div>
-      <div class="update-item tips" style="margin-top: 8px;">优化了一些其他部分，尤其是数据闪退部分。</div>
+      <div class="update-item tips" style="margin-bottom: 8px;">点三下强制跳过更新日志弹窗。有问题的可以试一下。</div>
+      <div class="update-item">1.修复小组件改完刷新又回去的问题</div>
+      <div class="update-item">2.修复数据大的问题，记得一键清空一下API调用历史</div>
+      <div class="update-item">3.修复绿江追更失败的BUG、新增追更时间</div>
+      <div class="update-item">4.新增自定义时间感知</div>
+      <div class="update-item">5.角色生成新增其他分裂，可以挂破限。还增加了根据用户人设生成，可选。</div>
+      <div class="update-item">6.新增角色可以帮你清空购物车，需要打开后台活动，暂时还没测试过</div>
+      <div class="update-item">7.优化结构化记忆，如果之前有旧数据，打开就可以自动转换为结构化记忆。修复之前结构化记忆不更新的问题，新增可以手动更新。</div>
     `;
 
     return `
@@ -41,7 +37,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.13 更新</div>
+            <div class="update-title">2.15 更新（没赶上情人节呜呜呜）</div>
           </div>
           
           <div class="update-notification-body">

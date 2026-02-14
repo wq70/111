@@ -27,7 +27,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=0.0.15" defer></script>
+  <script src="update-notification.js?v=0.0.16" defer></script>
   <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
@@ -2569,7 +2569,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v1.0.8</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v1.0.9</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -4155,6 +4155,18 @@
                     </label>
                 </div>
 
+                <!-- 允许角色清空购物车 -->
+                <div class="settings-item" style="display: flex !important; justify-content: space-between !important; align-items: center !important; flex-direction: row !important;">
+                     <div style="flex: 1; padding-right: 10px; display: flex; flex-direction: column; align-items: flex-start;">
+                        <label style="margin-bottom: 2px;">允许自动清空购物车</label>
+                        <div class="settings-desc">角色可用自己的余额帮你清空购物车</div>
+                    </div>
+                    <label class="toggle-switch" style="margin: 0;"> 
+                        <input type="checkbox" id="char-auto-cart-clear-switch"> 
+                        <span class="slider"></span> 
+                    </label>
+                </div>
+
             </div>
 
             <!-- 群聊后台 -->
@@ -4705,18 +4717,56 @@
                  </div>
              </div>
 
-             <!-- 时间感知 -->
-             <div class="settings-item" id="time-perception-group">
-                 <label>时间感知</label>
-                 <label class="toggle-switch"> <input type="checkbox" id="time-perception-toggle"> <span class="slider"></span> </label>
-             </div>
-             <div class="settings-item-block" id="time-zone-group" style="display: none;">
-                 <label>时区设置</label>
-                 <div style="margin-top: 10px; width: 100%;">
-                     <input type="search" id="time-zone-search-input" placeholder="搜索时区..." class="settings-textarea" style="height: 36px; padding: 8px; margin-bottom: 8px;">
-                     <select id="time-zone-select" class="settings-select" style="width: 100%; padding: 10px; background-color: #f5f5f7;"></select>
-                 </div>
-             </div>
+            <!-- 时间感知 -->
+            <div class="settings-item" id="time-perception-group">
+                <label>时间感知</label>
+                <label class="toggle-switch"> <input type="checkbox" id="time-perception-toggle"> <span class="slider"></span> </label>
+            </div>
+            <div class="settings-item-block" id="time-zone-group" style="display: none;">
+                <label>时区设置</label>
+                <div style="margin-top: 10px; width: 100%;">
+                    <input type="search" id="time-zone-search-input" placeholder="搜索时区..." class="settings-textarea" style="height: 36px; padding: 8px; margin-bottom: 8px;">
+                    <select id="time-zone-select" class="settings-select" style="width: 100%; padding: 10px; background-color: #f5f5f7;"></select>
+                </div>
+            </div>
+
+            <!-- 自定义时间 -->
+            <div class="settings-item" id="custom-time-group">
+                <label>自定义时间</label>
+                <label class="toggle-switch"> <input type="checkbox" id="custom-time-toggle"> <span class="slider"></span> </label>
+            </div>
+            <div class="settings-item-block" id="custom-time-settings-group" style="display: none;">
+                <label>时间设置</label>
+                <div style="margin-top: 10px; width: 100%;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div>
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">年份</label>
+                            <input type="number" id="custom-year-input" class="settings-num-input" placeholder="2024" min="1900" max="2100" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">月份</label>
+                            <input type="number" id="custom-month-input" class="settings-num-input" placeholder="1-12" min="1" max="12" style="width: 100%;">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div>
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">日期</label>
+                            <input type="number" id="custom-day-input" class="settings-num-input" placeholder="1-31" min="1" max="31" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">小时</label>
+                            <input type="number" id="custom-hour-input" class="settings-num-input" placeholder="0-23" min="0" max="23" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">分钟</label>
+                            <input type="number" id="custom-minute-input" class="settings-num-input" placeholder="0-59" min="0" max="59" style="width: 100%;">
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                        当前设置：<span id="custom-time-preview" style="color: #007AFF; font-weight: 500;">未设置</span>
+                    </div>
+                </div>
+            </div>
              
              <!-- NAI设置 (单聊/群聊复用ID，JS控制) -->
              <div class="settings-item-block" id="nai-character-settings-group" style="display: none;">
@@ -6945,6 +6995,81 @@
                     </select>
                 </div>
 
+                <!-- 每天一更时间选择 -->
+                <div class="gr-form-group" id="gr-daily-time-group" style="display: none;">
+                    <label>每天更新时间</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <select id="gr-daily-update-hour" class="gr-select" style="flex: 1;">
+                            <option value="0">00:00 (凌晨12点)</option>
+                            <option value="1">01:00 (凌晨1点)</option>
+                            <option value="2">02:00 (凌晨2点)</option>
+                            <option value="3">03:00 (凌晨3点)</option>
+                            <option value="4">04:00 (凌晨4点)</option>
+                            <option value="5">05:00 (凌晨5点)</option>
+                            <option value="6">06:00 (早上6点)</option>
+                            <option value="7">07:00 (早上7点)</option>
+                            <option value="8">08:00 (早上8点)</option>
+                            <option value="9">09:00 (早上9点)</option>
+                            <option value="10">10:00 (上午10点)</option>
+                            <option value="11">11:00 (上午11点)</option>
+                            <option value="12" selected>12:00 (中午12点)</option>
+                            <option value="13">13:00 (下午1点)</option>
+                            <option value="14">14:00 (下午2点)</option>
+                            <option value="15">15:00 (下午3点)</option>
+                            <option value="16">16:00 (下午4点)</option>
+                            <option value="17">17:00 (下午5点)</option>
+                            <option value="18">18:00 (下午6点)</option>
+                            <option value="19">19:00 (晚上7点)</option>
+                            <option value="20">20:00 (晚上8点)</option>
+                            <option value="21">21:00 (晚上9点)</option>
+                            <option value="22">22:00 (晚上10点)</option>
+                            <option value="23">23:00 (晚上11点)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 每周一更时间选择 -->
+                <div class="gr-form-group" id="gr-weekly-time-group" style="display: none;">
+                    <label>每周更新时间</label>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="gr-weekly-update-day" class="gr-select" style="flex: 1;">
+                            <option value="1" selected>星期一</option>
+                            <option value="2">星期二</option>
+                            <option value="3">星期三</option>
+                            <option value="4">星期四</option>
+                            <option value="5">星期五</option>
+                            <option value="6">星期六</option>
+                            <option value="0">星期日</option>
+                        </select>
+                        <select id="gr-weekly-update-hour" class="gr-select" style="flex: 1;">
+                            <option value="0">00:00</option>
+                            <option value="1">01:00</option>
+                            <option value="2">02:00</option>
+                            <option value="3">03:00</option>
+                            <option value="4">04:00</option>
+                            <option value="5">05:00</option>
+                            <option value="6">06:00</option>
+                            <option value="7">07:00</option>
+                            <option value="8">08:00</option>
+                            <option value="9">09:00</option>
+                            <option value="10">10:00</option>
+                            <option value="11">11:00</option>
+                            <option value="12" selected>12:00</option>
+                            <option value="13">13:00</option>
+                            <option value="14">14:00</option>
+                            <option value="15">15:00</option>
+                            <option value="16">16:00</option>
+                            <option value="17">17:00</option>
+                            <option value="18">18:00</option>
+                            <option value="19">19:00</option>
+                            <option value="20">20:00</option>
+                            <option value="21">21:00</option>
+                            <option value="22">22:00</option>
+                            <option value="23">23:00</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="gr-form-group" id="gr-custom-frequency-group" style="display: none;">
                     <label>自定义更新间隔（小时）</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
@@ -6953,9 +7078,23 @@
                     </div>
                 </div>
 
+                <!-- 上次更新时间显示 -->
+                <div class="gr-form-group" id="gr-last-update-display" style="display: none;">
+                    <div style="background: #f5f5f5; padding: 10px; border-radius: 4px; font-size: 13px; color: #666;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>上次更新：</span>
+                            <span id="gr-last-update-time" style="color: #333; font-weight: 500;">从未更新</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                            <span>下次更新：</span>
+                            <span id="gr-next-update-time" style="color: #1B4F3E; font-weight: 500;">--</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="gr-form-group">
                     <label style="font-size: 12px; color: #666;">
-                        💡 提示：启用追更后，系统将按照设定的频率自动生成新章节。每次更新都会使用选择的作者文风或角色视角。
+                        💡 提示：启用追更后，系统将按照设定的频率和时间自动生成新章节。每次更新都会使用选择的作者文风或角色视角。
                     </label>
                 </div>
             </div>
@@ -7742,6 +7881,180 @@
     </div>
     <div id="mobile-console-content"></div>
 </div>
+
+<script>
+// ==================== 时间感知与自定义时间系统 ====================
+(function() {
+  'use strict';
+
+  // 获取元素
+  const timePerceptionToggle = document.getElementById('time-perception-toggle');
+  const timeZoneGroup = document.getElementById('time-zone-group');
+  const customTimeToggle = document.getElementById('custom-time-toggle');
+  const customTimeSettingsGroup = document.getElementById('custom-time-settings-group');
+  
+  const customYearInput = document.getElementById('custom-year-input');
+  const customMonthInput = document.getElementById('custom-month-input');
+  const customDayInput = document.getElementById('custom-day-input');
+  const customHourInput = document.getElementById('custom-hour-input');
+  const customMinuteInput = document.getElementById('custom-minute-input');
+  const customTimePreview = document.getElementById('custom-time-preview');
+
+  // 从localStorage加载设置
+  function loadSettings() {
+    const timePerceptionEnabled = localStorage.getItem('time-perception-enabled') === 'true';
+    const customTimeEnabled = localStorage.getItem('custom-time-enabled') === 'true';
+    
+    timePerceptionToggle.checked = timePerceptionEnabled;
+    customTimeToggle.checked = customTimeEnabled;
+    
+    // 显示/隐藏相应的设置面板
+    if (timePerceptionEnabled) {
+      timeZoneGroup.style.display = 'block';
+    }
+    if (customTimeEnabled) {
+      customTimeSettingsGroup.style.display = 'block';
+    }
+    
+    // 加载自定义时间值
+    customYearInput.value = localStorage.getItem('custom-time-year') || '';
+    customMonthInput.value = localStorage.getItem('custom-time-month') || '';
+    customDayInput.value = localStorage.getItem('custom-time-day') || '';
+    customHourInput.value = localStorage.getItem('custom-time-hour') || '';
+    customMinuteInput.value = localStorage.getItem('custom-time-minute') || '';
+    
+    updatePreview();
+  }
+
+  // 更新时间预览
+  function updatePreview() {
+    const year = customYearInput.value;
+    const month = customMonthInput.value;
+    const day = customDayInput.value;
+    const hour = customHourInput.value;
+    const minute = customMinuteInput.value;
+    
+    if (year && month && day && hour !== '' && minute !== '') {
+      const monthStr = String(month).padStart(2, '0');
+      const dayStr = String(day).padStart(2, '0');
+      const hourStr = String(hour).padStart(2, '0');
+      const minuteStr = String(minute).padStart(2, '0');
+      customTimePreview.textContent = `${year}年${monthStr}月${dayStr}日 ${hourStr}:${minuteStr}`;
+    } else {
+      customTimePreview.textContent = '未设置';
+    }
+  }
+
+  // 保存自定义时间设置
+  function saveCustomTimeSettings() {
+    localStorage.setItem('custom-time-year', customYearInput.value);
+    localStorage.setItem('custom-time-month', customMonthInput.value);
+    localStorage.setItem('custom-time-day', customDayInput.value);
+    localStorage.setItem('custom-time-hour', customHourInput.value);
+    localStorage.setItem('custom-time-minute', customMinuteInput.value);
+    updatePreview();
+  }
+
+  // 时间感知开关事件
+  timePerceptionToggle.addEventListener('change', function() {
+    const isEnabled = this.checked;
+    localStorage.setItem('time-perception-enabled', isEnabled);
+    
+    if (isEnabled) {
+      // 显示时区设置
+      timeZoneGroup.style.display = 'block';
+      
+      // 关闭自定义时间
+      if (customTimeToggle.checked) {
+        customTimeToggle.checked = false;
+        customTimeSettingsGroup.style.display = 'none';
+        localStorage.setItem('custom-time-enabled', 'false');
+      }
+    } else {
+      timeZoneGroup.style.display = 'none';
+    }
+  });
+
+  // 自定义时间开关事件
+  customTimeToggle.addEventListener('change', function() {
+    const isEnabled = this.checked;
+    localStorage.setItem('custom-time-enabled', isEnabled);
+    
+    if (isEnabled) {
+      // 显示自定义时间设置
+      customTimeSettingsGroup.style.display = 'block';
+      
+      // 关闭时间感知
+      if (timePerceptionToggle.checked) {
+        timePerceptionToggle.checked = false;
+        timeZoneGroup.style.display = 'none';
+        localStorage.setItem('time-perception-enabled', 'false');
+      }
+      
+      // 如果没有设置值，使用当前时间作为默认值
+      if (!customYearInput.value) {
+        const now = new Date();
+        customYearInput.value = now.getFullYear();
+        customMonthInput.value = now.getMonth() + 1;
+        customDayInput.value = now.getDate();
+        customHourInput.value = now.getHours();
+        customMinuteInput.value = now.getMinutes();
+        saveCustomTimeSettings();
+      }
+    } else {
+      customTimeSettingsGroup.style.display = 'none';
+    }
+  });
+
+  // 监听自定义时间输入变化
+  [customYearInput, customMonthInput, customDayInput, customHourInput, customMinuteInput].forEach(input => {
+    input.addEventListener('input', saveCustomTimeSettings);
+    input.addEventListener('change', saveCustomTimeSettings);
+  });
+
+  // 获取当前时间（考虑自定义时间）
+  window.getCustomTime = function() {
+    const customTimeEnabled = localStorage.getItem('custom-time-enabled') === 'true';
+    
+    if (customTimeEnabled) {
+      const year = localStorage.getItem('custom-time-year');
+      const month = localStorage.getItem('custom-time-month');
+      const day = localStorage.getItem('custom-time-day');
+      const hour = localStorage.getItem('custom-time-hour');
+      const minute = localStorage.getItem('custom-time-minute');
+      
+      if (year && month && day && hour !== null && minute !== null) {
+        return {
+          enabled: true,
+          year: parseInt(year),
+          month: parseInt(month),
+          day: parseInt(day),
+          hour: parseInt(hour),
+          minute: parseInt(minute),
+          formatted: `${year}年${String(month).padStart(2, '0')}月${String(day).padStart(2, '0')}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+        };
+      }
+    }
+    
+    // 返回当前实际时间
+    const now = new Date();
+    return {
+      enabled: false,
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      day: now.getDate(),
+      hour: now.getHours(),
+      minute: now.getMinutes(),
+      formatted: `${now.getFullYear()}年${String(now.getMonth() + 1).padStart(2, '0')}月${String(now.getDate()).padStart(2, '0')}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    };
+  };
+
+  // 页面加载时初始化
+  loadSettings();
+
+  console.log('时间感知与自定义时间系统已初始化');
+})();
+</script>
 
 <script>
 // ==================== EPhone 验证系统 ====================

@@ -392,12 +392,13 @@ ${formattedHistory}
 
     container.innerHTML = '';
 
-    // 操作栏：新建分类 + 添加条目
+    // 操作栏：新建分类 + 添加条目 + 重置更新
     const toolbar = document.createElement('div');
     toolbar.className = 'sm-toolbar';
     toolbar.innerHTML = `
       <button class="sm-toolbar-btn" id="sm-add-category-btn">＋ 新建分类</button>
       <button class="sm-toolbar-btn" id="sm-add-entry-btn">＋ 添加条目</button>
+      <button class="sm-toolbar-btn" id="sm-reset-timestamp-btn" style="margin-left: auto;" title="如果结构化记忆停止更新，可以尝试重置">🔄 重置更新</button>
     `;
     container.appendChild(toolbar);
 
@@ -623,6 +624,40 @@ ${formattedHistory}
     }
     const entry = { date, category: categoryCode, content };
     this.mergeEntries(chat, [entry]);
+  }
+
+  // ==================== 调试与维护 ====================
+
+  /**
+   * 重置结构化记忆的时间戳（用于修复更新停止的问题）
+   */
+  resetTimestamp(chat) {
+    if (chat) {
+      const oldTimestamp = chat.lastStructuredMemoryTimestamp;
+      chat.lastStructuredMemoryTimestamp = 0;
+      console.log(`[结构化记忆] 时间戳已重置: ${oldTimestamp} -> 0`);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 获取调试信息
+   */
+  getDebugInfo(chat) {
+    if (!chat) return null;
+    const lastTimestamp = chat.lastStructuredMemoryTimestamp || 0;
+    const lastDate = lastTimestamp ? new Date(lastTimestamp).toLocaleString('zh-CN') : '从未更新';
+    const totalMessages = chat.history ? chat.history.length : 0;
+    const messagesAfterTimestamp = chat.history ? chat.history.filter(m => m.timestamp > lastTimestamp).length : 0;
+    
+    return {
+      lastTimestamp,
+      lastDate,
+      totalMessages,
+      messagesAfterTimestamp,
+      isEnabled: chat.settings?.enableStructuredMemory || false
+    };
   }
 }
 

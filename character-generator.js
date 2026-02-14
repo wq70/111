@@ -154,6 +154,26 @@
                     <div id="gen-style-files-list" style="margin-top: 5px; font-size: 14px; color: #666;"></div>
                 </div>
 
+                <!-- 其他部分 -->
+                <div class="form-group">
+                    <label>其他要求（可选）</label>
+                    <textarea id="gen-other-requirements" placeholder="输入其他特殊要求或补充说明..."></textarea>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="form-button form-button-secondary" onclick="window.charGenSelectWorldBooks('other')" style="flex: 1;">选择世界书</button>
+                        <button class="form-button form-button-secondary" onclick="window.charGenImportFiles('other', ['txt', 'docx', 'json'])" style="flex: 1;">导入文件</button>
+                    </div>
+                    <div id="gen-other-selections" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
+                    <div id="gen-other-files-list" style="margin-top: 5px; font-size: 14px; color: #666;"></div>
+                </div>
+
+                <!-- 结合用户人设 -->
+                <div class="form-group">
+                    <label>结合用户人设（可选）</label>
+                    <textarea id="gen-user-persona" placeholder="输入用户人设描述..."></textarea>
+                    <button class="form-button form-button-secondary" onclick="window.charGenSelectPersona()">从我的人设库选择</button>
+                    <div id="gen-persona-selection" style="margin-top: 10px; font-size: 14px; color: #666;"></div>
+                </div>
+
                 <!-- 角色姓名 -->
                 <div class="form-group">
                     <label>角色姓名（可选，留空则由AI生成）</label>
@@ -274,6 +294,9 @@
             } else if (type === 'style') {
                 document.getElementById('gen-writing-style').value += combinedContent;
                 updateFilesList('gen-style-files-list', fileNames);
+            } else if (type === 'other') {
+                document.getElementById('gen-other-requirements').value += combinedContent;
+                updateFilesList('gen-other-files-list', fileNames);
             }
 
             alert(`成功导入 ${files.length} 个文件`);
@@ -548,6 +571,10 @@
             document.getElementById('gen-writing-style').value += combinedContent;
             document.getElementById('gen-style-selections').innerHTML = 
                 '已选择: ' + selectedBooks.map(b => b.name).join(', ');
+        } else if (type === 'other') {
+            document.getElementById('gen-other-requirements').value += combinedContent;
+            document.getElementById('gen-other-selections').innerHTML = 
+                '已选择: ' + selectedBooks.map(b => b.name).join(', ');
         }
 
         if (typeof window.showScreen === 'function') {
@@ -560,6 +587,141 @@
         // 预加载世界书数据，以便后续快速使用
         console.log('世界书数据已准备');
     }
+
+    // ========== 选择人设库功能 ==========
+    window.charGenSelectPersona = async function() {
+        console.log('选择人设库');
+        
+        let screen = document.getElementById('gen-persona-selector-screen');
+        if (!screen) {
+            screen = createPersonaSelectorScreen();
+            document.getElementById('phone-screen').appendChild(screen);
+        }
+
+        // 先显示屏幕
+        if (typeof window.showScreen === 'function') {
+            window.showScreen('gen-persona-selector-screen');
+        }
+
+        // 加载人设库列表（异步）
+        await loadPersonasForSelection();
+    };
+
+    function createPersonaSelectorScreen() {
+        const screen = document.createElement('div');
+        screen.id = 'gen-persona-selector-screen';
+        screen.className = 'screen';
+        screen.innerHTML = `
+            <div class="header">
+                <span class="back-btn" onclick="showScreen('character-generator-screen')">‹</span>
+                <span>选择人设</span>
+                <span class="action-btn" onclick="window.confirmPersonaSelection()">确定</span>
+            </div>
+            <div id="gen-persona-list" class="list-container">
+                <!-- 人设列表将在这里动态生成 -->
+            </div>
+        `;
+
+        return screen;
+    }
+
+    async function loadPersonasForSelection() {
+        const container = document.getElementById('gen-persona-list');
+        if (!container) {
+            console.error('人设列表容器未找到');
+            return;
+        }
+
+        // 显示加载提示
+        container.innerHTML = '<p style="text-align: center; color: #999; padding: 50px 20px;">加载中...</p>';
+
+        // 从IndexedDB获取人设预设
+        let personas = [];
+        
+        try {
+            // 检查window.db是否存在
+            if (!window.db) {
+                console.error('window.db 未初始化');
+                container.innerHTML = '<p style="text-align: center; color: #f44; padding: 50px 20px;">数据库未初始化，请刷新页面重试</p>';
+                return;
+            }
+            
+            if (!window.db.personaPresets) {
+                console.error('window.db.personaPresets 不存在');
+                container.innerHTML = '<p style="text-align: center; color: #f44; padding: 50px 20px;">人设库数据表不存在</p>';
+                return;
+            }
+            
+            personas = await window.db.personaPresets.toArray();
+            console.log('从IndexedDB加载人设库成功:', personas.length, '个');
+            console.log('人设详情:', personas);
+            
+        } catch (e) {
+            console.error('从IndexedDB获取人设库失败:', e);
+            container.innerHTML = '<p style="text-align: center; color: #f44; padding: 50px 20px;">加载失败: ' + e.message + '</p>';
+            return;
+        }
+
+        if (personas.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #999; padding: 50px 20px;">暂无人设<br><br>请先在聊天设置中的"我的人设库"添加人设</p>';
+            return;
+        }
+
+        container.innerHTML = personas.map(persona => {
+            // 处理persona字段内容预览
+            let contentPreview = '';
+            if (persona.persona) {
+                contentPreview = persona.persona.substring(0, 100);
+                if (persona.persona.length > 100) contentPreview += '...';
+            } else {
+                contentPreview = '无内容';
+            }
+            
+            return `
+                <div class="list-item" style="display: flex; align-items: center; gap: 10px; padding: 15px; border-bottom: 1px solid var(--border-color);">
+                    <input type="checkbox" 
+                           data-persona-id="${persona.id}" 
+                           data-persona-content="${escapeHTML(persona.persona || '')}"
+                           style="width: 20px; height: 20px;">
+                    ${persona.avatar ? `<img src="${persona.avatar}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">` : ''}
+                    <div style="flex: 1;">
+                        <div class="item-title" style="font-weight: 600; margin-bottom: 5px;">人设预设 ${persona.id}</div>
+                        <div class="item-content" style="font-size: 13px; color: #666;">${escapeHTML(contentPreview)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.confirmPersonaSelection = function() {
+        const checkboxes = document.querySelectorAll('#gen-persona-list input[type="checkbox"]:checked');
+        
+        if (checkboxes.length === 0) {
+            alert('请至少选择一个人设');
+            return;
+        }
+
+        // 获取选中的人设内容
+        let combinedContent = '';
+        const selectedNames = [];
+        
+        checkboxes.forEach((cb, index) => {
+            const content = cb.dataset.personaContent;
+            selectedNames.push(`人设${index + 1}`);
+            if (content) {
+                combinedContent += `\n\n=== 用户人设 ${index + 1} ===\n${content}`;
+            }
+        });
+
+        // 填充到对应文本框
+        document.getElementById('gen-user-persona').value += combinedContent;
+        document.getElementById('gen-persona-selection').innerHTML = 
+            '已选择: ' + selectedNames.join(', ');
+
+        if (typeof window.showScreen === 'function') {
+            window.showScreen('character-generator-screen');
+        }
+    };
 
     // 获取API配置（从IndexedDB读取）
     async function getApiConfig() {
@@ -686,6 +848,8 @@
         const worldBackground = document.getElementById('gen-world-background').value.trim();
         const fanficSource = document.getElementById('gen-fanfic-source').value.trim();
         const writingStyle = document.getElementById('gen-writing-style').value.trim();
+        const otherRequirements = document.getElementById('gen-other-requirements').value.trim();
+        const userPersona = document.getElementById('gen-user-persona').value.trim();
         const characterName = document.getElementById('gen-character-name').value.trim();
         const genCount = parseInt(document.getElementById('gen-count').value) || 1;
 
@@ -704,6 +868,8 @@
             worldBackground,
             fanficSource,
             writingStyle,
+            otherRequirements,
+            userPersona,
             characterName
         });
 
@@ -780,6 +946,14 @@
 
         if (data.writingStyle) {
             prompt += `文风要求：\n${data.writingStyle}\n\n`;
+        }
+
+        if (data.otherRequirements) {
+            prompt += `其他要求：\n${data.otherRequirements}\n\n`;
+        }
+
+        if (data.userPersona) {
+            prompt += `用户人设（请生成能与此用户人设互动良好的角色）：\n${data.userPersona}\n\n`;
         }
 
         if (data.characterName) {
