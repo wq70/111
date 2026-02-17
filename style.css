@@ -1049,6 +1049,61 @@
                border: 2px solid white;
            }
 
+           /* 智能匹配表情包面板 */
+           #smart-sticker-match-panel {
+               background-color: rgba(242, 242, 247, 0.95);
+               backdrop-filter: blur(10px);
+               -webkit-backdrop-filter: blur(10px);
+               border-top: 1px solid var(--border-color);
+               border-bottom: 1px solid var(--border-color);
+               padding: 10px;
+               max-height: 150px;
+               overflow-x: auto;
+               overflow-y: hidden;
+           }
+
+           #smart-sticker-match-grid {
+               display: flex;
+               gap: 10px;
+               align-items: center;
+           }
+
+           #smart-sticker-match-grid .sticker-item {
+               flex-shrink: 0;
+               width: 70px;
+               display: flex;
+               flex-direction: column;
+               align-items: center;
+               gap: 4px;
+               cursor: pointer;
+               transition: transform 0.2s;
+           }
+
+           #smart-sticker-match-grid .sticker-item:hover {
+               transform: scale(1.1);
+           }
+
+           #smart-sticker-match-grid .sticker-image-container {
+               width: 60px;
+               height: 60px;
+               background-color: white;
+               border-radius: 8px;
+               background-size: contain;
+               background-repeat: no-repeat;
+               background-position: center;
+               box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+           }
+
+           #smart-sticker-match-grid .sticker-name {
+               font-size: 11px;
+               color: var(--text-secondary);
+               width: 100%;
+               text-align: center;
+               white-space: nowrap;
+               overflow: hidden;
+               text-overflow: ellipsis;
+           }
+
            #input-actions-wrapper {
                position: static;
                display: flex;
@@ -1184,6 +1239,11 @@
 
            .custom-modal-footer button:first-child {
                border-right: 1px solid #dbdbdb;
+               border-bottom-left-radius: 14px;
+           }
+
+           .custom-modal-footer button:last-child {
+               border-bottom-right-radius: 14px;
            }
 
            .custom-modal-footer .confirm-btn {
@@ -25246,3 +25306,73 @@
                    font-size: 11px !important;
                }
            }
+
+/* NPC头像管理样式 */
+#npc-avatars-modal .modal-content {
+    max-width: 600px;
+    height: 70%;
+    max-height: 600px;
+    display: flex;
+    flex-direction: column;
+}
+
+#npc-avatars-modal .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 15px;
+}
+
+#npc-avatars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.npc-avatar-item {
+    position: relative;
+    cursor: pointer;
+}
+
+.npc-avatar-item img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #ddd;
+    transition: border-color 0.2s;
+}
+
+.npc-avatar-checkbox {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    z-index: 10;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.npc-avatar-item img:hover {
+    border-color: #007bff;
+}
+
+#phone-screen.dark-mode .npc-avatar-item img {
+    border-color: #444;
+}
+
+#phone-screen.dark-mode .npc-avatar-item img:hover {
+    border-color: #007bff;
+}
+
+#npc-avatars-modal .btn-danger {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+#npc-avatars-modal .btn-danger:hover {
+    background-color: #c82333 !important;
+}

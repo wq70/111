@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.16'; // 当前更新版本号
+    this.currentVersion = '0.0.17'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,14 +22,15 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item tips" style="margin-bottom: 8px;">点三下强制跳过更新日志弹窗。有问题的可以试一下。</div>
-      <div class="update-item">1.修复小组件改完刷新又回去的问题</div>
-      <div class="update-item">2.修复数据大的问题，记得一键清空一下API调用历史</div>
-      <div class="update-item">3.修复绿江追更失败的BUG、新增追更时间</div>
-      <div class="update-item">4.新增自定义时间感知</div>
-      <div class="update-item">5.角色生成新增其他分裂，可以挂破限。还增加了根据用户人设生成，可选。</div>
-      <div class="update-item">6.新增角色可以帮你清空购物车，需要打开后台活动，暂时还没测试过</div>
-      <div class="update-item">7.优化结构化记忆，如果之前有旧数据，打开就可以自动转换为结构化记忆。修复之前结构化记忆不更新的问题，新增可以手动更新。</div>
+      <div class="update-item">1.结构化新增手动更新、指定范围、最新更新</div>
+      <div class="update-item">2.新增旁白按钮，可以直接输入上下文</div>
+      <div class="update-item">3.谷歌生图片新增大范围适配，以前只适配聊天室和动态。比如送礼物什么的都适配了，一些别的小地方还没适配，效果好的话后续适配</div>
+      <div class="update-item">4.新增TKOEN手动刷新，有不对的可以刷新试一下。</div>
+      <div class="update-item">5.新增豆瓣自定义小组、自定义NPC头像</div>
+      <div class="update-item">6.新增跨群聊的开关。就是可以不会让群聊触发私聊，私聊触发群聊</div>
+      <div class="update-item">6.优化一些其他地方的使用。新增了一些小功能</div>
+      <div class="update-item tips" style="margin-top: 8px;">还有一些新功能明天或者过几天上（双语、番茄钟、论坛）</div>
+      <div class="update-item tips">双语灵感来源UWU章鱼机的1900老师，感谢老师授权。</div>
     `;
 
     return `
@@ -37,7 +38,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.15 更新（没赶上情人节呜呜呜）</div>
+            <div class="update-title">2.17 更新</div>
           </div>
           
           <div class="update-notification-body">

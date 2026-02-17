@@ -392,13 +392,13 @@ ${formattedHistory}
 
     container.innerHTML = '';
 
-    // 操作栏：新建分类 + 添加条目 + 重置更新
+    // 操作栏：新建分类 + 添加条目 + 总结
     const toolbar = document.createElement('div');
     toolbar.className = 'sm-toolbar';
     toolbar.innerHTML = `
-      <button class="sm-toolbar-btn" id="sm-add-category-btn">＋ 新建分类</button>
-      <button class="sm-toolbar-btn" id="sm-add-entry-btn">＋ 添加条目</button>
-      <button class="sm-toolbar-btn" id="sm-reset-timestamp-btn" style="margin-left: auto;" title="如果结构化记忆停止更新，可以尝试重置">🔄 重置更新</button>
+      <button class="sm-toolbar-btn" id="sm-add-category-btn">新建分类</button>
+      <button class="sm-toolbar-btn" id="sm-add-entry-btn">添加条目</button>
+      <button class="sm-toolbar-btn" id="sm-summary-btn" style="margin-left: auto;">总结</button>
     `;
     container.appendChild(toolbar);
 

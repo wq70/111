@@ -27,7 +27,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=0.0.16" defer></script>
+  <script src="update-notification.js?v=0.0.17" defer></script>
   <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
@@ -2236,6 +2236,17 @@
                 </label>
             </div>
             
+            <div class="settings-item">
+                <div>
+                    <div style="font-weight: 500;">跨聊天消息</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">AI可以在群聊中给你发私信，或在私聊中给群聊发消息</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="global-enable-cross-chat-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
             <div style="font-size: 12px; color: #666; margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 6px;">
                 💡 提示：这是全局默认设置。你可以在每个角色的聊天设置中单独覆盖这些选项。
             </div>
@@ -2569,7 +2580,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v1.0.9</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v2.0.0</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">
@@ -3093,6 +3104,10 @@
       </div>
       <div id="chat-input-area">
         <div id="chat-at-mention-popup" class="at-mention-popup"></div>
+        <!-- 智能匹配表情包显示区域 -->
+        <div id="smart-sticker-match-panel" style="display: none;">
+          <div id="smart-sticker-match-grid"></div>
+        </div>
         <div id="reply-preview-bar">
           <div class="reply-preview-content">
             <div class="sender">回复 xxx:</div>
@@ -3215,6 +3230,13 @@
 <button id="open-quick-reply-btn" class="chat-action-icon-btn action-button" title="快捷回复">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+            </button>
+<button id="narration-btn" class="chat-action-icon-btn action-button" title="旁白">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                <line x1="9" y1="10" x2="15" y2="10"></line>
+                <line x1="12" y1="7" x2="12" y2="13"></line>
               </svg>
             </button>
 <button id="open-todo-list-btn" class="chat-action-icon-btn action-button" title="待办事项">
@@ -4355,9 +4377,21 @@
                 </select>
             </div>
             
+            <div class="settings-item" id="ai-behavior-cross-chat-item">
+                <div>
+                    <div style="font-weight: 500;">跨聊天消息</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">AI可以在群聊中给你发私信，或在私聊中给群聊发消息</div>
+                </div>
+                <select id="chat-enable-cross-chat-select" style="padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--secondary-bg);">
+                    <option value="null">使用全局设置</option>
+                    <option value="true">开启</option>
+                    <option value="false">关闭</option>
+                </select>
+            </div>
+            
             <div class="settings-item" id="ai-behavior-status-item">
                 <div style="font-size: 12px; color: #666; padding: 10px; background: #f5f5f5; border-radius: 6px; width: 100%;">
-                    💡 当前全局设置：心声功能 <span id="global-thoughts-status">关闭</span>，动态功能 <span id="global-qzone-status">关闭</span>，查看手机 <span id="global-view-myphone-status">关闭</span>
+                    💡 当前全局设置：心声功能 <span id="global-thoughts-status">关闭</span>，动态功能 <span id="global-qzone-status">关闭</span>，查看手机 <span id="global-view-myphone-status">关闭</span>，跨聊天消息 <span id="global-cross-chat-status">开启</span>
                 </div>
             </div>
         </div>
@@ -4685,6 +4719,18 @@
                  </div>
                  <label class="toggle-switch"> 
                     <input type="checkbox" id="enable-sticker-vision-checkbox"> 
+                    <span class="slider"></span> 
+                 </label>
+             </div>
+             
+             <!-- 表情包智能匹配 -->
+             <div class="settings-item" id="sticker-smart-match-group">
+                 <div>
+                    <label>启用表情包智能匹配</label>
+                    <div class="settings-desc">输入文字时自动匹配相关表情包</div>
+                 </div>
+                 <label class="toggle-switch"> 
+                    <input type="checkbox" id="enable-sticker-smart-match-checkbox"> 
                     <span class="slider"></span> 
                  </label>
              </div>
@@ -6135,6 +6181,7 @@
       <div class="modal-body" id="token-breakdown-body" style="padding: 0; overflow-y: auto;">
       </div>
       <div class="modal-footer">
+        <button class="primary" id="token-breakdown-refresh-btn">刷新</button>
         <button class="cancel" id="token-breakdown-close-btn">关闭</button>
       </div>
     </div>
@@ -6260,6 +6307,26 @@
         </div>
         <hr style="opacity: 0.2; margin: 15px 0;">
         <div class="form-group douban-settings-item">
+          <label> 
+            <input type="checkbox" id="douban-enable-ai-avatar-checkbox" checked> 
+            开启通用AI生图
+            <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;"> 
+              关闭后，NPC头像将使用默认头像或自定义头像库中的头像。 
+            </p> 
+          </label>
+        </div>
+        <hr style="opacity: 0.2; margin: 15px 0;">
+        <div class="form-group douban-settings-item">
+          <label> NPC头像自定义 <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;"> 上传自定义NPC头像，将随机分配给使用的NPC。一个头像对应一个NPC。 </p> </label>
+        </div>
+        <button class="save" id="manage-npc-avatars-btn" style="width: calc(100% - 40px); margin: 0 20px 15px 20px; padding: 10px; font-size: 14px;">管理NPC头像</button>
+        <hr style="opacity: 0.2; margin: 15px 0;">
+        <div class="form-group douban-settings-item">
+          <label> 自定义小组管理 <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;"> 添加和管理自定义豆瓣小组，设置小组名称和提示词。 </p> </label>
+        </div>
+        <button class="save" id="manage-custom-groups-btn" style="width: calc(100% - 40px); margin: 0 20px 15px 20px; padding: 10px; font-size: 14px;">管理自定义小组</button>
+        <hr style="opacity: 0.2; margin: 15px 0;">
+        <div class="form-group douban-settings-item">
           <label> 帖子管理 <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;"> 可以选择性删除已生成的豆瓣帖子。 </p> </label>
         </div>
         <button class="save" id="manage-douban-posts-btn" style="width: calc(100% - 40px); margin: 0 20px 15px 20px; padding: 10px; font-size: 14px;">管理豆瓣帖子</button>
@@ -6279,6 +6346,67 @@
       <div class="modal-header"> <span>选择要删除的豆瓣帖子</span> <label style="font-size: 14px; font-weight: normal; display: flex; align-items: center; gap: 5px;"> <input type="checkbox" id="select-all-douban-posts"> 全选 </label> </div>
       <div class="modal-body" id="delete-douban-posts-list" style="padding: 0;"> </div>
       <div class="modal-footer"> <button class="cancel" id="cancel-delete-douban-posts-btn"data-lang-key="cancel">取消</button> <button class="save btn-danger" id="confirm-delete-douban-posts-btn">确认删除</button> </div>
+    </div>
+  </div>
+  <div id="npc-avatars-modal" class="modal">
+    <div class="modal-content" style="height: 70%; max-height: 600px;">
+      <div class="modal-header"> 
+        <span>NPC头像管理</span> 
+        <div style="display: flex; gap: 10px;">
+          <button class="save" id="add-npc-avatar-url-btn" style="padding: 5px 15px; font-size: 13px;">+ URL上传</button>
+          <button class="save" id="add-npc-avatar-local-btn" style="padding: 5px 15px; font-size: 13px;">+ 本地上传</button>
+        </div>
+      </div>
+      <div class="modal-body" style="padding: 15px; display: flex; flex-direction: column; height: calc(100% - 120px); overflow: hidden;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0;">
+          <label style="font-size: 14px; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="select-all-npc-avatars"> 全选
+          </label>
+          <button class="save btn-danger" id="delete-selected-npc-avatars-btn" style="padding: 5px 15px; font-size: 13px; display: none;">删除选中</button>
+        </div>
+        <div id="npc-avatars-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; overflow-y: auto; flex: 1;"> </div>
+      </div>
+      <div class="modal-footer"> 
+        <button class="cancel" id="close-npc-avatars-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+  <input type="file" id="npc-avatar-local-input" accept="image/*" multiple style="display: none;">
+  <div id="custom-groups-modal" class="modal">
+    <div class="modal-content" style="height: 75%;">
+      <div class="modal-header"> 
+        <span>自定义小组管理</span> 
+        <button class="save" id="add-custom-group-btn" style="padding: 5px 15px; font-size: 13px;">+ 添加小组</button>
+      </div>
+      <div class="modal-body" id="custom-groups-list" style="padding: 15px; overflow-y: auto;"> </div>
+      <div class="modal-footer"> 
+        <button class="cancel" id="close-custom-groups-btn">关闭</button> 
+      </div>
+    </div>
+  </div>
+  <div id="edit-custom-group-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"> <span id="edit-group-modal-title">编辑小组</span> </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="custom-group-name-input">小组名称</label>
+          <input type="text" id="custom-group-name-input" placeholder="例如：吃喝玩乐小组" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label for="custom-group-prompt-input">小组提示词 <p style="font-size: 12px; font-weight: normal; color: #999; margin-top: 5px;">描述这个小组的主题和风格，AI会根据这个提示词生成相关内容</p></label>
+          <textarea id="custom-group-prompt-input" placeholder="例如：这是一个分享美食、旅游、娱乐的生活方式小组，成员们喜欢分享各地美食推荐、旅行攻略和娱乐活动..." style="width: 100%; min-height: 120px; padding: 10px; border: 1px solid #ddd; border-radius: 8px; resize: vertical;"></textarea>
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="custom-group-enabled-input">
+            <span>启用此小组（刷新时生成内容）</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer"> 
+        <button class="cancel" id="cancel-edit-group-btn">取消</button> 
+        <button class="save" id="save-edit-group-btn">保存</button> 
+      </div>
     </div>
   </div><input type="file" id="import-preset-input" accept=".json" hidden>
   <div id="update-notice-modal">
