@@ -7020,6 +7020,7 @@ document.addEventListener('DOMContentLoaded', () => {
       shoppingCategoryCount: 3,
       shoppingProductCount: 8,
       chatRenderWindow: 50,
+      safeRenderMode: false,
       systemNotification: {
         enabled: false,
         appName: 'EPhone',
@@ -9050,6 +9051,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apiHistorySwitch) {
       apiHistorySwitch.checked = state.globalSettings.enableApiHistory || false;
     }
+    
+    // 加载安全渲染模式开关状态
+    const safeRenderSwitch = document.getElementById('safe-render-mode-switch');
+    if (safeRenderSwitch) {
+      safeRenderSwitch.checked = state.globalSettings.safeRenderMode || false;
+    }
     const savedMinimaxGroupId = localStorage.getItem('minimax-group-id');
     const savedMinimaxApiKey = localStorage.getItem('minimax-api-key');
     const savedMinimaxModel = localStorage.getItem('minimax-model');
@@ -9691,6 +9698,8 @@ document.addEventListener('DOMContentLoaded', () => {
           currentGroupContent = groupContainer.querySelector('.chat-group-content');
         } else if (item.type === 'chatItem') {
           const listItem = createChatListItem(item.chat);
+          // 安全渲染：跳过渲染失败的项，防止一个错误导致整个列表崩溃
+          if (!listItem) return;
           if (item.chat.groupId && currentGroupContent) {
             currentGroupContent.appendChild(listItem);
           } else {
@@ -9850,8 +9859,36 @@ document.addEventListener('DOMContentLoaded', () => {
       return item;
 
     } catch (error) {
-
       console.error(`渲染聊天项 [${chat.name || '未知'}] (ID: ${chat.id}) 时出错:`, error);
+      
+      // 安全渲染模式：返回错误占位符而不是 null，让用户知道哪个聊天项有问题
+      if (state.globalSettings.safeRenderMode) {
+        const errorItem = document.createElement('div');
+        errorItem.className = 'chat-list-item chat-list-item-error';
+        errorItem.dataset.chatId = chat.id;
+        errorItem.innerHTML = `
+          <div class="avatar-group">
+            <div style="width: 50px; height: 50px; border-radius: 10px; background: #ffebee; display: flex; align-items: center; justify-content: center; color: #c62828; font-size: 20px;">⚠</div>
+          </div>
+          <div class="info">
+            <div class="name-line">
+              <span class="name" style="color: #c62828;">${chat.name || '未知聊天'}</span>
+            </div>
+            <div class="last-msg" style="color: #e57373; font-size: 11px;">渲染失败，点击尝试修复</div>
+          </div>
+        `;
+        errorItem.addEventListener('click', async () => {
+          if (confirm(`聊天项 "${chat.name}" 渲染失败。\n\n可能的原因：数据损坏或格式不兼容。\n\n是否尝试打开此聊天？（如果打开后仍有问题，可以在聊天设置中尝试修复）`)) {
+            try {
+              await openChat(chat.id);
+            } catch (e) {
+              alert('打开聊天失败：' + e.message);
+            }
+          }
+        });
+        return errorItem;
+      }
+      
       return null;
     }
   }
@@ -12730,6 +12767,16 @@ https://xx.com/4.jpg 疑惑`;
           if (!isUser && typeof qqUndefinedFilter !== 'undefined') {
             plainText = qqUndefinedFilter(plainText);
           }
+          
+          // 【双语模式处理】如果启用了双语模式且是AI消息
+          if (!isUser && chat.settings.enableBilingualMode && msg.type !== 'voice_message') {
+            // 保存原始内容（包含〖〗）
+            bubble.dataset.originalContent = plainText;
+            bubble.dataset.showingTranslation = 'false';
+            // 默认隐藏〖〗部分，只显示外语
+            plainText = plainText.replace(/〖[^〗]*〗/g, '');
+          }
+          
           contentHtml = parseMarkdown(plainText).replace(/\n/g, '<br>');
         }
       }
@@ -14265,6 +14312,18 @@ ${linkedContents}
 -   **【角色发言 (第二步)】**: 在思维链对象【之后】，才是所有角色的具体行动JSON对象 (text, sticker, etc.)。
 
 - 数组中的每个对象都【必须】包含 "type" 和 "name" 字段。'name'字段【必须】使用角色的【本名】。
+${chat.settings.enableBilingualMode ? `
+
+# 双语输出规则 (最高优先级)
+- 所有角色的文本消息【必须】同时包含外语和中文翻译。
+- 格式：外语〖中文〗
+- 示例：Hello!〖你好！〗How are you today?〖你今天怎么样？〗
+- 重要：括号必须是 〖 和 〗 这两个符号（不是普通的【】）
+- 每句外语后面紧跟〖中文〗，不要有空格
+- 中文翻译要自然流畅，符合中文表达习惯
+- 不要在〖〗中使用〗符号
+- 每个外语句子都要有对应的〖中文〗
+` : ''}
 
 
 # 角色扮演核心规则
@@ -15349,6 +15408,17 @@ ${kinshipContext}
 - 你的回复【必须】是一个JSON数组格式的字符串。
 - 数组的第一项【必须】是思维链 \`thought_chain\`。
 - 数组的后续项是你的一系列行动。
+${chat.settings.enableBilingualMode ? `
+## 1.5. 双语输出规则 (最高优先级)
+- 你的每条文本消息【必须】同时包含外语和中文翻译。
+- 格式：外语〖中文〗
+- 示例：Hello!〖你好！〗How are you today?〖你今天怎么样？〗
+- 重要：括号必须是 〖 和 〗 这两个符号（不是普通的【】）
+- 每句外语后面紧跟〖中文〗，不要有空格
+- 中文翻译要自然流畅，符合中文表达习惯
+- 不要在〖〗中使用〗符号
+- 每个外语句子都要有对应的〖中文〗
+` : ''}
 
 ## 2. 思维链 (Chain of Thought) - 你的大脑
 在行动前，你必须先思考。请在JSON数组的第一项返回：
@@ -36464,7 +36534,8 @@ ${chat.settings.myPersona}
         if (element.tagName === 'IMG') {
           element.src = savedValue;
         } else {
-          element.textContent = savedValue;
+          // 将保存的\n转换为<br>以正确显示换行
+          element.innerHTML = savedValue.replace(/\n/g, '<br>');
         }
       }
     }
@@ -40098,59 +40169,181 @@ ${chat.settings.myPersona}
   }
 
   // ==========================================
-  // CPhone 气泡文字专用编辑函数 (修复无法修改问题)
+  // CPhone 气泡文字专用编辑函数 (弹窗编辑模式)
   // ==========================================
   window.editBubbleText = async function (elementId) {
     const textElement = document.getElementById(elementId);
     if (!textElement) return;
 
-    // 如果已经是 input 模式，直接返回，防止重复点击
-    if (textElement.tagName === 'INPUT') return;
+    // 获取当前文本，将<br>转换为\n以便在textarea中正确显示
+    const currentText = textElement.innerHTML.replace(/<br\s*\/?>/gi, '\n');
 
-    const currentText = textElement.innerText;
-    const parent = textElement.parentElement;
+    // 创建弹窗遮罩
+    const overlay = document.createElement('div');
+    overlay.id = 'text-edit-modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      animation: fadeIn 0.2s ease;
+    `;
 
-    // 创建临时输入框
-    const input = document.createElement('input');
-    input.type = 'text';
+    // 创建弹窗内容
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background-color: var(--secondary-bg, #ffffff);
+      width: 85%;
+      max-width: 320px;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      animation: modalSlideUp 0.3s ease;
+    `;
+
+    // 弹窗标题
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 600;
+      text-align: center;
+      border-bottom: 1px solid var(--border-color, #e0e0e0);
+      color: var(--text-primary, #1f1f1f);
+    `;
+    header.textContent = '编辑文字';
+
+    // 弹窗主体
+    const body = document.createElement('div');
+    body.style.cssText = `
+      padding: 16px;
+    `;
+
+    const input = document.createElement('textarea');
     input.value = currentText;
-    input.className = 'bubble-edit-input'; // 使用我们在 CSS 里定义的样式
+    input.style.cssText = `
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 8px;
+      font-size: 15px;
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+      color: var(--text-primary, #1f1f1f);
+      background-color: var(--secondary-bg, #ffffff);
+      resize: vertical;
+      line-height: 1.5;
+    `;
+    input.placeholder = '请输入文字...';
 
-    // 继承字体样式
-    const computedStyle = window.getComputedStyle(textElement);
-    input.style.fontFamily = computedStyle.fontFamily;
-    input.style.fontSize = computedStyle.fontSize;
-    input.style.fontWeight = computedStyle.fontWeight;
-    input.style.textAlign = computedStyle.textAlign;
+    // 添加提示文本
+    const hint = document.createElement('div');
+    hint.style.cssText = `
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-secondary, #8a8a8a);
+      text-align: center;
+    `;
+    hint.textContent = '支持换行输入 • Ctrl+Enter 保存';
+
+    body.appendChild(input);
+    body.appendChild(hint);
+
+    // 弹窗底部按钮
+    const footer = document.createElement('div');
+    footer.style.cssText = `
+      border-top: 1px solid var(--border-color, #e0e0e0);
+      display: flex;
+    `;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '取消';
+    cancelBtn.style.cssText = `
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      color: var(--text-secondary, #8a8a8a);
+      cursor: pointer;
+      border-right: 1px solid var(--border-color, #e0e0e0);
+    `;
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.textContent = '确定';
+    confirmBtn.style.cssText = `
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      color: var(--accent-color, #007bff);
+      font-weight: 600;
+      cursor: pointer;
+    `;
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(confirmBtn);
+
+    // 组装弹窗
+    modal.appendChild(header);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
 
     // 保存函数
     async function saveEdit() {
       const newText = input.value.trim();
       if (newText) {
-        textElement.innerText = newText;
-        // 尝试保存到数据库 (复用 widgetData)
+        // 使用innerHTML来保留换行，将\n转换为<br>
+        textElement.innerHTML = newText.replace(/\n/g, '<br>');
+        // 保存到数据库
         if (!state.globalSettings.widgetData) {
           state.globalSettings.widgetData = {};
         }
         state.globalSettings.widgetData[elementId] = newText;
         await db.globalSettings.put(state.globalSettings);
       }
-      // 替换回文本标签
-      if (input.parentNode) input.replaceWith(textElement);
+      closeModal();
     }
 
-    // 绑定事件：失去焦点或回车时保存
-    input.addEventListener('blur', saveEdit);
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') {
-        input.blur();
+    // 关闭弹窗
+    function closeModal() {
+      overlay.style.animation = 'fadeOut 0.2s ease';
+      setTimeout(() => {
+        overlay.remove();
+      }, 200);
+    }
+
+    // 事件绑定
+    confirmBtn.addEventListener('click', saveEdit);
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal();
+    });
+    input.addEventListener('keydown', (e) => {
+      // Ctrl/Cmd + Enter 保存，Escape 取消
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveEdit();
+      } else if (e.key === 'Escape') {
+        closeModal();
       }
     });
 
-    // 替换 DOM
-    textElement.replaceWith(input);
-    input.focus();
-    // 阻止事件冒泡，防止触发其他点击
+    // 添加到页面并聚焦
+    document.body.appendChild(overlay);
+    setTimeout(() => input.focus(), 100);
+
+    // 阻止事件冒泡
     if (window.event) window.event.stopPropagation();
   }
   function switchToCharScreen(screenId) {
@@ -46820,6 +47013,17 @@ ${charactersContext}
                 <span class="name">${chat.name} (角色)</span>
             `;
         listEl.appendChild(charItem);
+      } else {
+        const groupItem = document.createElement('div');
+        groupItem.className = 'clear-posts-item';
+        groupItem.dataset.charId = chat.id;
+        groupItem.dataset.isGroup = 'true';
+        const memberCount = chat.members ? chat.members.length : 0;
+        groupItem.innerHTML = `
+                <div class="checkbox"></div>
+                <span class="name">${chat.name} (群聊 - ${memberCount}人)</span>
+            `;
+        listEl.appendChild(groupItem);
       }
     });
   }
@@ -46832,42 +47036,42 @@ ${charactersContext}
     const dataTypes = [{
       id: 'chat',
       name: '聊天记录',
-      description: '将清空选定角色的所有对话消息、曾用备注和你的昵称。'
+      description: '将清空选定角色/群聊的所有对话消息。对于角色，还会清空曾用备注和你的昵称。'
     },
     {
       id: 'qzone',
       name: '动态与互动',
-      description: '将清空选定角色的所有动态、评论和点赞。'
+      description: '将清空选定角色的所有动态、评论和点赞。(不适用于群聊)'
     },
     {
       id: 'calls',
       name: '通话记录',
-      description: '将清空选定角色的所有通话记录。'
+      description: '将清空选定角色的所有通话记录。(不适用于群聊)'
     },
     {
       id: 'thoughts',
       name: '心声',
-      description: '将清空选定角色的心声和散记历史。'
+      description: '将清空选定角色的心声和散记历史。(不适用于群聊)'
     },
     {
       id: 'memories',
       name: '长期记忆',
-      description: '将清空选定角色的所有长期记忆。'
+      description: '将清空选定角色的所有长期记忆。(不适用于群聊)'
     },
     {
       id: 'favorites',
       name: '收藏',
-      description: '将清空收藏夹中所有与该角色相关的内容（如聊天、动态、日记等）。'
+      description: '将清空收藏夹中所有与该角色相关的内容（如聊天、动态、日记等）。(不适用于群聊)'
     },
     {
       id: 'cphone',
       name: 'Cphone数据 (CPhone)',
-      description: '将清空角色的相册、QQ、浏览器、淘宝、日记、备忘录等所有模拟手机数据。'
+      description: '将清空角色的相册、QQ、浏览器、淘宝、日记、备忘录等所有模拟手机数据。(不适用于群聊)'
     },
     {
       id: 'myphone',
       name: 'MyPhone数据 (MyPhone)',
-      description: '将清空绑定角色的MyPhone所有数据，包括QQ联系人、相册、浏览器、淘宝、日记、备忘录、地图、APP记录、音乐等。'
+      description: '将清空绑定角色的MyPhone所有数据，包括QQ联系人、相册、浏览器、淘宝、日记、备忘录、地图、APP记录、音乐等。(不适用于群聊)'
     },
     {
       id: 'todo',
@@ -46901,7 +47105,7 @@ ${charactersContext}
   function handleDataClearNext() {
     const selectedItems = document.querySelectorAll('#data-clear-char-list .clear-posts-item.selected');
     if (selectedItems.length === 0) {
-      alert("请至少选择一个要清理的角色。");
+      alert("请至少选择一个要清理的角色或群聊。");
       return;
     }
 
@@ -46968,9 +47172,13 @@ ${charactersContext}
                 }
                 console.log("已清理所有由用户创建的待办事项");
               } else {
-                // 如果选的是具体角色，直接清空该角色的待办列表 (todoList)
+                // 如果选的是具体角色或群聊，直接清空该对象的待办列表 (todoList)
                 const chat = await db.chats.get(charId);
                 if (chat) {
+                  if (chat.isGroup) {
+                    console.log(`跳过群聊 ${chat.name} 的待办事项清理（群聊不适用）`);
+                    continue;
+                  }
                   chat.todoList = []; // 直接置空
                   await db.chats.put(chat);
                   console.log(`已清空角色 ${chat.name} 的待办事项`);
@@ -47015,32 +47223,59 @@ ${charactersContext}
               } else {
                 const chat = await db.chats.get(charId);
                 if (chat) {
-                  chat.history = [];
-                  chat.heartfeltVoice = '...';
-                  chat.randomJottings = '...';
-                  if (Array.isArray(chat.nameHistory)) {
-                    chat.nameHistory = [];
+                  // 如果是群聊，只清空聊天记录，保留其他信息
+                  if (chat.isGroup) {
+                    chat.history = [];
+                    // 保留群设置、成员等信息
+                    await db.chats.put(chat);
+                    console.log(`已清空群聊 ${chat.name} 的聊天记录`);
+                  } else {
+                    // 单聊的处理逻辑（清空更多信息）
+                    chat.history = [];
+                    chat.heartfeltVoice = '...';
+                    chat.randomJottings = '...';
+                    if (Array.isArray(chat.nameHistory)) {
+                      chat.nameHistory = [];
+                    }
+                    if (chat.settings) {
+                      chat.settings.myNickname = '我';
+                    }
+                    await db.chats.put(chat);
                   }
-                  if (chat.settings) {
-                    chat.settings.myNickname = '我';
-                  }
-                  await db.chats.put(chat);
                 }
               }
             }
 
             if (type === 'qzone') {
+              // 群聊不适用于动态清理
+              if (charId !== 'user') {
+                const chat = await db.chats.get(charId);
+                if (chat && chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的动态清理（群聊不适用）`);
+                  continue;
+                }
+              }
               const authorId = (charId === 'user') ? 'user' : charId;
               await db.qzonePosts.where('authorId').equals(authorId).delete();
             }
 
             if (type === 'calls' && charId !== 'user') {
+              // 检查是否为群聊
+              const chat = await db.chats.get(charId);
+              if (chat && chat.isGroup) {
+                console.log(`跳过群聊 ${chat.name} 的通话记录清理（群聊不适用）`);
+                continue;
+              }
               await db.callRecords.where('chatId').equals(charId).delete();
             }
 
             if (type === 'thoughts' && charId !== 'user') {
               const chat = await db.chats.get(charId);
               if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的心声清理（群聊不适用）`);
+                  continue;
+                }
                 chat.thoughtsHistory = [];
                 chat.heartfeltVoice = '...';
                 chat.randomJottings = '...';
@@ -47051,6 +47286,10 @@ ${charactersContext}
             if (type === 'memories' && charId !== 'user') {
               const chat = await db.chats.get(charId);
               if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的长期记忆清理（群聊不适用）`);
+                  continue;
+                }
                 chat.longTermMemory = [];
                 await db.chats.put(chat);
               }
@@ -47064,6 +47303,12 @@ ${charactersContext}
 
                 await db.favorites.where('type').equals('chat_message').filter(fav => fav.content.role === 'user').delete();
               } else {
+                // 检查是否为群聊
+                const chat = await db.chats.get(charId);
+                if (chat && chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的收藏清理（群聊不适用）`);
+                  continue;
+                }
 
                 await db.favorites.where('type').equals('chat_message').and(fav => fav.chatId === charId).delete();
 
@@ -47079,6 +47324,10 @@ ${charactersContext}
             if (type === 'cphone' && charId !== 'user') {
               const chat = await db.chats.get(charId);
               if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的CPhone数据清理（群聊不适用）`);
+                  continue;
+                }
                 chat.simulatedAlbum = [];
                 chat.simulatedConversations = [];
                 chat.simulatedBrowserHistory = [];
@@ -47095,6 +47344,10 @@ ${charactersContext}
             if (type === 'myphone' && charId !== 'user') {
               const chat = await db.chats.get(charId);
               if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的MyPhone数据清理（群聊不适用）`);
+                  continue;
+                }
                 chat.myPhoneSimulatedQQConversations = [];
                 chat.myPhoneAlbum = [];
                 chat.myPhoneBrowserHistory = [];
@@ -47842,6 +48095,190 @@ ${charactersContext}
 
     } catch (error) {
       console.error("清空图片时出错:", error);
+      await showCustomAlert('清空失败', `操作失败: ${error.message}`);
+    }
+  }
+
+  // 清空聊天HTML相关函数
+  let selectedChatsForHtmlClear = [];
+
+  function isRawHtmlContent(content) {
+    if (typeof content !== 'string') return false;
+    const trimmed = content.trim();
+    return trimmed.startsWith('<') && trimmed.endsWith('>');
+  }
+
+  function stripHtmlTags(html) {
+    if (typeof html !== 'string') return html;
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return doc.body.textContent || '';
+  }
+
+  function openClearChatHtmlModal() {
+    const modal = document.getElementById('clear-chat-html-modal');
+    selectedChatsForHtmlClear = [];
+    document.getElementById('select-all-chats-for-html-clear').checked = false;
+    
+    renderClearChatHtmlList();
+    modal.classList.add('visible');
+  }
+
+  async function renderClearChatHtmlList() {
+    const listEl = document.getElementById('clear-chat-html-list');
+    listEl.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--text-secondary);">正在扫描...</p>';
+
+    const allChats = await db.chats.toArray();
+    const chatsWithHtml = [];
+
+    for (const chat of allChats) {
+      let htmlMsgCount = 0;
+
+      if (chat.history && Array.isArray(chat.history)) {
+        for (const msg of chat.history) {
+          if (isRawHtmlContent(msg.content)) {
+            htmlMsgCount++;
+          }
+        }
+      }
+
+      if (htmlMsgCount > 0) {
+        chatsWithHtml.push({
+          id: chat.id,
+          name: chat.name,
+          isGroup: chat.isGroup || false,
+          htmlMsgCount: htmlMsgCount
+        });
+      }
+    }
+
+    if (chatsWithHtml.length === 0) {
+      listEl.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-secondary);">没有找到包含HTML内容的聊天</p>';
+      return;
+    }
+
+    chatsWithHtml.sort((a, b) => b.htmlMsgCount - a.htmlMsgCount);
+
+    listEl.innerHTML = '';
+    chatsWithHtml.forEach(chat => {
+      const typeLabel = chat.isGroup ? '群聊' : '单聊';
+      const item = document.createElement('div');
+      item.className = 'clear-posts-item';
+      item.dataset.chatId = chat.id;
+      item.innerHTML = `
+        <div class="checkbox"></div>
+        <div>
+          <span class="name">${chat.name}</span>
+          <p style="font-size: 12px; color: #888; margin: 4px 0 0;">${typeLabel} · ${chat.htmlMsgCount} 条HTML消息</p>
+        </div>
+      `;
+      item.addEventListener('click', () => {
+        item.classList.toggle('selected');
+        updateHtmlClearSelection();
+      });
+      listEl.appendChild(item);
+    });
+  }
+
+  function updateHtmlClearSelection() {
+    const allItems = document.querySelectorAll('#clear-chat-html-list .clear-posts-item');
+    const selectedItems = document.querySelectorAll('#clear-chat-html-list .clear-posts-item.selected');
+    document.getElementById('select-all-chats-for-html-clear').checked = allItems.length > 0 && allItems.length === selectedItems.length;
+  }
+
+  async function handleConfirmClearChatHtml() {
+    const selectedItems = document.querySelectorAll('#clear-chat-html-list .clear-posts-item.selected');
+
+    if (selectedItems.length === 0) {
+      alert("请至少选择一个聊天。");
+      return;
+    }
+
+    selectedChatsForHtmlClear = Array.from(selectedItems).map(item => item.dataset.chatId);
+    
+    const clearMode = document.querySelector('input[name="html-clear-mode"]:checked').value;
+    const modeText = clearMode === 'strip' ? '剥离HTML标签（保留文本）' : '直接删除消息';
+
+    const confirmed = await showCustomConfirm(
+      '确认清空HTML？',
+      `即将处理 <strong>${selectedChatsForHtmlClear.length}</strong> 个聊天的HTML内容。<br><br>
+      清理模式：<strong>${modeText}</strong><br><br>
+      此操作不可撤销，建议先导出数据备份。`,
+      {
+        confirmButtonClass: 'btn-danger',
+        confirmText: '确认清空'
+      }
+    );
+
+    if (!confirmed) return;
+
+    await showCustomAlert("请稍候...", "正在清空HTML内容，请不要关闭页面...");
+
+    try {
+      let stats = {
+        chatsProcessed: 0,
+        msgsProcessed: 0,
+        msgsDeleted: 0
+      };
+
+      await db.transaction('rw', db.chats, async () => {
+        for (const chatId of selectedChatsForHtmlClear) {
+          const chat = await db.chats.get(chatId);
+          if (!chat) continue;
+
+          if (chat.history && Array.isArray(chat.history)) {
+            if (clearMode === 'delete') {
+              const originalLength = chat.history.length;
+              chat.history = chat.history.filter(msg => {
+                if (isRawHtmlContent(msg.content)) {
+                  stats.msgsDeleted++;
+                  return false;
+                }
+                return true;
+              });
+              stats.msgsProcessed += (originalLength - chat.history.length);
+            } else {
+              for (const msg of chat.history) {
+                if (isRawHtmlContent(msg.content)) {
+                  msg.content = stripHtmlTags(msg.content);
+                  stats.msgsProcessed++;
+                }
+              }
+            }
+          }
+
+          await db.chats.put(chat);
+          stats.chatsProcessed++;
+        }
+      });
+
+      document.getElementById('clear-chat-html-modal').classList.remove('visible');
+
+      const resultText = clearMode === 'delete' 
+        ? `删除了 ${stats.msgsDeleted} 条HTML消息`
+        : `处理了 ${stats.msgsProcessed} 条HTML消息（已剥离标签）`;
+
+      const shouldRefresh = await showCustomConfirm(
+        '清空完成',
+        `已成功处理 ${stats.chatsProcessed} 个聊天的HTML内容。<br>
+        ${resultText}<br><br>
+        是否立即刷新页面以使更改生效？<br>
+        <span style="color: #666; font-size: 14px;">（点击"取消"可以继续进行其他操作）</span>`,
+        {
+          confirmText: '立即刷新',
+          cancelText: '稍后刷新'
+        }
+      );
+
+      if (shouldRefresh) {
+        location.reload();
+      } else {
+        if (state.currentChatId && selectedChatsForHtmlClear.includes(state.currentChatId)) {
+          await loadChat(state.currentChatId);
+        }
+      }
+
+    } catch (error) {
+      console.error("清空HTML时出错:", error);
       await showCustomAlert('清空失败', `操作失败: ${error.message}`);
     }
   }
@@ -51839,6 +52276,72 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
     }
   }
 
+  // 双语翻译切换函数
+  function toggleBilingualTranslation(bubble, chat) {
+    const originalContent = bubble.dataset.originalContent;
+    if (!originalContent) return; // 没有双语内容
+    
+    const isShowingTranslation = bubble.dataset.showingTranslation === 'true';
+    const contentEl = bubble.querySelector('.content');
+    const displayMode = chat.settings.bilingualDisplayMode || 'outside';
+    
+    if (isShowingTranslation) {
+      // 隐藏翻译
+      if (displayMode === 'inside') {
+        // 内部模式：恢复只显示外语
+        const englishOnly = originalContent.replace(/〖[^〗]*〗/g, '');
+        contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>');
+      } else {
+        // 外部模式：移除翻译元素
+        const transEl = bubble.querySelector('.voice-transcript');
+        if (transEl) transEl.remove();
+      }
+      bubble.dataset.showingTranslation = 'false';
+    } else {
+      // 显示翻译
+      const translation = extractBilingualTranslation(originalContent, bubble);
+      if (!translation) {
+        console.warn('[双语模式] 未找到翻译内容，AI可能未按格式输出');
+        return;
+      }
+      
+      if (displayMode === 'inside') {
+        // 内部模式：外语 + 翻译（用换行分隔）
+        const englishOnly = originalContent.replace(/〖[^〗]*〗/g, '');
+        contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>') + 
+          '<br><span style="color: var(--text-secondary); font-size: 0.95em;">' + 
+          translation + '</span>';
+      } else {
+        // 外部模式：复用voice-transcript样式
+        const transEl = document.createElement('div');
+        transEl.className = 'voice-transcript';
+        transEl.style.display = 'block';
+        transEl.textContent = translation;
+        bubble.appendChild(transEl);
+      }
+      bubble.dataset.showingTranslation = 'true';
+    }
+  }
+
+  // 提取双语翻译内容
+  function extractBilingualTranslation(content, bubble) {
+    // 检查缓存
+    if (bubble.dataset.cachedTranslation) {
+      return bubble.dataset.cachedTranslation;
+    }
+    
+    // 提取〖〗中的内容
+    const matches = content.match(/〖([^〗]*)〗/g);
+    if (!matches || matches.length === 0) return null;
+    
+    const translation = matches.map(m => m.replace(/〖|〗/g, '')).join(' ');
+    
+    // 缓存结果
+    bubble.dataset.cachedTranslation = translation;
+    
+    return translation;
+  }
+
 
 
   async function openProductCategoryManager() {
@@ -52643,7 +53146,9 @@ ${recentHistoryContext}
     }
   }
 
-  // 高级导出导入功能 - 按类别导出导入
+  // 高级导出导入功能 - 按类别导出导入（支持多选角色/群聊）
+  let advancedExportSelectedChats = []; // 存储选中的角色/群聊ID
+  
   async function showAdvancedExportImportModal() {
     // 定义数据类别及其对应的表
     const dataCategories = {
@@ -52662,15 +53167,89 @@ ${recentHistoryContext}
       '外观设置': ['appearancePresets']
     };
 
+    // 需要按角色/群聊过滤的数据类别
+    const chatRelatedCategories = ['聊天与消息', '空间与社交', '记忆与记录'];
+
+    // 重置选中的角色/群聊
+    advancedExportSelectedChats = [];
+
+    // 生成角色/群聊列表HTML
+    const generateChatListHTML = () => {
+      let chatListHTML = '';
+      Object.values(state.chats).forEach(chat => {
+        if (!chat.isGroup) {
+          chatListHTML += `
+            <div class="adv-export-chat-item" data-chat-id="${chat.id}" style="
+              margin: 6px 0; 
+              padding: 10px 12px; 
+              background: rgba(255,255,255,0.7); 
+              border-radius: 8px; 
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              transition: all 0.2s;
+              border: 2px solid transparent;
+            ">
+              <div class="adv-export-checkbox" style="
+                width: 20px; 
+                height: 20px; 
+                border: 2px solid #ccc; 
+                border-radius: 4px; 
+                margin-right: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+              "></div>
+              <span style="flex: 1; font-size: 14px;">${chat.name}</span>
+              <span style="font-size: 12px; color: #666; background: #e3f2fd; padding: 2px 8px; border-radius: 10px;">角色</span>
+            </div>
+          `;
+        } else {
+          const memberCount = chat.members ? chat.members.length : 0;
+          chatListHTML += `
+            <div class="adv-export-chat-item" data-chat-id="${chat.id}" data-is-group="true" style="
+              margin: 6px 0; 
+              padding: 10px 12px; 
+              background: rgba(255,255,255,0.7); 
+              border-radius: 8px; 
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              transition: all 0.2s;
+              border: 2px solid transparent;
+            ">
+              <div class="adv-export-checkbox" style="
+                width: 20px; 
+                height: 20px; 
+                border: 2px solid #ccc; 
+                border-radius: 4px; 
+                margin-right: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+              "></div>
+              <span style="flex: 1; font-size: 14px;">${chat.name}</span>
+              <span style="font-size: 12px; color: #666; background: #fff3e0; padding: 2px 8px; border-radius: 10px;">群聊 · ${memberCount}人</span>
+            </div>
+          `;
+        }
+      });
+      return chatListHTML;
+    };
+
     // 创建选择界面HTML
     const categoryCheckboxes = Object.keys(dataCategories).map(category => {
       const tableCount = dataCategories[category].length;
+      const isChatRelated = chatRelatedCategories.includes(category);
       return `
         <div style="margin: 8px 0; padding: 10px; background: rgba(255,255,255,0.5); border-radius: 8px;">
           <label style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" class="category-checkbox" data-category="${category}" 
                    style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
             <span style="flex: 1; font-size: 14px;">${category}</span>
+            ${isChatRelated ? '<span style="font-size: 11px; color: #2196F3; margin-right: 5px;">📋可筛选</span>' : ''}
             <span style="font-size: 12px; color: #666;">(${tableCount}个表)</span>
           </label>
         </div>
@@ -52691,67 +53270,173 @@ ${recentHistoryContext}
         z-index: 10000;
       ">
         <div style="
-          background: white;
+          background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
           border-radius: 12px;
           padding: 20px;
-          max-width: 500px;
+          max-width: 520px;
           width: 90%;
-          max-height: 80vh;
+          max-height: 85vh;
           overflow-y: auto;
           box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         ">
-          <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #333;">高级导出导入 - 选择数据类别</h2>
-          <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <button id="select-all-categories" style="
-              padding: 8px 15px;
-              background: #4CAF50;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-            ">全选</button>
-            <button id="deselect-all-categories" style="
-              padding: 8px 15px;
-              background: #f44336;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-            ">取消全选</button>
-            <button id="advanced-import-trigger" style="
-              padding: 8px 15px;
-              background: #FF9800;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-              margin-left: auto;
-            ">📥 导入数据</button>
-          </div>
-          <div style="margin: 15px 0;">
-            ${categoryCheckboxes}
-          </div>
-          <div style="margin-top: 20px; display: flex; gap: 10px;">
-            <button id="confirm-export" style="
-              flex: 1;
-              padding: 12px;
-              background: #2196F3;
-              color: white;
-              border: none;
+          <!-- 步骤1: 选择角色/群聊 -->
+          <div id="adv-export-step-1" style="display: flex; flex-direction: column;">
+            <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #333;">
+              📤 高级导出 - 第一步：选择角色/群聊
+            </h2>
+            <p style="margin: 0 0 15px 0; font-size: 13px; color: #666;">
+              选择要导出的角色或群聊。如不选择任何项目，将导出全部数据。
+            </p>
+            <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="adv-export-select-all-chats" style="
+                padding: 6px 12px;
+                background: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+              ">全选</button>
+              <button id="adv-export-deselect-all-chats" style="
+                padding: 6px 12px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+              ">取消全选</button>
+              <button id="adv-export-select-roles-only" style="
+                padding: 6px 12px;
+                background: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+              ">仅角色</button>
+              <button id="adv-export-select-groups-only" style="
+                padding: 6px 12px;
+                background: #FF9800;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+              ">仅群聊</button>
+            </div>
+            <div id="adv-export-chat-list" style="
+              max-height: 300px; 
+              overflow-y: auto; 
+              padding: 5px;
+              background: rgba(0,0,0,0.03);
               border-radius: 8px;
-              font-size: 16px;
-              cursor: pointer;
-            ">确认导出</button>
-            <button id="cancel-export" style="
-              flex: 1;
-              padding: 12px;
-              background: #999;
-              color: white;
-              border: none;
-              border-radius: 8px;
-              font-size: 16px;
-              cursor: pointer;
-            ">取消</button>
+            ">
+              ${generateChatListHTML()}
+            </div>
+            <div style="
+              margin-top: 10px; 
+              padding: 8px 12px; 
+              background: #e3f2fd; 
+              border-radius: 6px;
+              font-size: 12px;
+              color: #1565c0;
+            ">
+              💡 已选择 <span id="adv-export-selected-count">0</span> 个角色/群聊
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+              <button id="adv-export-step1-next" style="
+                flex: 1;
+                padding: 12px;
+                background: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                cursor: pointer;
+              ">下一步 →</button>
+              <button id="adv-export-step1-cancel" style="
+                flex: 1;
+                padding: 12px;
+                background: #999;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                cursor: pointer;
+              ">取消</button>
+            </div>
+          </div>
+
+          <!-- 步骤2: 选择数据类别 -->
+          <div id="adv-export-step-2" style="display: none; flex-direction: column;">
+            <h2 style="margin: 0 0 10px 0; font-size: 18px; color: #333;">
+              📤 高级导出 - 第二步：选择数据类别
+            </h2>
+            <p id="adv-export-filter-hint" style="margin: 0 0 15px 0; font-size: 13px; color: #666;"></p>
+            <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button id="select-all-categories" style="
+                padding: 6px 12px;
+                background: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+              ">全选</button>
+              <button id="deselect-all-categories" style="
+                padding: 6px 12px;
+                background: #f44336;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+              ">取消全选</button>
+              <button id="advanced-import-trigger" style="
+                padding: 6px 12px;
+                background: #FF9800;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                margin-left: auto;
+              ">📥 导入数据</button>
+            </div>
+            <div style="margin: 10px 0; max-height: 280px; overflow-y: auto;">
+              ${categoryCheckboxes}
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+              <button id="adv-export-step2-back" style="
+                padding: 12px 20px;
+                background: #757575;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                cursor: pointer;
+              ">← 上一步</button>
+              <button id="confirm-export" style="
+                flex: 1;
+                padding: 12px;
+                background: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                cursor: pointer;
+              ">确认导出</button>
+              <button id="cancel-export" style="
+                padding: 12px 20px;
+                background: #999;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 15px;
+                cursor: pointer;
+              ">取消</button>
+            </div>
           </div>
         </div>
       </div>
@@ -52762,16 +53447,131 @@ ${recentHistoryContext}
     modalContainer.innerHTML = modalHTML;
     document.body.appendChild(modalContainer);
 
-    // 绑定事件
     const modal = document.getElementById('advanced-export-modal');
+    const chatItems = modal.querySelectorAll('.adv-export-chat-item');
+    const selectedCountEl = document.getElementById('adv-export-selected-count');
+
+    // 更新选中计数
+    const updateSelectedCount = () => {
+      const count = advancedExportSelectedChats.length;
+      selectedCountEl.textContent = count;
+    };
+
+    // 更新单个项目的选中状态样式
+    const updateItemStyle = (item, isSelected) => {
+      const checkbox = item.querySelector('.adv-export-checkbox');
+      if (isSelected) {
+        item.style.borderColor = '#2196F3';
+        item.style.background = 'rgba(33, 150, 243, 0.1)';
+        checkbox.style.borderColor = '#2196F3';
+        checkbox.style.background = '#2196F3';
+        checkbox.innerHTML = '<span style="color: white; font-size: 14px;">✓</span>';
+      } else {
+        item.style.borderColor = 'transparent';
+        item.style.background = 'rgba(255,255,255,0.7)';
+        checkbox.style.borderColor = '#ccc';
+        checkbox.style.background = 'transparent';
+        checkbox.innerHTML = '';
+      }
+    };
+
+    // 绑定角色/群聊选择事件
+    chatItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const chatId = item.dataset.chatId;
+        const index = advancedExportSelectedChats.indexOf(chatId);
+        if (index > -1) {
+          advancedExportSelectedChats.splice(index, 1);
+          updateItemStyle(item, false);
+        } else {
+          advancedExportSelectedChats.push(chatId);
+          updateItemStyle(item, true);
+        }
+        updateSelectedCount();
+      });
+    });
+
+    // 全选角色/群聊
+    document.getElementById('adv-export-select-all-chats').addEventListener('click', () => {
+      advancedExportSelectedChats = [];
+      chatItems.forEach(item => {
+        advancedExportSelectedChats.push(item.dataset.chatId);
+        updateItemStyle(item, true);
+      });
+      updateSelectedCount();
+    });
+
+    // 取消全选角色/群聊
+    document.getElementById('adv-export-deselect-all-chats').addEventListener('click', () => {
+      advancedExportSelectedChats = [];
+      chatItems.forEach(item => {
+        updateItemStyle(item, false);
+      });
+      updateSelectedCount();
+    });
+
+    // 仅选择角色
+    document.getElementById('adv-export-select-roles-only').addEventListener('click', () => {
+      advancedExportSelectedChats = [];
+      chatItems.forEach(item => {
+        if (item.dataset.isGroup !== 'true') {
+          advancedExportSelectedChats.push(item.dataset.chatId);
+          updateItemStyle(item, true);
+        } else {
+          updateItemStyle(item, false);
+        }
+      });
+      updateSelectedCount();
+    });
+
+    // 仅选择群聊
+    document.getElementById('adv-export-select-groups-only').addEventListener('click', () => {
+      advancedExportSelectedChats = [];
+      chatItems.forEach(item => {
+        if (item.dataset.isGroup === 'true') {
+          advancedExportSelectedChats.push(item.dataset.chatId);
+          updateItemStyle(item, true);
+        } else {
+          updateItemStyle(item, false);
+        }
+      });
+      updateSelectedCount();
+    });
+
+    // 步骤1取消
+    document.getElementById('adv-export-step1-cancel').addEventListener('click', () => {
+      document.body.removeChild(modalContainer);
+    });
+
+    // 步骤1下一步
+    document.getElementById('adv-export-step1-next').addEventListener('click', () => {
+      document.getElementById('adv-export-step-1').style.display = 'none';
+      document.getElementById('adv-export-step-2').style.display = 'flex';
+      
+      // 更新提示文字
+      const filterHint = document.getElementById('adv-export-filter-hint');
+      if (advancedExportSelectedChats.length === 0) {
+        filterHint.innerHTML = '将导出<strong>全部</strong>数据。带 📋 标记的类别包含与角色/群聊相关的数据。';
+      } else {
+        filterHint.innerHTML = `将仅导出 <strong>${advancedExportSelectedChats.length}</strong> 个选中角色/群聊的相关数据。带 📋 标记的类别会被筛选。`;
+      }
+    });
+
+    // 步骤2返回
+    document.getElementById('adv-export-step2-back').addEventListener('click', () => {
+      document.getElementById('adv-export-step-2').style.display = 'none';
+      document.getElementById('adv-export-step-1').style.display = 'flex';
+    });
+
+    // 绑定数据类别事件
     const checkboxes = modal.querySelectorAll('.category-checkbox');
 
-    // 全选
+    // 全选类别
     document.getElementById('select-all-categories').addEventListener('click', () => {
       checkboxes.forEach(cb => cb.checked = true);
     });
 
-    // 取消全选
+    // 取消全选类别
     document.getElementById('deselect-all-categories').addEventListener('click', () => {
       checkboxes.forEach(cb => cb.checked = false);
     });
@@ -52806,8 +53606,8 @@ ${recentHistoryContext}
       // 关闭模态框
       document.body.removeChild(modalContainer);
 
-      // 执行导出
-      await exportSelectedTables(tablesToExport, selectedCategories);
+      // 执行导出（传入选中的角色/群聊ID）
+      await exportSelectedTables(tablesToExport, selectedCategories, advancedExportSelectedChats);
     });
 
     // 点击背景关闭
@@ -52818,16 +53618,19 @@ ${recentHistoryContext}
     });
   }
 
-  // 导出选定的表
-  async function exportSelectedTables(tables, categoryNames) {
+  // 导出选定的表（支持按角色/群聊过滤）
+  async function exportSelectedTables(tables, categoryNames, selectedChatIds = []) {
     await showCustomAlert("正在准备...", "正在读取选定的数据，请稍候...");
 
     try {
+      const isFiltered = selectedChatIds.length > 0;
       const backupData = {
         version: 3,
         timestamp: Date.now(),
         exportType: 'advanced',
         categories: categoryNames,
+        filteredByChats: isFiltered,
+        selectedChatIds: isFiltered ? selectedChatIds : null,
         data: {}
       };
 
@@ -52836,14 +53639,19 @@ ${recentHistoryContext}
         if (db[tableName]) {
           let tableData = await db.table(tableName).toArray();
           
-          // 方案3：导出时移除API历史记录
+          // 根据选中的角色/群聊过滤数据
+          if (isFiltered) {
+            tableData = filterDataByChatIds(tableName, tableData, selectedChatIds);
+          }
+          
+          // 导出时移除API历史记录
           if (tableName === 'chats') {
             tableData = removeApiHistoryFromChats(tableData);
           }
           
           backupData.data[tableName] = tableData;
           totalRecords += tableData.length;
-          console.log(`已打包表: ${tableName}, 记录数: ${tableData.length}`);
+          console.log(`已打包表: ${tableName}, 记录数: ${tableData.length}${isFiltered ? ' (已过滤)' : ''}`);
         }
       }
 
@@ -52857,15 +53665,72 @@ ${recentHistoryContext}
       const link = document.createElement('a');
       link.href = url;
       const categoryLabel = categoryNames.join('-');
-      link.download = `EPhone-Advanced-Export-${categoryLabel}-${new Date().toISOString().split('T')[0]}.json`;
+      const filterLabel = isFiltered ? `-${selectedChatIds.length}项` : '';
+      link.download = `EPhone-Advanced-Export-${categoryLabel}${filterLabel}-${new Date().toISOString().split('T')[0]}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
-      await showCustomAlert('导出成功', `已成功导出 ${tables.length} 个数据表，共 ${totalRecords} 条记录！`);
+      const filterMsg = isFiltered ? `（已按 ${selectedChatIds.length} 个角色/群聊筛选）` : '';
+      await showCustomAlert('导出成功', `已成功导出 ${tables.length} 个数据表，共 ${totalRecords} 条记录！${filterMsg}`);
 
     } catch (error) {
       console.error("高级导出数据时出错:", error);
       await showCustomAlert('导出失败', `发生了一个错误: ${error.message}`);
+    }
+  }
+
+  // 根据角色/群聊ID过滤数据
+  function filterDataByChatIds(tableName, tableData, selectedChatIds) {
+    switch (tableName) {
+      case 'chats':
+        // 直接过滤聊天记录
+        return tableData.filter(chat => selectedChatIds.includes(chat.id));
+      
+      case 'qzonePosts':
+        // 过滤动态（authorId 或 targetCharId）
+        return tableData.filter(post => 
+          selectedChatIds.includes(post.authorId) || 
+          selectedChatIds.includes(post.targetCharId) ||
+          post.authorId === 'user'
+        );
+      
+      case 'memories':
+        // 过滤长期记忆
+        return tableData.filter(memory => selectedChatIds.includes(memory.chatId));
+      
+      case 'callRecords':
+        // 过滤通话记录
+        return tableData.filter(record => selectedChatIds.includes(record.chatId));
+      
+      case 'favorites':
+        // 过滤收藏（可能包含chatId或characterId）
+        return tableData.filter(fav => 
+          selectedChatIds.includes(fav.chatId) || 
+          selectedChatIds.includes(fav.characterId)
+        );
+      
+      case 'qzoneAlbums':
+        // 过滤相册
+        return tableData.filter(album => 
+          selectedChatIds.includes(album.ownerId) || 
+          album.ownerId === 'user'
+        );
+      
+      case 'qzonePhotos':
+        // 过滤照片（需要先获取过滤后的相册ID）
+        // 这里简单处理，保留所有照片（因为照片关联相册，相册已过滤）
+        return tableData;
+      
+      case 'doubanPosts':
+        // 过滤豆瓣动态
+        return tableData.filter(post => 
+          selectedChatIds.includes(post.authorId) || 
+          post.authorId === 'user'
+        );
+      
+      default:
+        // 其他表不过滤，全量导出
+        return tableData;
     }
   }
 
@@ -64029,6 +64894,11 @@ ${recentHistoryWithUser}
       document.getElementById('time-zone-group').style.display = e.target.checked ? 'block' : 'none';
     });
     
+    // 双语模式开关事件
+    document.getElementById('bilingual-mode-toggle').addEventListener('change', (e) => {
+      document.getElementById('bilingual-display-mode-group').style.display = e.target.checked ? 'flex' : 'none';
+    });
+    
     // 自动记忆开关实时生效
     document.getElementById('auto-memory-toggle').addEventListener('change', (e) => {
       const chat = state.chats[state.activeChatId];
@@ -64821,7 +65691,23 @@ ${recentHistoryWithUser}
         state.globalSettings.enableApiHistory = apiHistorySwitch.checked;
       }
       
+      // 保存安全渲染模式
+      const safeRenderSwitch = document.getElementById('safe-render-mode-switch');
+      const oldSafeRenderMode = state.globalSettings.safeRenderMode;
+      if (safeRenderSwitch) {
+        state.globalSettings.safeRenderMode = safeRenderSwitch.checked;
+      }
+      
       await db.globalSettings.put(state.globalSettings);
+      
+      // 如果安全渲染模式发生变化，提醒用户刷新页面
+      if (safeRenderSwitch && oldSafeRenderMode !== safeRenderSwitch.checked) {
+        setTimeout(() => {
+          if (confirm('安全渲染模式已' + (safeRenderSwitch.checked ? '开启' : '关闭') + '，需要刷新页面才能生效。是否立即刷新？')) {
+            location.reload();
+          }
+        }, 100);
+      }
 
       stopBackgroundSimulation();
       if (state.globalSettings.enableBackgroundActivity) {
@@ -65190,6 +66076,19 @@ ${recentHistoryWithUser}
     });
 
     document.getElementById('chat-messages').addEventListener('click', async (e) => {
+      // 【双语模式】点击消息气泡切换翻译
+      let bubble = e.target.closest('.message-bubble');
+      if (bubble && bubble.dataset.originalContent && state.activeChatId) {
+        const chat = state.chats[state.activeChatId];
+        if (chat && chat.settings.enableBilingualMode) {
+          // 排除点击图片、按钮等特殊元素
+          if (!e.target.closest('img, button, a, .voice-message-body, .voice-transcript')) {
+            toggleBilingualTranslation(bubble, chat);
+            return;
+          }
+        }
+      }
+      
       if (e.target.tagName === 'IMG') {
         // 检查是否是聊天里的图片类名
         if (e.target.classList.contains('chat-image') ||
@@ -65474,7 +66373,7 @@ ${recentHistoryWithUser}
         openSharedHistoryViewer(timestamp);
       }
 
-      const bubble = e.target.closest('.message-bubble');
+      bubble = e.target.closest('.message-bubble');
       if (bubble && bubble.classList.contains('ai') && bubble.classList.contains('is-transfer') && bubble.dataset.status === 'pending') {
         const timestamp = parseInt(bubble.dataset.timestamp);
         if (!isNaN(timestamp)) {
@@ -65648,6 +66547,13 @@ ${recentHistoryWithUser}
       timezoneSelect.value = chat.settings.timeZone || 'Asia/Shanghai';
       document.getElementById('enable-synth-music-switch').checked = chat.settings.enableSynthMusic || false;
       document.getElementById('narrator-mode-toggle').checked = chat.settings.enableNarratorMode || false;
+      
+      // 加载双语模式设置
+      document.getElementById('bilingual-mode-toggle').checked = chat.settings.enableBilingualMode || false;
+      document.getElementById('bilingual-display-mode-select').value = chat.settings.bilingualDisplayMode || 'outside';
+      document.getElementById('bilingual-display-mode-group').style.display = 
+        (chat.settings.enableBilingualMode) ? 'flex' : 'none';
+      
       if (isGroup) {
 
         document.getElementById('group-background-activity-switch').checked = chat.settings.enableBackgroundActivity;
@@ -66151,6 +67057,11 @@ ${recentHistoryWithUser}
       };
       chat.settings.enableSynthMusic = document.getElementById('enable-synth-music-switch').checked;
       chat.settings.enableNarratorMode = document.getElementById('narrator-mode-toggle').checked;
+      
+      // 保存双语模式设置
+      chat.settings.enableBilingualMode = document.getElementById('bilingual-mode-toggle').checked;
+      chat.settings.bilingualDisplayMode = document.getElementById('bilingual-display-mode-select').value;
+      
       if (chat.isGroup) {
         chat.settings.enableBackgroundActivity = document.getElementById('group-background-activity-switch').checked;
         chat.settings.myNickname = document.getElementById('my-group-nickname-input').value.trim();
@@ -71891,6 +72802,20 @@ ${recentHistoryWithUser}
       document.getElementById('clear-chat-images-modal').classList.remove('visible');
     });
     document.getElementById('confirm-clear-images-btn').addEventListener('click', handleConfirmClearChatImages);
+
+    // 清空聊天HTML
+    document.getElementById('clear-chat-html-btn').addEventListener('click', openClearChatHtmlModal);
+    document.getElementById('cancel-clear-html-btn').addEventListener('click', () => {
+      document.getElementById('clear-chat-html-modal').classList.remove('visible');
+    });
+    document.getElementById('confirm-clear-html-btn').addEventListener('click', handleConfirmClearChatHtml);
+    document.getElementById('select-all-chats-for-html-clear').addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      const items = document.querySelectorAll('#clear-chat-html-list .clear-posts-item');
+      items.forEach(item => {
+        item.classList.toggle('selected', isChecked);
+      });
+    });
 
     // 清空所有API历史记录
     document.getElementById('clear-api-history-btn').addEventListener('click', async () => {
