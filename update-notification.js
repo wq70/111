@@ -22,7 +22,7 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.新增双语模式，修复双语模式下的语音朗读问题</div>
+      <div class="update-item">1.新增双语模式，修复双语模式下的语音朗读问题（灵感来源1900老师，感谢授权）</div>
       <div class="update-item">2.优化小组件输入</div>
       <div class="update-item">3.高级清理新增群聊，只有聊天记录最适配清理</div>
       <div class="update-item">4.高级导入导出新增可以多选角色、群聊导出导入</div>
