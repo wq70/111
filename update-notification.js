@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.17'; // 当前更新版本号
+    this.currentVersion = '0.0.21'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,15 +22,17 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.结构化新增手动更新、指定范围、最新更新</div>
-      <div class="update-item">2.新增旁白按钮，可以直接输入上下文</div>
-      <div class="update-item">3.谷歌生图片新增大范围适配，以前只适配聊天室和动态。比如送礼物什么的都适配了，一些别的小地方还没适配，效果好的话后续适配</div>
-      <div class="update-item">4.新增TKOEN手动刷新，有不对的可以刷新试一下。</div>
-      <div class="update-item">5.新增豆瓣自定义小组、自定义NPC头像</div>
-      <div class="update-item">6.新增跨群聊的开关。就是可以不会让群聊触发私聊，私聊触发群聊</div>
-      <div class="update-item">6.优化一些其他地方的使用。新增了一些小功能</div>
-      <div class="update-item tips" style="margin-top: 8px;">还有一些新功能明天或者过几天上（双语、番茄钟、论坛）</div>
-      <div class="update-item tips">双语灵感来源UWU章鱼机的1900老师，感谢老师授权。</div>
+      <div class="update-item">1.新增双语模式，修复双语模式下的语音朗读问题</div>
+      <div class="update-item">2.优化小组件输入</div>
+      <div class="update-item">3.高级清理新增群聊，只有聊天记录最适配清理</div>
+      <div class="update-item">4.高级导入导出新增可以多选角色、群聊导出导入</div>
+      <div class="update-item">5.新增选择聊天清空HTML</div>
+      <div class="update-item">6.新增安全渲染模式开关，如果聊天列表空白，请打开此开关重新刷新网页</div>
+      <div class="update-item">7.月经记录</div>
+      <div class="update-item">8.番茄钟</div>
+      <div class="update-item tips" style="margin-top: 8px;">修复一些现有BUG，基本上都修了（比如提示音预设、拓展按钮位置），没修的就是漏掉了</div>
+      <div class="update-item tips">许愿的没做就是还没想好</div>
+      <div class="update-item tips">这几天拉磨拉的有点浑</div>
     `;
 
     return `
@@ -38,7 +40,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.17 更新</div>
+            <div class="update-title">2.21 更新</div>
           </div>
           
           <div class="update-notification-body">

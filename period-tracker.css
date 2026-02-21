@@ -1,0 +1,949 @@
+/* =========================================
+   月经记录 APP - Period Tracker Styles
+   ========================================= */
+
+/* 定义局部变量 */
+#period-tracker-screen {
+  --pt-primary: #FF9EAA;
+  --pt-primary-soft: #FFC5CD;
+  --pt-bg: #FFF5F7;
+  --pt-card-bg: #FFFFFF;
+  --pt-text-main: #5D4037;
+  --pt-text-light: #9E8B85;
+  --pt-shadow: 0 4px 12px rgba(255, 158, 170, 0.15);
+  background-color: var(--pt-bg);
+}
+
+/* 覆盖默认的 screen header */
+#period-tracker-screen .header {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  color: var(--pt-text-main);
+  border-bottom: 1px solid rgba(255, 158, 170, 0.1);
+  box-shadow: none;
+}
+
+#period-tracker-screen .header span {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* 导航栏 */
+.period-nav {
+  display: flex;
+  background: transparent;
+  border-bottom: none;
+  padding: 15px 20px 5px;
+  gap: 15px;
+  justify-content: center;
+}
+
+.period-nav-btn {
+  flex: 1;
+  max-width: 100px;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--pt-text-light);
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.period-nav-btn.active {
+  background: #FFFFFF;
+  color: var(--pt-primary);
+  font-weight: 600;
+  box-shadow: var(--pt-shadow);
+}
+
+/* 视图容器 */
+.period-view {
+  padding: 20px;
+  overflow-y: auto;
+  height: calc(100% - 110px);
+  scrollbar-width: none;
+}
+.period-view::-webkit-scrollbar {
+  display: none;
+}
+
+/* 卡片通用样式 */
+#period-calendar-content,
+.period-stats,
+.period-settings-section,
+.period-history-item {
+  background: var(--pt-card-bg);
+  border-radius: 20px;
+  box-shadow: var(--pt-shadow);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* === 日历部分 === */
+.period-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+  padding: 0 10px;
+}
+
+.period-month-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--pt-text-main);
+}
+
+.period-month-nav {
+  background: #FFF0F3;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--pt-primary);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.period-month-nav:hover {
+  background: var(--pt-primary);
+  color: white;
+}
+
+.period-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--pt-text-light);
+  font-weight: 500;
+}
+
+.period-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  row-gap: 8px;
+  column-gap: 0;
+  margin-bottom: 20px;
+}
+
+/* 日期格子 */
+.period-day {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--pt-text-main);
+}
+
+.period-day:not(.empty):hover {
+  background: #FFF0F3;
+}
+
+.period-day.today {
+  border: 1px solid var(--pt-primary);
+  color: var(--pt-primary);
+  font-weight: 600;
+  background: transparent;
+}
+
+.period-day:has(.period-dot) {
+  background: var(--pt-primary);
+  color: white;
+  box-shadow: 0 2px 6px rgba(255, 158, 170, 0.3);
+}
+
+.period-day:has(.period-dot) .day-number {
+  color: white;
+  font-weight: 600;
+}
+
+.period-day .period-dot {
+  display: none;
+}
+
+.period-day:has(.predicted-mark) {
+  background: transparent;
+  border: 1px dashed var(--pt-primary-soft);
+  color: var(--pt-primary);
+}
+
+.period-day .predicted-mark {
+  display: none;
+}
+
+/* 排卵期标记 */
+.period-day.ovulation {
+  background: rgba(135, 206, 250, 0.2);
+  border: 1px dashed #87CEEB;
+}
+
+.ovulation-mark {
+  font-size: 10px;
+  margin-top: -2px;
+}
+
+/* 图例 */
+.period-legend {
+  background: transparent;
+  border-radius: 0;
+  padding: 5px;
+  gap: 20px;
+  justify-content: center;
+  border-top: 1px dashed #F0F0F0;
+  padding-top: 15px;
+  display: flex;
+}
+
+.legend-item {
+  gap: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.period-dot {
+  background: var(--pt-primary);
+  box-shadow: 0 2px 4px rgba(255, 158, 170, 0.3);
+  display: block;
+}
+
+.legend-dot.predicted-mark {
+  background: transparent;
+  border: 1px dashed var(--pt-primary);
+  color: transparent;
+  display: block;
+}
+
+/* 统计卡片 */
+.period-stats {
+  padding: 25px 20px;
+  margin-top: 15px;
+  gap: 15px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.stat-item {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--pt-text-light);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--pt-primary);
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* 主按钮 */
+.period-add-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #FF9EAA 0%, #FFC5CD 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(255, 158, 170, 0.4);
+  margin-top: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.period-add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 158, 170, 0.5);
+}
+
+/* 历史列表 */
+.period-history-list {
+  gap: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.period-history-item {
+  margin-bottom: 0;
+  border: 1px solid #FFF0F3;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+}
+
+.period-history-item:hover {
+  background: #FFF5F7;
+  transform: translateX(3px);
+  border-color: var(--pt-primary-soft);
+}
+
+.history-date {
+  background: #FFF0F3;
+  color: var(--pt-primary);
+  border-radius: 15px;
+  padding: 10px;
+  text-align: center;
+  min-width: 50px;
+}
+
+.history-month {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.history-day {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.history-info {
+  flex: 1;
+}
+
+.history-title {
+  color: var(--pt-text-main);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.history-meta {
+  font-size: 13px;
+  color: var(--pt-text-light);
+}
+
+.history-arrow {
+  color: var(--pt-text-light);
+  font-size: 20px;
+}
+
+/* 设置页面 */
+.period-settings-section {
+  background: var(--pt-card-bg);
+}
+
+.period-settings-section h3 {
+  color: var(--pt-primary);
+  border-left: 3px solid var(--pt-primary);
+  padding-left: 10px;
+  margin-bottom: 15px;
+}
+
+.settings-hint {
+  font-size: 13px;
+  color: var(--pt-text-light);
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.period-character-item {
+  background: #FFF9FA;
+  border: 1px solid #FFF0F3;
+  border-radius: 16px;
+  padding: 15px;
+}
+
+/* 主开关容器 */
+.memory-master-switch-container {
+  background: linear-gradient(135deg, #FFE4EC 0%, #FFF0F3 100%);
+  border: 2px solid var(--pt-primary);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.15);
+  transition: all 0.3s ease;
+}
+
+.memory-master-switch-container:hover {
+  box-shadow: 0 6px 16px rgba(255, 107, 157, 0.25);
+  transform: translateY(-2px);
+}
+
+.master-switch-label {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.master-switch-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.master-switch-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--pt-text-main);
+  margin-bottom: 4px;
+}
+
+.master-switch-hint {
+  font-size: 13px;
+  color: #9E8B85;
+}
+
+/* 角色选择区域 */
+#character-memory-selection {
+  margin-top: 20px;
+  padding: 20px;
+  background: #FFFBFC;
+  border-radius: 16px;
+  border: 2px dashed #FFD1DC;
+}
+
+.character-selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #FFF0F3;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--pt-text-main);
+}
+
+.select-all-btn {
+  background: var(--pt-primary);
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.select-all-btn:hover {
+  background: #FF6B9D;
+  transform: scale(1.05);
+}
+
+/* 角色复选框列表 */
+.period-character-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.character-checkbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border: 2px solid #FFF0F3;
+  border-radius: 16px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.character-checkbox-item:hover {
+  border-color: var(--pt-primary);
+  background: #FFF9FA;
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(255, 107, 157, 0.1);
+}
+
+.character-checkbox-item input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkbox-character-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.checkbox-char-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #FFF0F3;
+  transition: all 0.3s;
+}
+
+.character-checkbox-item:hover .checkbox-char-avatar {
+  border-color: var(--pt-primary);
+  transform: scale(1.1);
+}
+
+.checkbox-char-details {
+  flex: 1;
+}
+
+.checkbox-char-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--pt-text-main);
+  margin-bottom: 4px;
+}
+
+.checkbox-char-status {
+  font-size: 13px;
+  color: #9E8B85;
+  font-weight: 500;
+}
+
+.checkbox-checkmark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.character-checkbox-item input:checked ~ .checkbox-checkmark {
+  background: var(--pt-primary);
+  border-color: var(--pt-primary);
+  transform: scale(1.1);
+}
+
+.character-checkbox-item input:not(:checked) ~ .checkbox-checkmark {
+  color: transparent;
+}
+
+.save-memory-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  margin-top: 10px;
+}
+
+.no-characters-hint {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9E8B85;
+  background: white;
+  border-radius: 12px;
+  border: 2px dashed #FFD1DC;
+}
+
+/* iOS 风格开关 */
+.pt-ios-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+}
+.pt-ios-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.pt-ios-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #E9E9EA;
+  transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-radius: 31px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.04);
+}
+
+.pt-ios-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 27px;
+  width: 27px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06);
+}
+
+.pt-ios-toggle-switch input:checked + .pt-ios-toggle-slider {
+  background-color: #34C759;
+  box-shadow: none;
+}
+
+.pt-ios-toggle-switch input:checked + .pt-ios-toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.pt-ios-toggle-switch-large {
+  width: 60px;
+  height: 36px;
+}
+.pt-ios-toggle-switch-large .pt-ios-toggle-slider {
+  border-radius: 36px;
+}
+.pt-ios-toggle-switch-large .pt-ios-toggle-slider:before {
+  height: 32px;
+  width: 32px;
+  left: 2px;
+  bottom: 2px;
+}
+.pt-ios-toggle-switch-large input:checked + .pt-ios-toggle-slider:before {
+  transform: translateX(24px);
+}
+
+/* 按钮变体 */
+.period-btn-secondary, .period-btn-danger {
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.period-btn-secondary {
+  background: #FFF0F3;
+  color: var(--pt-text-main);
+}
+
+.period-btn-danger {
+  background: #FFEBEE;
+  color: #FF5252;
+}
+
+.period-btn-primary {
+  background: var(--pt-primary);
+  color: white;
+  border: none;
+  border-radius: 15px;
+  padding: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+/* 表单样式 */
+.period-form-group {
+  margin-bottom: 15px;
+}
+
+.period-form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pt-text-main);
+  margin-bottom: 6px;
+}
+
+.period-input, select.period-input {
+  background: #FAFAFA;
+  border: 1px solid #F0F0F0;
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--pt-text-main);
+  transition: all 0.3s;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.period-input:focus {
+  background: white;
+  border-color: var(--pt-primary);
+  box-shadow: 0 0 0 3px rgba(255, 158, 170, 0.1);
+  outline: none;
+}
+
+/* 详情行 */
+.detail-row {
+  border-bottom: 1px dashed #F0F0F0;
+  padding: 15px 5px;
+  display: flex;
+  justify-content: space-between;
+}
+.detail-label {
+  color: var(--pt-text-light);
+}
+
+/* PMS症状复选框 */
+.pms-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+  background: #FAFAFA;
+  border-radius: 8px;
+}
+
+.pms-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pms-checkbox {
+  cursor: pointer;
+}
+
+/* 滑块样式 */
+.period-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #E0E0E0;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.period-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pt-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(255, 158, 170, 0.3);
+}
+
+.period-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pt-primary);
+  cursor: pointer;
+  border: none;
+}
+
+/* 报告页面 */
+.report-time-selector {
+  background: #f2f2f7;
+  padding: 4px;
+  border-radius: 10px;
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.time-range-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px;
+  font-size: 13px;
+  color: #8e8e93;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.time-range-btn.active {
+  background: white;
+  color: #000;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* 健康评分卡片 */
+.health-score-card {
+  background: linear-gradient(135deg, #FF9EAA 0%, #FFB7C5 100%);
+  border-radius: 18px;
+  padding: 18px;
+  color: white;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 20px rgba(255, 158, 170, 0.25);
+}
+
+.score-main { text-align: center; }
+
+.score-number {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.score-label { font-size: 12px; opacity: 0.9; }
+
+.score-stars { font-size: 20px; margin: 5px 0; }
+
+.score-status { font-size: 16px; font-weight: 600; }
+
+.score-details {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(5px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-width: 130px;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.score-item:last-child { margin-bottom: 0; }
+
+.score-item-label { opacity: 0.8; }
+
+/* 图表容器 */
+.report-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.chart-container {
+  background: white;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  border: 1px solid rgba(0,0,0,0.03);
+}
+
+.chart-title {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 8px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.chart-wrapper-doughnut {
+  height: 120px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chart-container canvas {
+  max-height: 250px;
+}
+
+/* 健康建议 */
+.health-suggestions {
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: var(--pt-shadow);
+  margin-top: 20px;
+}
+
+.health-suggestions h3 {
+  color: var(--pt-primary);
+  font-size: 16px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #FFF0F3;
+}
+
+.health-suggestions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.health-suggestions li {
+  padding: 10px 0;
+  line-height: 1.6;
+  color: var(--pt-text-main);
+  border-bottom: 1px dashed #F0F0F0;
+}
+
+.health-suggestions li:last-child {
+  border-bottom: none;
+}
+
+/* 通知设置表单 */
+.notif-settings-form {
+  background: #FFF9FA;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #FFF0F3;
+}
+
+.notif-form-row {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--pt-text-main);
+}
+
+.notif-form-row input {
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.notif-form-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 小圆点基础样式 */
+.period-dot, .predicted-mark, .ovulation-mark {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin: 0 auto;
+}

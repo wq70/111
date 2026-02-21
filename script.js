@@ -2910,6 +2910,8 @@ document.addEventListener('DOMContentLoaded', () => {
     'auction': 'https://i.postimg.cc/Hs7BLh76/alipay.png',
     'green-river': 'https://i.postimg.cc/0j55Pj1L/green-river-icon.png',
     'mail': 'https://i.postimg.cc/PfR7f37x/mail.png',
+    'period-tracker': 'https://i.postimg.cc/RVGt0yMN/calendar-pink.png',
+    'focus-timer': 'https://i.postimg.cc/Kz8d9YJy/tomato-timer.png',
 
     // 第三页的APP
     'myphone': 'https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg',
@@ -4134,6 +4136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     shoppingProducts: '++id, name, description',
     shoppingCategories: '++id, name',
     apiPresets: '++id, name',
+    soundPresets: '++id, name',
     renderingRules: '++id, name, chatId',
     appearancePresets: '++id, name, type',
     stickerCategories: '++id, name',
@@ -4175,6 +4178,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // 观影播放列表
   db.version(52).stores({
     watchTogetherPlaylist: '++id, name, timestamp'
+  });
+
+  // 月经记录相关表
+  db.version(53).stores({
+    periodRecords: '++id, startDate, endDate, flow, symptoms, mood, notes, painLevel, pmsSymptoms, productChanges, sleepQuality, exerciseDuration, createdAt',
+    periodSettings: '++id, characterId, enabled, avgCycleLength, avgPeriodLength',
+    periodNotificationSettings: '&id, enabled, upcomingDays, upcomingTime, recordTime, abnormalCycleMin, abnormalCycleMax, delayDays'
+  });
+
+  // 番茄钟相关表
+  db.version(54).stores({
+    focusSessions: '++id, companionId, startTime, endTime, duration, completed, stage',
+    focusStats: '&id, todayCount, totalCount, streakDays, lastFocusDate',
+    focusMessages: '++id, sessionId, companionId, stage, message, timestamp'
   });
 
   window.db = db;
@@ -5904,7 +5921,7 @@ document.addEventListener('DOMContentLoaded', () => {
         personaPresets, musicLibrary, qzoneSettings, qzonePosts,
         qzoneAlbums, qzonePhotos, favorites, qzoneGroups,
         memories, worldBookCategories,
-        apiPresets, shoppingProducts, callRecords,
+        apiPresets, soundPresets, shoppingProducts, callRecords,
         renderingRules,
 
         doubanPosts,
@@ -5952,6 +5969,7 @@ document.addEventListener('DOMContentLoaded', () => {
         db.memories.toArray(),
         db.worldBookCategories.toArray(),
         db.apiPresets.toArray(),
+        db.soundPresets.toArray(),
         db.shoppingProducts.toArray(),
         db.callRecords.toArray(),
         db.renderingRules.toArray(),
@@ -6006,6 +6024,7 @@ document.addEventListener('DOMContentLoaded', () => {
         memories,
         worldBookCategories,
         apiPresets,
+        soundPresets,
         shoppingProducts,
         callRecords,
         renderingRules,
@@ -6128,6 +6147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         memories: '记忆',
         worldBookCategories: '世界书分类',
         apiPresets: 'API预设',
+        soundPresets: '声音预设',
         shoppingProducts: '商品',
         callRecords: '通话记录',
         renderingRules: '渲染规则',
@@ -6408,6 +6428,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'shoppingProducts': '商品',
       'shoppingCategories': '商品分类',
       'apiPresets': 'API预设',
+      'soundPresets': '声音预设',
       'renderingRules': '渲染规则',
       'appearancePresets': '外观预设',
       'npcs': 'NPCs',
@@ -6556,6 +6577,7 @@ document.addEventListener('DOMContentLoaded', () => {
       'shoppingProducts': '商品',
       'shoppingCategories': '商品分类',
       'apiPresets': 'API预设',
+      'soundPresets': '声音预设',
       'renderingRules': '渲染规则',
       'appearancePresets': '外观预设',
       'npcs': 'NPCs',
@@ -6733,6 +6755,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (Array.isArray(backupData.memories)) await db.memories.bulkPut(backupData.memories);
         if (Array.isArray(backupData.worldBookCategories)) await db.worldBookCategories.bulkPut(backupData.worldBookCategories);
         if (Array.isArray(backupData.apiPresets)) await db.apiPresets.bulkPut(backupData.apiPresets);
+        if (Array.isArray(backupData.soundPresets)) await db.soundPresets.bulkPut(backupData.soundPresets);
         if (Array.isArray(backupData.shoppingProducts)) await db.shoppingProducts.bulkPut(backupData.shoppingProducts);
         if (Array.isArray(backupData.callRecords)) await db.callRecords.bulkPut(backupData.callRecords);
         if (Array.isArray(backupData.renderingRules)) await db.renderingRules.bulkPut(backupData.renderingRules);
@@ -10177,9 +10200,196 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
+  // ========== 提示音预设管理功能 ==========
+
+  // 数据迁移：将旧的 state.globalSettings.soundPresets 迁移到 db.soundPresets 表
+  async function migrateSoundPresetsToDb() {
+    try {
+      // 检查数据库表是否为空
+      const existingPresets = await db.soundPresets.toArray();
+      if (existingPresets.length > 0) {
+        console.log('[声音预设迁移] 数据库表已有数据，跳过迁移');
+        return;
+      }
+
+      // 检查旧数据是否存在
+      if (state.globalSettings.soundPresets && Array.isArray(state.globalSettings.soundPresets) && state.globalSettings.soundPresets.length > 0) {
+        console.log('[声音预设迁移] 发现旧数据，开始迁移...', state.globalSettings.soundPresets);
+        
+        // 迁移数据到新表
+        for (const preset of state.globalSettings.soundPresets) {
+          await db.soundPresets.add({
+            name: preset.name,
+            url: preset.url
+          });
+        }
+        
+        console.log(`[声音预设迁移] 成功迁移 ${state.globalSettings.soundPresets.length} 个预设到数据库表`);
+      } else {
+        console.log('[声音预设迁移] 未发现旧数据');
+      }
+    } catch (error) {
+      console.error('[声音预设迁移] 迁移失败:', error);
+    }
+  }
+
+  // 加载提示音预设下拉框
+  async function loadSoundPresetsDropdown(forceSelectedId = null) {
+    console.log('[声音预设DEBUG] loadSoundPresetsDropdown 被调用, forceSelectedId:', forceSelectedId);
+    const selectEl = document.getElementById('sound-preset-select');
+    if (!selectEl) {
+      console.error('[声音预设DEBUG] 找不到 sound-preset-select 元素！');
+      return;
+    }
+
+    selectEl.innerHTML = '<option value="current">当前配置 (未保存)</option>';
+
+    console.log('[声音预设DEBUG] 开始从数据库读取预设...');
+    const presets = await db.soundPresets.toArray();
+    console.log('[声音预设DEBUG] 从数据库读取到的预设:', presets);
+    
+    presets.forEach(preset => {
+      const option = document.createElement('option');
+      option.value = preset.id;
+      option.textContent = preset.name;
+      selectEl.appendChild(option);
+      console.log('[声音预设DEBUG] 添加预设到下拉框:', preset.name, 'ID:', preset.id);
+    });
+
+    // 如果指定了要选中的预设ID
+    if (forceSelectedId) {
+      selectEl.value = forceSelectedId;
+      return;
+    }
+
+    // 自动匹配当前配置
+    const currentUrl = document.getElementById('notification-sound-url-input').value.trim();
+    let matchingPresetId = null;
+    for (const preset of presets) {
+      if (preset.url === currentUrl) {
+        matchingPresetId = preset.id;
+        break;
+      }
+    }
+
+    if (matchingPresetId) {
+      selectEl.value = matchingPresetId;
+    } else {
+      selectEl.value = 'current';
+    }
+  }
+
+  // 处理提示音预设选择变化
+  async function handleSoundPresetSelectionChange() {
+    const selectEl = document.getElementById('sound-preset-select');
+    const selectedValue = selectEl.value;
+
+    if (selectedValue === 'current') {
+      return;
+    }
+
+    const selectedId = parseInt(selectedValue);
+    if (isNaN(selectedId)) {
+      return;
+    }
+
+    const preset = await db.soundPresets.get(selectedId);
+    if (!preset) return;
+
+    // 直接应用预设
+    document.getElementById('notification-sound-url-input').value = preset.url || '';
+    state.globalSettings.notificationSoundUrl = preset.url || '';
+    saveState();
+
+    // 刷新下拉框，确保选中状态
+    await loadSoundPresetsDropdown(selectedId);
+  }
+
+  // 保存提示音预设
+  async function saveSoundPreset() {
+    console.log('[声音预设DEBUG] saveSoundPreset 被调用');
+    const url = document.getElementById('notification-sound-url-input').value.trim();
+
+    // 请求输入预设名称
+    const name = await showCustomPrompt('保存提示音预设', '请输入预设名称');
+    if (!name || name.trim() === '') {
+      console.log('[声音预设DEBUG] 用户取消输入');
+      return;
+    }
+
+    const presetData = {
+      name: name.trim(),
+      url: url
+    };
+    console.log('[声音预设DEBUG] 准备保存预设:', presetData);
+
+    // 检查是否已存在同名预设
+    const existingPreset = await db.soundPresets.where('name').equals(presetData.name).first();
+    if (existingPreset) {
+      console.log('[声音预设DEBUG] 发现同名预设:', existingPreset);
+      const confirmed = await showCustomConfirm('覆盖预设', `名为 "${presetData.name}" 的预设已存在。要覆盖它吗？`, {
+        confirmButtonClass: 'btn-danger'
+      });
+      if (!confirmed) {
+        console.log('[声音预设DEBUG] 用户取消覆盖');
+        return;
+      }
+      presetData.id = existingPreset.id;
+    }
+
+    console.log('[声音预设DEBUG] 开始写入数据库...');
+    await db.soundPresets.put(presetData);
+    console.log('[声音预设DEBUG] 数据库写入完成，返回的ID:', presetData.id);
+    
+    console.log('[声音预设DEBUG] 准备刷新下拉框...');
+    await loadSoundPresetsDropdown(presetData.id);
+    console.log('[声音预设DEBUG] 下拉框刷新完成');
+    
+    alert('预设已保存！');
+  }
+
+  // 删除提示音预设（从下拉框删除选中的预设）
+  async function deleteSoundPreset() {
+    const selectEl = document.getElementById('sound-preset-select');
+    const selectedValue = selectEl.value;
+
+    if (selectedValue === 'current') {
+      alert('请先从下拉框中选择一个要删除的预设。');
+      return;
+    }
+
+    const selectedId = parseInt(selectedValue);
+    if (isNaN(selectedId)) {
+      return;
+    }
+
+    const preset = await db.soundPresets.get(selectedId);
+    if (!preset) return;
+
+    const confirmed = await showCustomConfirm('删除预设', `确定要删除预设 "${preset.name}" 吗？`, {
+      confirmButtonClass: 'btn-danger'
+    });
+    if (confirmed) {
+      await db.soundPresets.delete(selectedId);
+      await loadSoundPresetsDropdown();
+      alert('预设已删除！');
+    }
+  }
+
+  // 渲染提示音预设列表（保持兼容，但现在主要用下拉框）
+  async function renderSoundPresets() {
+    console.log('[声音预设DEBUG] renderSoundPresets 被调用');
+    await migrateSoundPresetsToDb(); // 先执行数据迁移
+    console.log('[声音预设DEBUG] 迁移完成，开始加载下拉框');
+    await loadSoundPresetsDropdown();
+    console.log('[声音预设DEBUG] 下拉框加载完成');
+  }
+
+  // ========== 提示音预设管理功能结束 ==========
 
 
-  function renderWallpaperScreen(forcePresetId = null) {
+  async function renderWallpaperScreen(forcePresetId = null) {
+    console.log('[声音预设DEBUG] renderWallpaperScreen 被调用');
     loadCssPresetsDropdown();
     // 这里传入 forcePresetId
     loadAppearancePresetsDropdown(forcePresetId);
@@ -10246,7 +10456,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('notification-volume-label').textContent = Math.round(volumeValue) + '%';
 
     if (typeof renderSoundPresets === 'function') {
-      renderSoundPresets(); // 渲染提示音预设列表
+      console.log('[声音预设DEBUG] 准备调用 renderSoundPresets');
+      await renderSoundPresets(); // 渲染提示音预设列表
+      console.log('[声音预设DEBUG] renderSoundPresets 调用完成');
+    } else {
+      console.error('[声音预设DEBUG] renderSoundPresets 函数不存在！');
     }
     document.getElementById('status-bar-toggle-switch').checked = state.globalSettings.showStatusBar || false;
     document.getElementById('global-show-seconds-switch').checked = state.globalSettings.showSeconds || false;
@@ -12454,12 +12668,18 @@ https://xx.com/4.jpg 疑惑`;
       } else if (msg.type === 'voice_message') {
         bubble.classList.add('is-voice-message', 'is-card-like');
 
+        // 【双语模式语音过滤】如果启用了双语模式且是AI消息，过滤掉〖〗中的翻译内容
+        let voiceContent = msg.content;
+        if (!isUser && chat.settings.enableBilingualMode) {
+          voiceContent = voiceContent.replace(/〖[^〗]*〗/g, '');
+        }
+
         // 优先使用真实音频时长，否则根据文字内容估算
         let duration;
         if (msg.audioDuration) {
           duration = msg.audioDuration;
         } else {
-          duration = Math.max(1, Math.round((msg.content || '').length / 5));
+          duration = Math.max(1, Math.round((voiceContent || '').length / 5));
         }
         const durationFormatted = `0:${String(duration).padStart(2, '0')}''`;
         const waveformHTML = '<div></div><div></div><div></div><div></div><div></div>';
@@ -12483,7 +12703,7 @@ https://xx.com/4.jpg 疑惑`;
           const voiceIdAttribute = canPlayTTS ? `data-voice-id="${voiceId}"` : '';
 
           contentHtml = `
-            <div class="voice-message-body" data-text="${encodeURIComponent(msg.content)}" ${voiceIdAttribute}>
+            <div class="voice-message-body" data-text="${encodeURIComponent(voiceContent)}" ${voiceIdAttribute}>
                 <div class="voice-waveform">${waveformHTML}</div>
                 <div class="loading-spinner"></div>
                 <span class="voice-duration">${durationFormatted}</span>
@@ -12810,8 +13030,14 @@ https://xx.com/4.jpg 疑惑`;
         }
       }
     }
-    wrapper.appendChild(bubble);
-    wrapper.appendChild(timestampEl);
+    
+    // 创建消息内容行容器（包含bubble和timestamp）
+    const contentRow = document.createElement('div');
+    contentRow.className = 'message-content-row';
+    contentRow.appendChild(bubble);
+    contentRow.appendChild(timestampEl);
+    
+    wrapper.appendChild(contentRow);
 
     addLongPressListener(wrapper, () => showMessageActions(msg.timestamp));
     wrapper.addEventListener('click', () => {
@@ -15352,6 +15578,17 @@ ${taskListString}
     - **重要**: 查看后的数据是${myNickname}手机的【真实数据】，你必须基于这些真实数据做出反应，不能凭空编造！
 ` : '';
 
+          // 月经周期信息注入（如果角色开启了记忆权限）
+          let periodSummaryContext = '';
+          try {
+            if (typeof getPeriodSummaryForCharacter === 'function') {
+              const periodSummary = await getPeriodSummaryForCharacter(chat.id);
+              if (periodSummary) {
+                periodSummaryContext = '\n' + periodSummary + '\n';
+              }
+            }
+          } catch(e) { console.warn('获取月经周期信息失败:', e); }
+
           systemPrompt = `
 # 【最高指令：沉浸式角色扮演】
 你正在进行一场深度角色扮演，每次回复像真实聊天一样,根据情绪和话题决定发送的消息条数，禁止每次回复相同条数，拆分为短句，比如最后不是用标点符号等，这是一个线上聊天。你扮演的角色和我之间没有任何线下关系。严禁提出任何关于线下见面、现实世界互动或转为其他非本平台联系方式的建议。你必须始终保持在线角色的身份。禁止滥用标点符号。
@@ -15370,6 +15607,7 @@ ${worldBookContent || '(当前无特殊世界观设定，以现实逻辑为准)'
 ${getMemoryContextForPrompt(chat)}
 ${multiLayeredSummaryContext}
 ${todoListContext}
+${periodSummaryContext}
 ## 4. 关键关系
 - **你的本名**: "${chat.originalName}"
 - **我对你的备注**: "${chat.name}"
@@ -27400,6 +27638,8 @@ ${worldBookContent}
       'auction': '黑市拍卖',
       'green-river': '绿江',
       'mail': '邮箱',
+      'period-tracker': '月经记录',
+      'focus-timer': '番茄钟',
 
       // 第三页的APP
       'myphone': 'Myphone',
@@ -46933,14 +47173,16 @@ ${charactersContext}
 
   const DEFAULT_BUTTON_ORDER = [
     'open-sticker-panel-btn', 'send-photo-btn', 'camera-capture-btn', 'upload-image-btn',
-    'transfer-btn', 'voice-message-btn', 'send-waimai-request-btn',
-    'video-call-btn', 'group-video-call-btn', 'send-poll-btn',
+    'transfer-btn', 'voice-message-btn', 'voice-record-btn', 'send-waimai-request-btn',
+    'video-call-btn', 'group-video-call-btn', 'voice-call-btn', 'group-voice-call-btn', 'send-poll-btn',
     'share-link-btn', 'share-location-btn', 'gomoku-btn',
     'open-shopping-btn', 'pat-btn', 'edit-last-response-btn',
     'regenerate-btn', 'propel-btn', 'show-announcement-board-btn',
     'werewolf-game-btn',
 
     'read-together-btn',
+    'open-truth-game-btn',
+    'open-watch-together-btn',
     'open-nai-gallery-btn',
     'open-todo-list-btn',
     'open-quick-reply-btn',
@@ -52292,9 +52534,13 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
         const englishOnly = originalContent.replace(/〖[^〗]*〗/g, '');
         contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>');
       } else {
-        // 外部模式：移除翻译元素
-        const transEl = bubble.querySelector('.voice-transcript');
-        if (transEl) transEl.remove();
+        // 外部模式：移除翻译元素（从wrapper中移除）
+        const contentRow = bubble.closest('.message-content-row');
+        const wrapper = contentRow ? contentRow.parentElement : null;
+        if (wrapper) {
+          const transEl = wrapper.querySelector('.translation-bubble');
+          if (transEl) transEl.remove();
+        }
       }
       bubble.dataset.showingTranslation = 'false';
     } else {
@@ -52312,12 +52558,18 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
           '<br><span style="color: var(--text-secondary); font-size: 0.95em;">' + 
           translation + '</span>';
       } else {
-        // 外部模式：复用voice-transcript样式
-        const transEl = document.createElement('div');
-        transEl.className = 'voice-transcript';
-        transEl.style.display = 'block';
-        transEl.textContent = translation;
-        bubble.appendChild(transEl);
+        // 外部模式：在wrapper中添加翻译气泡（作为contentRow的兄弟元素）
+        const contentRow = bubble.closest('.message-content-row');
+        const wrapper = contentRow ? contentRow.parentElement : null;
+        if (wrapper) {
+          const transEl = document.createElement('div');
+          transEl.className = 'translation-bubble';
+          transEl.textContent = translation;
+          transEl.dataset.linkedBubble = bubble.dataset.timestamp || Date.now();
+          
+          // 添加到wrapper的末尾（contentRow下方）
+          wrapper.appendChild(transEl);
+        }
       }
       bubble.dataset.showingTranslation = 'true';
     }
@@ -53155,7 +53407,7 @@ ${recentHistoryContext}
       '聊天与消息': ['chats'],
       '空间与社交': ['qzoneSettings', 'qzonePosts', 'qzoneAlbums', 'qzonePhotos', 'qzoneGroups', 'doubanPosts'],
       '世界书与预设': ['worldBooks', 'worldBookCategories', 'presets', 'presetCategories', 'personaPresets'],
-      'API与配置': ['apiConfig', 'apiPresets', 'globalSettings', 'renderingRules', 'naiPresets'],
+      'API与配置': ['apiConfig', 'apiPresets', 'soundPresets', 'globalSettings', 'renderingRules', 'naiPresets'],
       '贴纸与表情': ['userStickers', 'stickerCategories', 'stickerVisionCache', 'customAvatarFrames'],
       '音乐与媒体': ['musicLibrary', 'readingLibrary', 'watchTogetherPlaylist'],
       '记忆与记录': ['memories', 'callRecords', 'favorites'],
@@ -71263,175 +71515,6 @@ ${recentHistoryWithUser}
     document.getElementById('propel-btn').addEventListener('click', handlePropelAction);
 
 
-    // ========== 提示音预设管理功能 ==========
-
-    // 添加提示音预设样式（支持暗黑模式）
-    const soundPresetStyle = document.createElement('style');
-    soundPresetStyle.textContent = `
-      /* 提示音预设项 - 暗黑模式适配 */
-      #phone-screen.dark-mode .sound-preset-item {
-        background: #1c1c1e !important;
-        border-color: #38383a !important;
-      }
-      #phone-screen.dark-mode .sound-preset-name {
-        color: #fff !important;
-      }
-      #phone-screen.dark-mode .sound-preset-item div[style*="color: #8e8e93"] {
-        color: #8e8e93 !important;
-      }
-    `;
-    document.head.appendChild(soundPresetStyle);
-
-    // 加载提示音预设下拉框
-    function loadSoundPresetsDropdown(forceSelectedIndex = null) {
-      const selectEl = document.getElementById('sound-preset-select');
-      if (!selectEl) return;
-
-      selectEl.innerHTML = '<option value="current">当前配置 (未保存)</option>';
-
-      const presets = state.globalSettings.soundPresets || [];
-      presets.forEach((preset, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = preset.name;
-        selectEl.appendChild(option);
-      });
-
-      // 如果指定了要选中的预设索引
-      if (forceSelectedIndex !== null && forceSelectedIndex >= 0 && forceSelectedIndex < presets.length) {
-        selectEl.value = forceSelectedIndex;
-        return;
-      }
-
-      // 自动匹配当前配置
-      const currentUrl = document.getElementById('notification-sound-url-input').value.trim();
-      let matchingIndex = null;
-      for (let i = 0; i < presets.length; i++) {
-        if (presets[i].url === currentUrl) {
-          matchingIndex = i;
-          break;
-        }
-      }
-
-      if (matchingIndex !== null) {
-        selectEl.value = matchingIndex;
-      } else {
-        selectEl.value = 'current';
-      }
-    }
-
-    // 处理提示音预设选择变化
-    function handleSoundPresetSelectionChange() {
-      const selectEl = document.getElementById('sound-preset-select');
-      const selectedValue = selectEl.value;
-
-      if (selectedValue === 'current') {
-        return;
-      }
-
-      const selectedIndex = parseInt(selectedValue);
-      if (isNaN(selectedIndex)) {
-        return;
-      }
-
-      const presets = state.globalSettings.soundPresets || [];
-      if (selectedIndex < 0 || selectedIndex >= presets.length) return;
-
-      const preset = presets[selectedIndex];
-      // 直接应用预设
-      document.getElementById('notification-sound-url-input').value = preset.url || '';
-      state.globalSettings.notificationSoundUrl = preset.url || '';
-      saveState();
-
-      // 刷新下拉框，确保选中状态
-      loadSoundPresetsDropdown(selectedIndex);
-    }
-
-    // 保存提示音预设
-    async function saveSoundPreset() {
-      const url = document.getElementById('notification-sound-url-input').value.trim();
-
-      // 请求输入预设名称
-      const name = prompt('请输入预设名称：', `预设 ${(state.globalSettings.soundPresets || []).length + 1}`);
-      if (!name || name.trim() === '') {
-        return;
-      }
-
-      if (!state.globalSettings.soundPresets) {
-        state.globalSettings.soundPresets = [];
-      }
-
-      // 检查是否已存在同名预设
-      const existingIndex = state.globalSettings.soundPresets.findIndex(p => p.name === name.trim());
-      let savedIndex;
-
-      if (existingIndex !== -1) {
-        if (!confirm('已存在同名预设，是否覆盖？')) {
-          return;
-        }
-        state.globalSettings.soundPresets[existingIndex] = {
-          name: name.trim(),
-          url: url
-        };
-        savedIndex = existingIndex;
-      } else {
-        state.globalSettings.soundPresets.push({
-          name: name.trim(),
-          url: url
-        });
-        savedIndex = state.globalSettings.soundPresets.length - 1;
-      }
-
-      // 保存状态到数据库/localStorage
-      if (typeof saveState === 'function') {
-        await saveState();
-      }
-
-      // 刷新下拉框并选中新保存的预设
-      loadSoundPresetsDropdown(savedIndex);
-      alert('预设已保存！');
-    }
-
-    // 删除提示音预设（从下拉框删除选中的预设）
-    async function deleteSoundPreset() {
-      const selectEl = document.getElementById('sound-preset-select');
-      const selectedValue = selectEl.value;
-
-      if (selectedValue === 'current') {
-        alert('请先从下拉框中选择一个要删除的预设。');
-        return;
-      }
-
-      const selectedIndex = parseInt(selectedValue);
-      if (isNaN(selectedIndex)) {
-        return;
-      }
-
-      const presets = state.globalSettings.soundPresets || [];
-      if (selectedIndex < 0 || selectedIndex >= presets.length) return;
-
-      const preset = presets[selectedIndex];
-      if (!confirm(`确定要删除预设"${preset.name}"吗？`)) {
-        return;
-      }
-
-      state.globalSettings.soundPresets.splice(selectedIndex, 1);
-
-      // 保存状态到数据库/localStorage
-      if (typeof saveState === 'function') {
-        await saveState();
-      }
-
-      // 删除后刷新下拉框并重置为"当前配置"
-      loadSoundPresetsDropdown();
-      alert('预设已删除！');
-    }
-
-    // 渲染提示音预设列表（保持兼容，但现在主要用下拉框）
-    function renderSoundPresets() {
-      loadSoundPresetsDropdown();
-    }
-
     // ========== 提示音预设管理功能结束 ==========
 
 
@@ -71468,9 +71551,9 @@ ${recentHistoryWithUser}
     document.getElementById('delete-sound-preset-btn').addEventListener('click', deleteSoundPreset);
 
     // 当用户手动修改提示音 URL 时，更新下拉框为"当前配置"
-    document.getElementById('notification-sound-url-input').addEventListener('input', () => {
+    document.getElementById('notification-sound-url-input').addEventListener('input', async () => {
       if (typeof loadSoundPresetsDropdown === 'function') {
-        loadSoundPresetsDropdown();
+        await loadSoundPresetsDropdown();
       }
     });
 

@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="update-notification.css">
   <link rel="stylesheet" href="structured-memory.css">
   <link rel="stylesheet" href="online-app.css">
+  <link rel="stylesheet" href="period-tracker.css">
+  <link rel="stylesheet" href="focus-timer.css">
   <link rel="apple-touch-icon" href="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg">
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,7 +29,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=0.0.17" defer></script>
+  <script src="update-notification.js?v=0.0.21" defer></script>
   <script src="prompt-manager.js" defer></script>
   <script src="online-chat-manager.js" defer></script>
   <script src="online-chat-integration.js" defer></script>
@@ -35,8 +37,11 @@
   <script src="notification-manager.js" defer></script>
   <script src="character-generator.js" defer></script>
   <script src="structured-memory.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script src="script.js" defer="defer"></script>
+  <script src="period-tracker.js" defer></script>
+  <script src="focus-timer.js" defer></script>
   <script src="helper-assistant.js" defer></script>
   <script src="force-update.js" defer></script>
   
@@ -757,13 +762,13 @@
                   <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
                   <span class="label">论坛</span>
                 </div>
-                <div class="desktop-app-icon p3-placeholder-app">
-                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">家居</span>
+                <div class="desktop-app-icon" onclick="openPeriodTracker()">
+                  <div class="icon-bg-desktop"><img id="icon-img-period-tracker" src="https://i.postimg.cc/RVGt0yMN/calendar-pink.png" alt="月经记录"></div>
+                  <span class="label">月经记录</span>
                 </div>
-                <div class="desktop-app-icon p3-placeholder-app">
-                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">宠物</span>
+                <div class="desktop-app-icon" onclick="openFocusTimer()">
+                  <div class="icon-bg-desktop"><img id="icon-img-focus-timer" src="https://i.postimg.cc/Kz8d9YJy/tomato-timer.png" alt="番茄钟"></div>
+                  <span class="label">番茄钟</span>
                 </div>
                 <div class="desktop-app-icon p3-placeholder-app">
                   <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
@@ -793,6 +798,169 @@
         </div>
       </div>
     </div>
+    <!-- 月经记录屏幕 -->
+    <div id="period-tracker-screen" class="screen">
+      <div class="header">
+        <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
+        <span>月经记录</span>
+        <span style="width: 30px;"></span>
+      </div>
+      <div class="period-nav">
+        <button class="period-nav-btn active" data-view="calendar" onclick="switchPeriodView('calendar')">日历</button>
+        <button class="period-nav-btn" data-view="history" onclick="switchPeriodView('history')">历史</button>
+        <button class="period-nav-btn" data-view="report" onclick="switchPeriodView('report')">报告</button>
+        <button class="period-nav-btn" data-view="settings" onclick="switchPeriodView('settings')">设置</button>
+      </div>
+      <div id="period-calendar-view" class="period-view">
+        <div id="period-calendar-content"></div>
+      </div>
+      <div id="period-history-view" class="period-view" style="display: none;">
+        <div id="period-history-content"></div>
+      </div>
+      <div id="period-report-view" class="period-view" style="display: none;">
+        <div id="period-report-content"></div>
+      </div>
+      <div id="period-settings-view" class="period-view" style="display: none;">
+        <div id="period-settings-content"></div>
+      </div>
+    </div>
+
+    <!-- 月经记录 - 添加记录弹窗 -->
+    <div id="period-add-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span>记录经期</span>
+          <span class="close-btn" onclick="hidePeriodAddModal()">×</span>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+          <div class="period-form-group">
+            <label>开始日期</label>
+            <input type="date" id="period-start-date" class="period-input">
+          </div>
+          <div class="period-form-group">
+            <label>结束日期（可选）</label>
+            <input type="date" id="period-end-date" class="period-input">
+          </div>
+          <div class="period-form-group">
+            <label>流量</label>
+            <select id="period-flow" class="period-input">
+              <option value="light">少量</option>
+              <option value="medium" selected>中等</option>
+              <option value="heavy">较多</option>
+            </select>
+          </div>
+          <div class="period-form-group">
+            <label>症状（可选）</label>
+            <input type="text" id="period-symptoms" class="period-input" placeholder="如：痛经、腰酸...">
+          </div>
+          <div class="period-form-group">
+            <label>心情</label>
+            <select id="period-mood" class="period-input">
+              <option value="great">很好</option>
+              <option value="good">不错</option>
+              <option value="normal" selected>一般</option>
+              <option value="bad">不好</option>
+              <option value="terrible">很差</option>
+            </select>
+          </div>
+          <div class="period-form-group">
+            <label>备注（可选）</label>
+            <textarea id="period-notes" class="period-input" rows="3" placeholder="其他想记录的..."></textarea>
+          </div>
+          <div class="period-form-group">
+            <label>痛经程度 (0-10分)</label>
+            <input type="range" id="period-pain-level" class="period-slider" min="0" max="10" value="0" oninput="updatePainLevelDisplay(this.value)">
+            <div style="text-align: center; margin-top: 5px; color: #FF9EAA; font-weight: 600;">
+              <span id="pain-level-display">0</span> / 10
+            </div>
+          </div>
+          <div class="period-form-group">
+            <label>PMS症状（可多选）</label>
+            <div class="pms-checkboxes">
+              <label><input type="checkbox" class="pms-checkbox" value="胸痛"> 胸痛</label>
+              <label><input type="checkbox" class="pms-checkbox" value="腹胀"> 腹胀</label>
+              <label><input type="checkbox" class="pms-checkbox" value="易怒"> 易怒</label>
+              <label><input type="checkbox" class="pms-checkbox" value="失眠"> 失眠</label>
+              <label><input type="checkbox" class="pms-checkbox" value="头痛"> 头痛</label>
+              <label><input type="checkbox" class="pms-checkbox" value="疲劳"> 疲劳</label>
+              <label><input type="checkbox" class="pms-checkbox" value="食欲增加"> 食欲增加</label>
+              <label><input type="checkbox" class="pms-checkbox" value="水肿"> 水肿</label>
+              <label><input type="checkbox" class="pms-checkbox" value="长痘"> 长痘</label>
+            </div>
+            <input type="text" id="period-pms-custom" class="period-input" placeholder="其他症状（用逗号分隔）" style="margin-top: 8px;">
+          </div>
+          <div class="period-form-group">
+            <label>用品更换次数</label>
+            <input type="text" id="period-product-changes" class="period-input" placeholder="例如：5次/天">
+          </div>
+          <div class="period-form-group">
+            <label>睡眠质量</label>
+            <input type="range" id="period-sleep-quality" class="period-slider" min="1" max="5" value="3" oninput="updateStarDisplay(this.value)">
+            <div id="sleep-stars-display" style="text-align: center; margin-top: 5px; font-size: 20px;">⭐⭐⭐☆☆</div>
+          </div>
+          <div class="period-form-group">
+            <label>运动时长（分钟）</label>
+            <input type="number" id="period-exercise-duration" class="period-input" placeholder="例如：30" min="0">
+          </div>
+          <button class="period-btn-primary" onclick="savePeriodRecord()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 月经记录 - 详情弹窗 -->
+    <div id="period-detail-modal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span>详情</span>
+          <span class="close-btn" onclick="hidePeriodDetailModal()">×</span>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+          <div id="period-detail-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 番茄钟 - 角色选择弹窗 -->
+    <div id="focus-companion-modal" style="display: none;">
+      <div class="focus-companion-modal-content">
+        <div class="focus-companion-modal-header">
+          <span class="focus-companion-modal-title">选择陪伴角色</span>
+          <button class="focus-companion-modal-close" onclick="closeFocusCompanionModal()">×</button>
+        </div>
+        <div class="focus-companion-modal-body">
+          <div id="focus-companion-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 番茄钟 - 设置弹窗 -->
+    <div id="focus-settings-modal" style="display: none;">
+      <div class="focus-settings-modal-content">
+        <div class="focus-settings-modal-header">番茄钟设置</div>
+        <div class="focus-settings-form">
+          <div class="focus-settings-row">
+            <label class="focus-settings-label">专注时长（分钟）</label>
+            <input type="number" id="focus-duration-input" class="focus-settings-input" 
+                   min="1" max="120" value="25">
+          </div>
+        </div>
+        <div class="focus-settings-actions">
+          <button class="focus-btn focus-btn-secondary" onclick="closeFocusSettings()">取消</button>
+          <button class="focus-btn focus-btn-primary" onclick="saveFocusSettings()">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 番茄钟屏幕 -->
+    <div id="focus-timer-screen" class="screen">
+      <div class="header">
+        <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
+        <span>番茄钟</span>
+        <span style="width: 30px;"></span>
+      </div>
+      <div id="focus-timer-content" class="list-container"></div>
+    </div>
+
     <div id="character-selection-screen" class="screen">
       <div class="header"> <span class="back-btn" onclick="showScreen('home-screen')">‹</span> <span data-lang-key="cphoneTitleSelect">选择一部手机</span> <span style="width: 30px;"></span> </div>
       <div id="character-grid" class="list-container"> </div>
@@ -2590,7 +2758,7 @@
         </div>
 
         <!-- 系统级通知 -->
-        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v2.0.0</span></div>
+        <div class="settings-header">系统级通知 <span style="font-size: 12px; color: #999; margin-left: 10px;">v2.1.0</span></div>
         <div class="settings-section">
             <!-- 1. 主开关 -->
             <div class="settings-item">

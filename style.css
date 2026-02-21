@@ -576,19 +576,35 @@
 
            .message-wrapper {
                display: flex;
-               gap: 8px;
-               align-items: flex-end;
+               flex-direction: column;
+               gap: 0;
                position: relative;
                max-width: 90%;
            }
 
            .message-wrapper.ai {
                align-self: flex-start;
-               flex-direction: row;
+               align-items: flex-start;
            }
 
            .message-wrapper.user {
                align-self: flex-end;
+               align-items: flex-end;
+           }
+
+           /* 消息内容行（头像+气泡+时间） */
+           .message-content-row {
+               display: flex;
+               gap: 8px;
+               align-items: flex-end;
+               width: 100%;
+           }
+
+           .message-wrapper.ai .message-content-row {
+               flex-direction: row;
+           }
+
+           .message-wrapper.user .message-content-row {
                flex-direction: row-reverse;
            }
 
@@ -5607,6 +5623,36 @@
 
            #phone-screen.dark-mode .voice-transcript {
                background-color: rgba(255, 255, 255, 0.1);
+           }
+
+           /* 双语翻译气泡（外部模式） */
+           .translation-bubble {
+               font-size: 14px;
+               line-height: 1.6;
+               color: var(--text-secondary);
+               padding: 8px 12px;
+               margin-top: 4px;
+               background-color: rgba(0, 0, 0, 0.04);
+               border-radius: 6px;
+               word-break: break-word;
+               box-sizing: border-box;
+               max-width: 100%;
+               width: fit-content; /* 根据内容自适应宽度 */
+           }
+
+           #phone-screen.dark-mode .translation-bubble {
+               background-color: rgba(255, 255, 255, 0.1);
+           }
+
+           /* AI消息的翻译气泡左对齐，考虑头像宽度 */
+           .message-wrapper.ai .translation-bubble {
+               margin-left: 50px; /* 与消息内容对齐（头像42px + gap 8px） */
+               align-self: flex-start;
+           }
+
+           /* 用户消息的翻译气泡右对齐 */
+           .message-wrapper.user .translation-bubble {
+               align-self: flex-end;
            }
 
            .loading-spinner {

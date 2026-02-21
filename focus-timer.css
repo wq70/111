@@ -1,0 +1,450 @@
+/* focus-timer.css - 番茄钟专注陪伴样式 */
+
+/* 主容器 */
+.focus-timer-main {
+  padding: 20px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* 陪伴角色区域 */
+.focus-companion-section {
+  margin-bottom: 30px;
+}
+
+.focus-companion-label {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.focus-companion-display {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.focus-companion-display:hover {
+  border-color: #999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.focus-no-companion {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+}
+
+.focus-companion-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.focus-companion-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.focus-companion-info {
+  flex: 1;
+}
+
+.focus-companion-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.focus-companion-status {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 计时器显示 */
+.focus-timer-display {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  margin: 30px auto;
+}
+
+.focus-timer-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.focus-timer-bg {
+  fill: none;
+  stroke: #f0f0f0;
+  stroke-width: 8;
+}
+
+.focus-timer-progress {
+  fill: none;
+  stroke: #333;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.focus-timer-time {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  font-weight: 300;
+  color: #333;
+  font-family: 'Courier New', monospace;
+}
+
+/* 控制按钮 */
+.focus-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.focus-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.focus-btn-primary {
+  background: #333;
+  color: #fff;
+}
+
+.focus-btn-primary:hover {
+  background: #555;
+}
+
+.focus-btn-secondary {
+  background: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.focus-btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+/* 统计区域 */
+.focus-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  margin-bottom: 30px;
+}
+
+.focus-stat-item {
+  text-align: center;
+}
+
+.focus-stat-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.focus-stat-value {
+  font-size: 20px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* 消息区域 */
+.focus-messages-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.focus-messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
+}
+
+.focus-messages-header span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.focus-call-btn {
+  padding: 6px 16px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.focus-call-btn:hover:not(:disabled) {
+  background: #555;
+}
+
+.focus-call-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.focus-messages-list {
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.focus-no-messages {
+  text-align: center;
+  color: #999;
+  padding: 40px 20px;
+}
+
+.focus-message-item {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.focus-message-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.focus-message-time {
+  font-size: 11px;
+  color: #999;
+  margin-bottom: 6px;
+}
+
+.focus-message-content {
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* 角色选择弹窗 */
+#focus-companion-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-companion-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-companion-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.focus-companion-modal-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.focus-companion-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-companion-modal-close:hover {
+  color: #333;
+}
+
+.focus-companion-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.focus-companion-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.focus-companion-item:hover {
+  border-color: #999;
+  background: #fafafa;
+}
+
+.focus-companion-item.selected {
+  border-color: #333;
+  background: #f5f5f5;
+}
+
+.focus-companion-item-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.focus-companion-item-info {
+  flex: 1;
+}
+
+.focus-companion-item-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.focus-companion-item-desc {
+  font-size: 12px;
+  color: #999;
+}
+
+.focus-companion-item-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #333;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+/* 设置弹窗 */
+#focus-settings-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+
+.focus-settings-modal-content {
+  background: #fff;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  padding: 20px;
+}
+
+.focus-settings-modal-header {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.focus-settings-form {
+  margin-bottom: 20px;
+}
+
+.focus-settings-row {
+  margin-bottom: 15px;
+}
+
+.focus-settings-label {
+  display: block;
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.focus-settings-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.focus-settings-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+  .focus-timer-main {
+    padding: 15px;
+  }
+  
+  .focus-timer-display {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .focus-timer-time {
+    font-size: 36px;
+  }
+  
+  .focus-stats {
+    padding: 15px;
+  }
+  
+  .focus-stat-value {
+    font-size: 18px;
+  }
+}
