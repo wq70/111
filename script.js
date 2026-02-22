@@ -4133,7 +4133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     qzoneGroups: '++id, name',
     memories: '++id, chatId, timestamp, type, targetDate',
     callRecords: '++id, chatId, timestamp, customName',
-    shoppingProducts: '++id, name, description',
+    shoppingProducts: '++id, name, description, categoryId',
     shoppingCategories: '++id, name',
     apiPresets: '++id, name',
     soundPresets: '++id, name',
@@ -4192,6 +4192,11 @@ document.addEventListener('DOMContentLoaded', () => {
     focusSessions: '++id, companionId, startTime, endTime, duration, completed, stage',
     focusStats: '&id, todayCount, totalCount, streakDays, lastFocusDate',
     focusMessages: '++id, sessionId, companionId, stage, message, timestamp'
+  });
+
+  // 修复：为 shoppingProducts 补充 categoryId 索引
+  db.version(55).stores({
+    shoppingProducts: '++id, name, description, categoryId'
   });
 
   window.db = db;
@@ -41756,6 +41761,72 @@ ${recentHistoryWithUser}
     }
   }
 
+  function editDiary() {
+    if (!activeDiaryForViewing || !activeCharacterId) return;
+
+    const diary = activeDiaryForViewing;
+    const char = state.chats[activeCharacterId];
+    if (!char || !char.diary) return;
+
+    const escapedTitle = diary.title.replace(/"/g, '&quot;');
+    const escapedContent = diary.content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const formHtml = `
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;display:block;">标题</label>
+          <input id="edit-diary-title-input" type="text" value="${escapedTitle}" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;font-size:16px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;display:block;">内容</label>
+          <textarea id="edit-diary-content-input" rows="10" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;font-size:15px;box-sizing:border-box;resize:vertical;line-height:1.6;">${escapedContent}</textarea>
+        </div>
+      </div>`;
+
+    modalResolve = null;
+    modalTitle.textContent = '编辑日记';
+    modalBody.innerHTML = formHtml;
+
+    const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
+    if (modalFooter) {
+      modalFooter.style.flexDirection = 'row';
+      modalFooter.style.justifyContent = 'flex-end';
+      modalFooter.style.maxHeight = '';
+      modalFooter.style.overflowY = '';
+      modalFooter.innerHTML = `
+        <button id="custom-modal-cancel">取消</button>
+        <button id="custom-modal-confirm" class="confirm-btn">保存</button>`;
+    }
+
+    document.getElementById('custom-modal-cancel').onclick = () => hideCustomModal();
+    document.getElementById('custom-modal-confirm').onclick = async () => {
+      const newTitle = document.getElementById('edit-diary-title-input').value.trim();
+      const newContent = document.getElementById('edit-diary-content-input').value;
+      if (!newTitle) { await showCustomAlert('提示', '标题不能为空。'); return; }
+
+      const entryIndex = char.diary.findIndex(d => d.id === diary.id);
+      if (entryIndex === -1) return;
+
+      char.diary[entryIndex].title = newTitle;
+      char.diary[entryIndex].content = newContent;
+      await db.chats.put(char);
+
+      activeDiaryForViewing = char.diary[entryIndex];
+      document.getElementById('char-diary-detail-title').textContent = newTitle;
+      const formattedContent = parseMarkdown(newContent)
+        .split('\n')
+        .map(p => `<p>${p || '&nbsp;'}</p>`)
+        .join('');
+      document.getElementById('char-diary-detail-content').innerHTML = formattedContent;
+
+      renderCharDiaryList();
+      hideCustomModal();
+      await showCustomAlert('编辑成功', '日记已更新。');
+    };
+
+    showCustomModal();
+  }
+
 
 
 
@@ -47301,6 +47372,16 @@ ${charactersContext}
       description: '将清空选定角色的所有长期记忆。(不适用于群聊)'
     },
     {
+      id: 'structured_memory',
+      name: '结构化记忆',
+      description: '将清空选定角色的所有结构化记忆数据及总结时间戳。(不适用于群聊)'
+    },
+    {
+      id: 'status',
+      name: '在线状态',
+      description: '将重置选定角色的在线状态为默认值"在线"。(不适用于群聊)'
+    },
+    {
       id: 'favorites',
       name: '收藏',
       description: '将清空收藏夹中所有与该角色相关的内容（如聊天、动态、日记等）。(不适用于群聊)'
@@ -47533,6 +47614,31 @@ ${charactersContext}
                   continue;
                 }
                 chat.longTermMemory = [];
+                await db.chats.put(chat);
+              }
+            }
+
+            if (type === 'structured_memory' && charId !== 'user') {
+              const chat = await db.chats.get(charId);
+              if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的结构化记忆清理（群聊不适用）`);
+                  continue;
+                }
+                chat.structuredMemory = null;
+                chat.lastStructuredMemoryTimestamp = 0;
+                await db.chats.put(chat);
+              }
+            }
+
+            if (type === 'status' && charId !== 'user') {
+              const chat = await db.chats.get(charId);
+              if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的在线状态重置（群聊不适用）`);
+                  continue;
+                }
+                chat.status = { text: '在线', isBusy: false, lastUpdate: Date.now() };
                 await db.chats.put(chat);
               }
             }
@@ -71947,6 +72053,7 @@ ${recentHistoryWithUser}
       const content = document.getElementById('char-diary-detail-content').innerText; // Use innerText to get formatted text
       copyTextToClipboard(content, '日记内容已复制！');
     });
+    document.getElementById('edit-diary-btn').addEventListener('click', editDiary);
 
     document.getElementById('copy-memo-content-btn').addEventListener('click', () => {
       const content = document.getElementById('char-memo-detail-content').value; // It's a textarea
