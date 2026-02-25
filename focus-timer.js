@@ -11,6 +11,9 @@ let focusIsRunning = false;
 let focusIsBreak = false;
 let focusCompanionId = null;
 let focusSessionId = null;
+let focusGoal = ''; // 当前番茄钟目标
+let autoCallTimer = null; // 定时呼叫计时器
+let autoCallInterval = 0; // 定时呼叫间隔（分钟），0表示不启用
 
 /**
  * 安全显示提示
@@ -293,6 +296,14 @@ async function toggleFocus() {
  * 开始专注
  */
 async function startFocus() {
+  // 询问目标（可留空）
+  const goal = prompt('本次番茄钟的目标是什么？（可留空）', '');
+  if (goal === null) {
+    // 用户取消
+    return;
+  }
+  
+  focusGoal = goal || '';
   focusIsRunning = true;
   focusStartTime = Date.now();
   focusElapsed = 0;
@@ -303,11 +314,15 @@ async function startFocus() {
     startTime: new Date().toISOString(),
     duration: focusDuration,
     completed: false,
-    stage: 'running'
+    stage: 'running',
+    goal: focusGoal
   });
   
   // 启动计时器
   focusTimer = setInterval(updateFocusTimer, 1000);
+  
+  // 启动定时呼叫（如果启用）
+  startAutoCallTimer();
   
   // 调用角色鼓励
   await callFocusCompanionAuto('start');
@@ -322,6 +337,8 @@ function pauseFocus() {
     clearInterval(focusTimer);
     focusTimer = null;
   }
+  // 暂停定时呼叫
+  stopAutoCallTimer();
 }
 
 /**
@@ -331,6 +348,8 @@ function resumeFocus() {
   focusIsRunning = true;
   focusStartTime = Date.now() - (focusElapsed * 1000);
   focusTimer = setInterval(updateFocusTimer, 1000);
+  // 恢复定时呼叫
+  startAutoCallTimer();
 }
 
 /**
@@ -352,8 +371,12 @@ async function resetFocus() {
     focusTimer = null;
   }
   
+  // 停止定时呼叫
+  stopAutoCallTimer();
+  
   focusIsRunning = false;
   focusElapsed = 0;
+  focusGoal = '';
   
   // 更新显示
   updateFocusDisplay(focusDuration);
@@ -390,11 +413,6 @@ function updateFocusTimer() {
   // 更新进度
   const progress = (focusElapsed / focusDuration) * 100;
   updateFocusProgress(progress);
-  
-  // 中途提醒（10分钟和20分钟）
-  if (focusElapsed === 10 * 60 || focusElapsed === 20 * 60) {
-    callFocusCompanionAuto('during');
-  }
 }
 
 /**
@@ -436,6 +454,9 @@ async function onFocusComplete() {
     focusTimer = null;
   }
   
+  // 停止定时呼叫
+  stopAutoCallTimer();
+  
   focusIsRunning = false;
   
   // 更新会话记录
@@ -458,6 +479,7 @@ async function onFocusComplete() {
   
   // 重置界面
   focusElapsed = 0;
+  focusGoal = '';
   updateFocusDisplay(focusDuration);
   updateFocusProgress(0);
   
@@ -549,13 +571,16 @@ async function buildFocusPrompt(stage, focusData) {
     return `${sender}: ${msg.content}`;
   }).join('\n');
   
+  // 目标信息
+  const goalText = focusGoal ? `\n- 本次目标: ${focusGoal}` : '';
+  
   // 根据阶段构建情景描述
   let stagePrompt = '';
   
   switch(stage) {
     case 'start':
       stagePrompt = `# 【当前情景】
-${myNickname} 刚刚开启了一个 ${focusData.duration}分钟 的番茄钟专注计时。
+${myNickname} 刚刚开启了一个 ${focusData.duration}分钟 的番茄钟专注计时。${goalText}
 - 今日已完成: ${focusData.todayCount} 个番茄钟
 - 连续天数: ${focusData.streakDays} 天
 ${focusData.isFirstTime ? '- 这是TA第一次使用番茄钟功能！' : ''}
@@ -568,7 +593,7 @@ ${focusData.isFirstTime ? '- 这是TA第一次使用番茄钟功能！' : ''}
       
     case 'during':
       stagePrompt = `# 【当前情景】
-${myNickname} 正在专注中，已经过去了 ${focusData.elapsedMinutes}分钟，还剩 ${focusData.remainingMinutes}分钟。
+${myNickname} 正在专注中，已经过去了 ${focusData.elapsedMinutes}分钟，还剩 ${focusData.remainingMinutes}分钟。${goalText}
 
 # 【你的任务】
 TA正在专注，你想对TA说点什么吗？
@@ -578,7 +603,7 @@ TA正在专注，你想对TA说点什么吗？
       
     case 'complete':
       stagePrompt = `# 【当前情景】
-${myNickname} 刚刚完成了一个 ${focusData.duration}分钟 的番茄钟！
+${myNickname} 刚刚完成了一个 ${focusData.duration}分钟 的番茄钟！${goalText}
 - 今日已完成: ${focusData.todayCount} 个番茄钟
 - 连续天数: ${focusData.streakDays} 天
 ${focusData.isNewRecord ? '- 这是TA的新纪录！' : ''}
@@ -592,7 +617,7 @@ ${myNickname} 完成了番茄钟，对此做出反应。
       
     case 'giveup':
       stagePrompt = `# 【当前情景】
-${myNickname} 在专注了 ${focusData.elapsedMinutes}分钟 后选择了放弃。
+${myNickname} 在专注了 ${focusData.elapsedMinutes}分钟 后选择了放弃。${goalText}
 
 # 【你的任务】
 对 ${myNickname} 放弃专注做出反应。
@@ -965,6 +990,7 @@ function showFocusSettings() {
   
   // 加载当前设置
   document.getElementById('focus-duration-input').value = focusDuration / 60;
+  document.getElementById('auto-call-interval-input').value = autoCallInterval;
   
   modal.style.display = 'flex';
 }
@@ -981,14 +1007,23 @@ function closeFocusSettings() {
  */
 function saveFocusSettings() {
   const duration = parseInt(document.getElementById('focus-duration-input').value);
+  const interval = parseInt(document.getElementById('auto-call-interval-input').value);
   
   if (duration < 1 || duration > 120) {
-    alert('请输入1-120之间的数字');
+    alert('专注时长请输入1-120之间的数字');
+    return;
+  }
+  
+  if (interval < 0 || interval > 60) {
+    alert('定时呼叫间隔请输入0-60之间的数字（0表示不启用）');
     return;
   }
   
   focusDuration = duration * 60;
+  autoCallInterval = interval;
+  
   localStorage.setItem('focusDuration', focusDuration);
+  localStorage.setItem('autoCallInterval', autoCallInterval);
   
   // 更新显示
   updateFocusDisplay(focusDuration);
@@ -997,8 +1032,49 @@ function saveFocusSettings() {
   showFocusToast('设置已保存');
 }
 
+/**
+ * 启动定时呼叫计时器
+ */
+function startAutoCallTimer() {
+  // 先清除旧的计时器
+  stopAutoCallTimer();
+  
+  // 如果间隔为0，不启用
+  if (autoCallInterval <= 0) {
+    return;
+  }
+  
+  // 设置定时器（转换为毫秒）
+  const intervalMs = autoCallInterval * 60 * 1000;
+  
+  autoCallTimer = setInterval(() => {
+    if (focusIsRunning) {
+      callFocusCompanionAuto('during');
+    }
+  }, intervalMs);
+  
+  console.log(`[定时呼叫] 已启动，间隔 ${autoCallInterval} 分钟`);
+}
+
+/**
+ * 停止定时呼叫计时器
+ */
+function stopAutoCallTimer() {
+  if (autoCallTimer) {
+    clearInterval(autoCallTimer);
+    autoCallTimer = null;
+    console.log('[定时呼叫] 已停止');
+  }
+}
+
 // 初始化：加载保存的时长设置
 const savedDuration = localStorage.getItem('focusDuration');
 if (savedDuration) {
   focusDuration = parseInt(savedDuration);
+}
+
+// 初始化：加载保存的定时呼叫间隔
+const savedInterval = localStorage.getItem('autoCallInterval');
+if (savedInterval) {
+  autoCallInterval = parseInt(savedInterval);
 }

@@ -943,6 +943,14 @@
             <input type="number" id="focus-duration-input" class="focus-settings-input" 
                    min="1" max="120" value="25">
           </div>
+          <div class="focus-settings-row">
+            <label class="focus-settings-label">定时呼叫间隔（分钟）</label>
+            <input type="number" id="auto-call-interval-input" class="focus-settings-input" 
+                   min="0" max="60" value="0" placeholder="0表示不启用">
+          </div>
+          <div class="focus-settings-hint">
+            设置后，角色会按间隔时间自动呼叫你
+          </div>
         </div>
         <div class="focus-settings-actions">
           <button class="focus-btn focus-btn-secondary" onclick="closeFocusSettings()">取消</button>
@@ -2043,6 +2051,41 @@
             </div>
         </div>
 
+        <!-- 后台活动 API 设置 -->
+        <div class="settings-header" data-lang-key="apiBackgroundSettings">后台活动 API 设置</div>
+        <div class="settings-section">
+            <div class="settings-tip-wrapper">
+                <div class="settings-tip-content">
+                    提示: 后台活动API用于角色自主行为。留空则使用主API。建议配置更便宜的模型以节省费用。
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiBackgroundProxyUrlLabel">反代地址</label>
+                <div class="settings-right">
+                    <input type="text" id="background-proxy-url" placeholder="留空使用主API">
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiBackgroundKeyLabel">API Key</label>
+                <div class="settings-right">
+                    <input type="password" id="background-api-key" placeholder="可选">
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiBackgroundModelLabel">模型（手写）</label>
+                <div class="settings-right">
+                    <input type="text" id="background-model-input" placeholder="可手写模型名称或从下方拉取自动填入" style="flex-grow: 1;">
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiFetchBackgroundModelsBtn">拉取模型</label>
+                <div class="settings-right">
+                    <select id="background-model-select" class="settings-select" style="flex-grow: 1; width: auto;"></select>
+                    <button id="fetch-background-models-btn" class="settings-mini-btn">拉取</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 参数设置 -->
         <div class="settings-header">参数设置</div>
         <div class="settings-section">
@@ -2076,8 +2119,21 @@
                     <input type="number" id="block-cooldown-input" min="0.1" step="0.1" value="1" class="settings-num-input">
                 </div>
             </div>
+            <div class="settings-item">
+                <label>后台查看用户手机</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="global-enable-view-myphone-bg-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item">
+                <label>查看概率 (%)</label>
+                <div class="settings-right">
+                    <input type="number" id="global-view-myphone-chance-input" min="0" max="100" placeholder="留空=AI自主决定" class="settings-num-input">
+                </div>
+            </div>
         </div>
-        <div class="settings-desc">开启后台活动会增加 API 费用。</div>
+        <div class="settings-desc">开启后台活动会增加 API 费用。后台查看手机：留空概率时AI自主决定，填写0-100则按概率触发。</div>
 
         <!-- 语音设置 -->
         <div class="settings-header" data-lang-key="apiTtsSettings">Minimax TTS 语音</div>
@@ -3778,6 +3834,16 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="settings-item">
+                <div>
+                    <label>真全屏模式</label>
+                    <div class="settings-desc">隐藏系统状态栏，内容延伸至屏幕顶部</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="true-fullscreen-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
         </div>
 
         <!-- 3. 锁屏设置 -->
@@ -4399,6 +4465,28 @@
                         <span class="slider"></span> 
                     </label>
                 </div>
+                
+                <!-- 后台查看用户手机 -->
+                <div class="settings-item" style="display: flex !important; justify-content: space-between !important; align-items: center !important; flex-direction: row !important;">
+                     <div style="flex: 1; padding-right: 10px; display: flex; flex-direction: column; align-items: flex-start;">
+                        <label style="margin-bottom: 2px;">后台查看用户手机</label>
+                        <div class="settings-desc">
+                            <select id="char-view-myphone-bg-select" style="width: 100%; padding: 5px; margin-top: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                                <option value="null">跟随全局</option>
+                                <option value="true">开启</option>
+                                <option value="false">关闭</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 查看概率 -->
+                <div class="settings-item">
+                    <label>查看概率 (%)</label>
+                    <div class="settings-right">
+                        <input type="number" id="char-view-myphone-chance-input" min="0" max="100" placeholder="留空=使用全局" class="settings-num-input">
+                    </div>
+                </div>
 
             </div>
 
@@ -4476,6 +4564,23 @@
                     <div class="settings-desc">用压缩表格格式存储记忆，大幅降低token占用</div>
                 </div>
                 <label class="toggle-switch"> <input type="checkbox" id="structured-memory-toggle"> <span class="slider"></span> </label>
+            </div>
+
+            <!-- 限制长期记忆读取数量 -->
+            <div class="settings-item-block" id="limit-memory-group">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; height: 30px;">
+                    <label for="limit-memory-toggle" style="line-height: 30px;">限制长期记忆读取数量</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="limit-memory-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="memory-limit-input-group" style="display: none; padding: 8px 0;">
+                    <label style="margin-right: 8px;">读取最近</label>
+                    <input type="number" id="memory-limit-count" min="1" max="1000" value="50" style="width: 80px; padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+                    <label style="margin-left: 8px;">条记忆</label>
+                </div>
+                <div class="settings-desc" style="margin-top: 4px; font-size: 12px; color: #666;">仅在未开启结构化记忆时生效，默认读取全部</div>
             </div>
 
             <!-- 挂载聊天 -->
@@ -6310,6 +6415,11 @@
           <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #333;">记住最近对话条数</label>
           <input type="number" id="watch-together-max-messages" min="5" max="100" value="20" style="width: 100%; padding: 8px; border: 1px solid #d0d0d0; border-radius: 4px;">
           <p style="font-size: 12px; color: #999; margin-top: 5px;">AI能记住的最近对话记录数量，超出部分将被删除</p>
+        </div>
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #333;">对话框位置</label>
+          <button id="reset-watch-together-position-btn" style="width: 100%; padding: 10px; background: #5a9fd4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">重置位置</button>
+          <p style="font-size: 12px; color: #999; margin-top: 5px;">如果对话框被拖到屏幕外，点击此按钮可恢复到默认位置</p>
         </div>
       </div>
       <div class="modal-footer">

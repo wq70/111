@@ -34,6 +34,7 @@ let periodChart = null;
 let painChart = null;
 let symptomsChart = null;
 let durationChart = null;
+let editingRecordId = null; // 用于标记当前是否在编辑模式
 
 /**
  * 打开月经记录应用
@@ -210,8 +211,13 @@ function selectPeriodDate(dateStr) {
  * 显示添加记录弹窗
  */
 async function showPeriodAddModal() {
+  editingRecordId = null; // 重置编辑模式
   const modal = document.getElementById('period-add-modal');
   const today = new Date().toISOString().split('T')[0];
+  
+  // 更新弹窗标题
+  const modalTitle = modal.querySelector('h2');
+  if (modalTitle) modalTitle.textContent = '记录本次经期';
   
   document.getElementById('period-start-date').value = today;
   document.getElementById('period-end-date').value = '';
@@ -276,7 +282,7 @@ async function savePeriodRecord() {
   }
   
   try {
-    await db.periodRecords.add({
+    const recordData = {
       startDate,
       endDate: endDate || null,
       flow,
@@ -287,11 +293,22 @@ async function savePeriodRecord() {
       pmsSymptoms: JSON.stringify(pmsSymptoms),
       productChanges,
       sleepQuality,
-      exerciseDuration,
-      createdAt: new Date().toISOString()
-    });
+      exerciseDuration
+    };
+    
+    if (editingRecordId) {
+      // 编辑模式：更新现有记录
+      await db.periodRecords.update(editingRecordId, recordData);
+      ptShowToast('记录更新成功', 'success');
+    } else {
+      // 新增模式：添加新记录
+      recordData.createdAt = new Date().toISOString();
+      await db.periodRecords.add(recordData);
+      ptShowToast('记录保存成功', 'success');
+    }
     
     hidePeriodAddModal();
+    hidePeriodDetailModal(); // 同时关闭详情弹窗
     
     if (currentPeriodView === 'calendar') {
       await renderPeriodCalendar();
@@ -301,7 +318,6 @@ async function savePeriodRecord() {
       await renderPeriodReport();
     }
     
-    showToast('记录保存成功');
     await checkAndSchedulePeriodNotifications();
   } catch (error) {
     console.error('保存经期记录失败:', error);
@@ -374,6 +390,66 @@ function hidePeriodDetailModal() {
   document.getElementById('period-detail-modal').style.display = 'none';
 }
 
+/**
+ * 编辑经期记录
+ */
+async function editPeriodRecord(id) {
+  try {
+    const record = await db.periodRecords.get(id);
+    if (!record) {
+      alert('记录不存在');
+      return;
+    }
+    
+    // 先关闭详情弹窗
+    hidePeriodDetailModal();
+    
+    editingRecordId = id; // 设置编辑模式
+    
+    const modal = document.getElementById('period-add-modal');
+    
+    // 更新弹窗标题
+    const modalTitle = modal.querySelector('h2');
+    if (modalTitle) modalTitle.textContent = '编辑记录';
+    
+    // 填充表单数据
+    document.getElementById('period-start-date').value = record.startDate || '';
+    document.getElementById('period-end-date').value = record.endDate || '';
+    document.getElementById('period-flow').value = record.flow || 'medium';
+    document.getElementById('period-symptoms').value = record.symptoms || '';
+    document.getElementById('period-mood').value = record.mood || 'normal';
+    document.getElementById('period-notes').value = record.notes || '';
+    
+    document.getElementById('period-pain-level').value = record.painLevel || 0;
+    document.getElementById('pain-level-display').textContent = record.painLevel || 0;
+    
+    // 恢复PMS症状选择
+    document.querySelectorAll('.pms-checkbox').forEach(cb => cb.checked = false);
+    if (record.pmsSymptoms) {
+      try {
+        const symptoms = JSON.parse(record.pmsSymptoms);
+        symptoms.forEach(symptom => {
+          const checkbox = document.querySelector(`.pms-checkbox[value="${symptom}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+      } catch (e) {
+        console.warn('解析PMS症状失败:', e);
+      }
+    }
+    
+    document.getElementById('period-pms-custom').value = '';
+    document.getElementById('period-product-changes').value = record.productChanges || '';
+    document.getElementById('period-sleep-quality').value = record.sleepQuality || 3;
+    updateStarDisplay(record.sleepQuality || 3);
+    document.getElementById('period-exercise-duration').value = record.exerciseDuration || '';
+    
+    modal.style.display = 'flex';
+  } catch (error) {
+    console.error('加载记录失败:', error);
+    alert('加载记录失败，请重试');
+  }
+}
+
 async function deletePeriodRecord(id) {
   if (!confirm('确定要删除这条记录吗？')) return;
   
@@ -389,7 +465,7 @@ async function deletePeriodRecord(id) {
       await renderPeriodReport();
     }
     
-    showToast('删除成功');
+    ptShowToast('删除成功', 'success');
   } catch (error) {
     console.error('删除记录失败:', error);
     alert('删除失败');
@@ -748,7 +824,7 @@ async function clearAllPeriodData() {
       await renderPeriodReport();
     }
     
-    showToast('已清空所有记录');
+    ptShowToast('已清空所有记录', 'success');
   } catch (error) {
     console.error('清空失败:', error);
     alert('操作失败');
@@ -1255,14 +1331,14 @@ async function enablePeriodNotifications() {
     abnormalCycleMin: 21, abnormalCycleMax: 35, delayDays: 7
   });
   
-  showToast('通知已开启');
+  ptShowToast('通知已开启', 'success');
   renderPeriodSettings();
   await checkAndSchedulePeriodNotifications();
 }
 
 async function disablePeriodNotifications() {
   await db.periodNotificationSettings.put({ id: 'main', enabled: false });
-  showToast('通知已关闭');
+  ptShowToast('通知已关闭', 'info');
   renderPeriodSettings();
 }
 
@@ -1335,7 +1411,7 @@ async function updatePeriodNotificationSettings() {
     delayDays: parseInt(document.getElementById('notif-delay-days').value) || 7
   };
   await db.periodNotificationSettings.put(settings);
-  showToast('设置已保存');
+  ptShowToast('设置已保存', 'success');
 }
 
 /**
@@ -1380,6 +1456,7 @@ window.selectPeriodDate = selectPeriodDate;
 window.showPeriodAddModal = showPeriodAddModal;
 window.hidePeriodAddModal = hidePeriodAddModal;
 window.savePeriodRecord = savePeriodRecord;
+window.editPeriodRecord = editPeriodRecord;
 window.showPeriodDetailModal = showPeriodDetailModal;
 window.hidePeriodDetailModal = hidePeriodDetailModal;
 window.deletePeriodRecord = deletePeriodRecord;

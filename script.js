@@ -82,15 +82,25 @@ function getMemoryContextForPrompt(chat, options = {}) {
     return '- (暂无)';
   }
   
+  // 新增：如果开启了限制，只取最近的 N 条
+  let memoriesToUse = chat.longTermMemory;
+  if (chat.settings?.limitLongTermMemory && chat.settings?.longTermMemoryLimit) {
+    const limit = parseInt(chat.settings.longTermMemoryLimit);
+    if (limit > 0 && limit < chat.longTermMemory.length) {
+      // 取最后 N 条（假设数组是旧的在前，新的在后）
+      memoriesToUse = chat.longTermMemory.slice(-limit);
+    }
+  }
+  
   if (includeTimestamp) {
     // formatTimeAgo 在 DOMContentLoaded 内部定义，这里用简单的时间格式替代
-    return chat.longTermMemory.map(mem => {
+    return memoriesToUse.map(mem => {
       const d = new Date(mem.timestamp);
       const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
       return `- (${dateStr}) ${mem.content}`;
     }).join('\n');
   }
-  return chat.longTermMemory.map(mem => `- ${mem.content}`).join('\n');
+  return memoriesToUse.map(mem => `- ${mem.content}`).join('\n');
 }
 
 // 外币换算成人民币
@@ -304,6 +314,11 @@ const translations = {
     apiSecondaryKeyLabel: '副密钥',
     apiSecondaryModelLabel: '副模型',
     apiFetchSecondaryModelsBtn: '拉取副模型',
+    apiBackgroundSettings: '后台活动API设置',
+    apiBackgroundProxyUrlLabel: '后台反代地址',
+    apiBackgroundKeyLabel: '后台密钥',
+    apiBackgroundModelLabel: '后台模型',
+    apiFetchBackgroundModelsBtn: '拉取后台模型',
     apiBgActivitySettings: '后台活动设置',
     apiEnableBgActivityLabel: '启用后台角色活动',
     apiBgIntervalLabel: '后台活动检测间隔 (秒)',
@@ -517,6 +532,11 @@ const translations = {
     apiSecondaryKeyLabel: 'Secondary API Key',
     apiSecondaryModelLabel: 'Secondary Model',
     apiFetchSecondaryModelsBtn: 'Fetch Secondary Models',
+    apiBackgroundSettings: 'Background Activity API Settings',
+    apiBackgroundProxyUrlLabel: 'Background Proxy URL',
+    apiBackgroundKeyLabel: 'Background API Key',
+    apiBackgroundModelLabel: 'Background Model',
+    apiFetchBackgroundModelsBtn: 'Fetch Background Models',
     apiTemperatureLabel: 'API Temperature',
     apiBgActivitySettings: 'Background Activity Settings',
     apiEnableBgActivityLabel: 'Enable Background Character Activity',
@@ -7017,6 +7037,8 @@ document.addEventListener('DOMContentLoaded', () => {
       enableCrossChat: true,              // 新增：全局跨聊天消息开关（群聊↔私聊），默认开启
       enableBackgroundActivity: false,
       backgroundActivityInterval: 60,
+      enableViewMyPhoneInBackground: false,  // 新增：后台查看用户手机开关，默认关闭
+      viewMyPhoneChance: null,               // 新增：后台查看用户手机概率，null=AI自主决定，0-100=按概率触发
       blockCooldownHours: 1,
       apiTemperature: 0.8,
       appIcons: {
@@ -7268,6 +7290,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof chat.settings.enableCrossChat === 'undefined') {
           chat.settings.enableCrossChat = null; // null表示使用全局设置
         }
+        
+        // 新增：初始化后台查看用户手机设置
+        if (typeof chat.settings.enableViewMyPhoneInBackground === 'undefined') {
+          chat.settings.enableViewMyPhoneInBackground = null; // null表示使用全局设置
+        }
+        if (typeof chat.settings.viewMyPhoneChance === 'undefined') {
+          chat.settings.viewMyPhoneChance = null; // null表示使用全局设置
+        }
 
         if (typeof chat.heartfeltVoice === 'undefined') chat.heartfeltVoice = '...';
         if (typeof chat.randomJottings === 'undefined') chat.randomJottings = '...';
@@ -7317,6 +7347,9 @@ document.addEventListener('DOMContentLoaded', () => {
       secondaryProxyUrl: '',
       secondaryApiKey: '',
       secondaryModel: '',
+      backgroundProxyUrl: '',
+      backgroundApiKey: '',
+      backgroundModel: '',
       minimaxGroupId: '',
       minimaxApiKey: '',
       minimaxModel: 'speech-01',
@@ -8927,6 +8960,9 @@ document.addEventListener('DOMContentLoaded', () => {
         secondaryProxyUrl: preset.secondaryProxyUrl,
         secondaryApiKey: preset.secondaryApiKey,
         secondaryModel: preset.secondaryModel,
+        backgroundProxyUrl: preset.backgroundProxyUrl,
+        backgroundApiKey: preset.backgroundApiKey,
+        backgroundModel: preset.backgroundModel,
         minimaxGroupId: preset.minimaxGroupId,
         minimaxApiKey: preset.minimaxApiKey,
         minimaxModel: preset.minimaxModel
@@ -8979,10 +9015,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 确保手写输入框被正确填充
       document.getElementById('model-input').value = preset.model || '';
       document.getElementById('secondary-model-input').value = preset.secondaryModel || '';
+      document.getElementById('background-model-input').value = preset.backgroundModel || '';
 
       document.getElementById('fetch-models-btn').click();
       if (preset.secondaryProxyUrl && preset.secondaryApiKey) {
         document.getElementById('fetch-secondary-models-btn').click();
+      }
+      if (preset.backgroundProxyUrl && preset.backgroundApiKey) {
+        document.getElementById('fetch-background-models-btn').click();
       }
       //alert(`已加载预设 “${preset.name}”`);
     }
@@ -9004,6 +9044,9 @@ document.addEventListener('DOMContentLoaded', () => {
       secondaryApiKey: document.getElementById('secondary-api-key').value.trim(),
       // 优先保存手写输入框的值
       secondaryModel: document.getElementById('secondary-model-input').value.trim() || document.getElementById('secondary-model-select').value,
+      backgroundProxyUrl: document.getElementById('background-proxy-url').value.trim(),
+      backgroundApiKey: document.getElementById('background-api-key').value.trim(),
+      backgroundModel: document.getElementById('background-model-input').value.trim() || document.getElementById('background-model-select').value,
 
       minimaxGroupId: document.getElementById('minimax-group-id').value.trim(),
       minimaxApiKey: document.getElementById('minimax-api-key').value.trim(),
@@ -9055,9 +9098,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('api-key').value = state.apiConfig.apiKey || '';
     document.getElementById('secondary-proxy-url').value = state.apiConfig.secondaryProxyUrl || '';
     document.getElementById('secondary-api-key').value = state.apiConfig.secondaryApiKey || '';
+    document.getElementById('background-proxy-url').value = state.apiConfig.backgroundProxyUrl || '';
+    document.getElementById('background-api-key').value = state.apiConfig.backgroundApiKey || '';
     document.getElementById('background-activity-switch').checked = state.globalSettings.enableBackgroundActivity || false;
     document.getElementById('background-interval-input').value = state.globalSettings.backgroundActivityInterval || 60;
     document.getElementById('block-cooldown-input').value = state.globalSettings.blockCooldownHours || 1;
+    
+    // 新增：加载后台查看用户手机设置
+    document.getElementById('global-enable-view-myphone-bg-switch').checked = state.globalSettings.enableViewMyPhoneInBackground || false;
+    document.getElementById('global-view-myphone-chance-input').value = state.globalSettings.viewMyPhoneChance !== null && state.globalSettings.viewMyPhoneChance !== undefined ? state.globalSettings.viewMyPhoneChance : '';
     document.getElementById('enable-ai-drawing-switch').checked = state.globalSettings.enableAiDrawing;
 
     // 新增：读取心声和动态功能开关
@@ -9254,11 +9303,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 填充手写输入框（模型）
     const modelInput = document.getElementById('model-input');
     const secondaryModelInput = document.getElementById('secondary-model-input');
+    const backgroundModelInput = document.getElementById('background-model-input');
     if (modelInput) {
       modelInput.value = state.apiConfig.model || '';
     }
     if (secondaryModelInput) {
       secondaryModelInput.value = state.apiConfig.secondaryModel || '';
+    }
+    if (backgroundModelInput) {
+      backgroundModelInput.value = state.apiConfig.backgroundModel || '';
     }
 
     loadApiPresetsDropdown(forcePresetId);
@@ -10473,6 +10526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('minimal-chat-ui-switch').checked = state.globalSettings.enableMinimalChatUI || false;
     document.getElementById('dynamic-island-music-toggle-switch').checked = state.globalSettings.alwaysShowMusicIsland || false;
     document.getElementById('detach-status-bar-switch').checked = state.globalSettings.detachStatusBar || false;
+    document.getElementById('true-fullscreen-switch').checked = state.globalSettings.trueFullscreen || false;
     document.getElementById('lock-screen-toggle').checked = state.globalSettings.lockScreenEnabled || false; // 锁屏回显
     document.getElementById('lock-screen-password-input').value = state.globalSettings.lockScreenPassword || ''; // 密码回显
 
@@ -11705,6 +11759,8 @@ https://xx.com/4.jpg 疑惑`;
                 timeZone: 'Asia/Shanghai',
                 myPhoneLockScreenEnabled: false,
                 myPhoneLockScreenPassword: '',
+                enableViewMyPhoneInBackground: null,  // null=跟随全局，true=强制开启，false=强制关闭
+                viewMyPhoneChance: null,              // null=使用全局设置，或者独立设置概率
                 userStatus: {
                   text: '在线',
                   lastUpdate: Date.now(),
@@ -12673,10 +12729,18 @@ https://xx.com/4.jpg 疑惑`;
       } else if (msg.type === 'voice_message') {
         bubble.classList.add('is-voice-message', 'is-card-like');
 
-        // 【双语模式语音过滤】如果启用了双语模式且是AI消息，过滤掉〖〗中的翻译内容
+        // 【双语模式语音处理】如果启用了双语模式且是AI消息
         let voiceContent = msg.content;
+        let voicePlayContent = voiceContent;  // 用于播放的内容
+        
         if (!isUser && chat.settings.enableBilingualMode) {
-          voiceContent = voiceContent.replace(/〖[^〗]*〗/g, '');
+          // 预处理：清理和规范化
+          voiceContent = voiceContent
+            .replace(/[\u200B-\u200D\uFEFF]/g, '')  // 清理零宽字符
+            .replace(/【/g, '〖').replace(/】/g, '〗');  // 统一符号
+          
+          // 播放时只用外语部分（过滤掉〖〗中的翻译内容）
+          voicePlayContent = voiceContent.replace(/[〖【][^〗】]*[〗】]/g, '');
         }
 
         // 优先使用真实音频时长，否则根据文字内容估算
@@ -12684,7 +12748,7 @@ https://xx.com/4.jpg 疑惑`;
         if (msg.audioDuration) {
           duration = msg.audioDuration;
         } else {
-          duration = Math.max(1, Math.round((voiceContent || '').length / 5));
+          duration = Math.max(1, Math.round((voicePlayContent || '').length / 5));
         }
         const durationFormatted = `0:${String(duration).padStart(2, '0')}''`;
         const waveformHTML = '<div></div><div></div><div></div><div></div><div></div>';
@@ -12706,9 +12770,16 @@ https://xx.com/4.jpg 疑惑`;
           const canPlayTTS = !chat.isGroup && chat.settings.enableTts !== false;
           const voiceId = chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
           const voiceIdAttribute = canPlayTTS ? `data-voice-id="${voiceId}"` : '';
+          
+          // 【双语模式】保存原始内容和播放内容
+          const originalContentAttr = chat.settings.enableBilingualMode ? 
+            `data-original-content="${encodeURIComponent(voiceContent)}" data-showing-translation="false"` : '';
 
           contentHtml = `
-            <div class="voice-message-body" data-text="${encodeURIComponent(voiceContent)}" ${voiceIdAttribute}>
+            <div class="voice-message-body" 
+                 data-text="${encodeURIComponent(voicePlayContent)}" 
+                 ${voiceIdAttribute}
+                 ${originalContentAttr}>
                 <div class="voice-waveform">${waveformHTML}</div>
                 <div class="loading-spinner"></div>
                 <span class="voice-duration">${durationFormatted}</span>
@@ -12995,11 +13066,17 @@ https://xx.com/4.jpg 疑惑`;
           
           // 【双语模式处理】如果启用了双语模式且是AI消息
           if (!isUser && chat.settings.enableBilingualMode && msg.type !== 'voice_message') {
+            // 预处理：清理和规范化
+            let cleanedContent = plainText
+              .replace(/[\u200B-\u200D\uFEFF]/g, '')  // 清理零宽字符
+              .replace(/【/g, '〖').replace(/】/g, '〗');  // 统一符号
+            
             // 保存原始内容（包含〖〗）
-            bubble.dataset.originalContent = plainText;
+            bubble.dataset.originalContent = cleanedContent;
             bubble.dataset.showingTranslation = 'false';
+            
             // 默认隐藏〖〗部分，只显示外语
-            plainText = plainText.replace(/〖[^〗]*〗/g, '');
+            plainText = cleanedContent.replace(/[〖【][^〗】]*[〗】]/g, '');
           }
           
           contentHtml = parseMarkdown(plainText).replace(/\n/g, '<br>');
@@ -14545,15 +14622,20 @@ ${linkedContents}
 - 数组中的每个对象都【必须】包含 "type" 和 "name" 字段。'name'字段【必须】使用角色的【本名】。
 ${chat.settings.enableBilingualMode ? `
 
-# 双语输出规则 (最高优先级)
-- 所有角色的文本消息【必须】同时包含外语和中文翻译。
-- 格式：外语〖中文〗
-- 示例：Hello!〖你好！〗How are you today?〖你今天怎么样？〗
-- 重要：括号必须是 〖 和 〗 这两个符号（不是普通的【】）
-- 每句外语后面紧跟〖中文〗，不要有空格
-- 中文翻译要自然流畅，符合中文表达习惯
+# 【双语输出铁律 - 最高优先级】
+所有角色的文本和语音消息都【必须】使用格式：外语〖中文〗
+
+示例：
+- Hello〖你好〗
+- How are you?〖你好吗？〗
+- I miss you〖我想你了〗
+
+重要规则：
+- 括号必须是 〖 和 〗（不是【】或其他符号）
+- 外语和〖之间紧贴，不要有空格
+- 每句话都要有对应的翻译
 - 不要在〖〗中使用〗符号
-- 每个外语句子都要有对应的〖中文〗
+- 【绝对禁止】只发外语或只发中文！
 ` : ''}
 
 
@@ -14676,7 +14758,7 @@ ${localStorage.getItem('google-imagen-enabled') === 'true' ? `-   **Google Image
           * 专注于描述内容本身即可，使用英文撰写prompt。
         - 使用场景：当你想要分享一张写实风格的高质量图片时使用。
         - 不要频繁使用，只在真正想分享图片的时候使用。` : ''}
--   **发语音**: \`{"type": "voice_message", "name": "角色本名", "content": "语音文字"}\`
+-   **发语音**: \`{"type": "voice_message", "name": "角色本名", "content": "语音文字"}\`${chat.settings.enableBilingualMode ? ' ⚠️ 必须使用双语格式：外语〖中文〗' : ''}
 -   **引用回复 (重要！)**:
     -   **回复【用户】或【历史消息】**: \`{"type": "quote_reply", "name": "你的角色本名", "target_timestamp": 消息时间戳, "reply_content": "回复内容"}\`
     -   **回复【本轮AI】发言**: \`{"type": "quote_reply", "name": "你的角色本名", "target_content": "你要回复的那句【完整】的话", "reply_content": "你的回复"}\`
@@ -14718,6 +14800,21 @@ ${localStorage.getItem('google-imagen-enabled') === 'true' ? `-   **Google Image
         systemPrompt = processPromptWithSettings(systemPrompt, 'group');
 
         messagesPayload = filteredHistory.map(msg => {
+          // 处理系统消息（旁白和系统通知）
+          if (msg.role === 'system' && !msg.isHidden) {
+            if (msg.type === 'narration') {
+              return {
+                role: 'user',
+                content: `(Timestamp: ${msg.timestamp}) [旁白] ${msg.content}`
+              };
+            } else if (msg.type === 'pat_message') {
+              return {
+                role: 'user',
+                content: `(Timestamp: ${msg.timestamp}) [系统] ${msg.content}`
+              };
+            }
+          }
+
           const sender = msg.role === 'user' ? myNickname : msg.senderName;
           let prefix = `(Timestamp: ${msg.timestamp}) ${sender}`;
 
@@ -15652,15 +15749,21 @@ ${kinshipContext}
 - 数组的第一项【必须】是思维链 \`thought_chain\`。
 - 数组的后续项是你的一系列行动。
 ${chat.settings.enableBilingualMode ? `
-## 1.5. 双语输出规则 (最高优先级)
-- 你的每条文本消息【必须】同时包含外语和中文翻译。
-- 格式：外语〖中文〗
-- 示例：Hello!〖你好！〗How are you today?〖你今天怎么样？〗
-- 重要：括号必须是 〖 和 〗 这两个符号（不是普通的【】）
-- 每句外语后面紧跟〖中文〗，不要有空格
-- 中文翻译要自然流畅，符合中文表达习惯
+
+# 【双语输出铁律 - 最高优先级】
+你的每条文本和语音消息都【必须】使用格式：外语〖中文〗
+
+示例：
+- Hello〖你好〗
+- How are you?〖你好吗？〗
+- I miss you〖我想你了〗
+
+重要规则：
+- 括号必须是 〖 和 〗（不是【】或其他符号）
+- 外语和〖之间紧贴，不要有空格
+- 每句话都要有对应的翻译
 - 不要在〖〗中使用〗符号
-- 每个外语句子都要有对应的〖中文〗
+- 【绝对禁止】只发外语或只发中文！
 ` : ''}
 
 ## 2. 思维链 (Chain of Thought) - 你的大脑
@@ -15672,8 +15775,8 @@ ${thoughtsPrompt}
 ## 4. 可选指令列表 (Capability List)
 
 ### A. 基础沟通
-- **发文本**: \`{"type": "text", "content": "..."}\` (像真人一样，如果话很长，请拆分成多条简短的text发送)
-- **发语音**: \`{"type": "voice_message", "content": "语音文字内容"}\` (根据人设来使用发语音的频率)
+- **发文本**: \`{"type": "text", "content": "..."}\` (像真人一样，如果话很长，请拆分成多条简短的text发送)${chat.settings.enableBilingualMode ? ' ⚠️ 必须使用双语格式：外语〖中文〗' : ''}
+- **发语音**: \`{"type": "voice_message", "content": "语音文字内容"}\` (根据人设来使用发语音的频率)${chat.settings.enableBilingualMode ? ' ⚠️ 必须使用双语格式：外语〖中文〗（播放时只读外语，但用户可以查看翻译）' : ''}
 -   **引用回复 (方式一)**: \`{"type": "quote_reply", "target_timestamp": 消息时间戳, "reply_content": "回复内容"}\`
 -   **引用回复 (方式二)**: \`{"type": "quote_reply", "target_content": "引用的原句", "reply_content": "回复内容"}\` (当你不确定时间戳或找不到时间戳时，**必须**使用此方式)(回复某句话时应该积极使用引用)
 - **撤回**: \`{"type": "send_and_recall", "content": "..."}\` (手滑、害羞或说错话)
@@ -15762,6 +15865,21 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
 `;
 
           messagesPayload = filteredHistory.map(msg => {
+            // 处理系统消息（旁白和系统通知）
+            if (msg.role === 'system' && !msg.isHidden) {
+              if (msg.type === 'narration') {
+                return {
+                  role: 'user',
+                  content: `(Timestamp: ${msg.timestamp}) [旁白] ${msg.content}`
+                };
+              } else if (msg.type === 'pat_message') {
+                return {
+                  role: 'user',
+                  content: `(Timestamp: ${msg.timestamp}) [系统] ${msg.content}`
+                };
+              }
+            }
+
             if (msg.isHidden && typeof msg.content === 'string' && msg.content.includes('[这是你上一轮的内部思考]')) {
               return null;
             }
@@ -16492,8 +16610,13 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
             const recipientOriginalName = msgData.recipient;
 
             const userOriginalName = state.qzoneSettings.nickname || '{{user}}';
+            const userNickname = chat.settings.myNickname || '我';
 
-            if (recipientOriginalName === userOriginalName) {
+            // 兼容多种写法：接受本名、昵称、"我"、"{{user}}"
+            if (recipientOriginalName === userOriginalName || 
+                recipientOriginalName === userNickname ||
+                recipientOriginalName === '我' ||
+                recipientOriginalName === '{{user}}') {
 
               const privateChat = Object.values(state.chats).find(c =>
                 !c.isGroup && c.originalName === senderOriginalName
@@ -17423,7 +17546,7 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
               videoCallState.isAwaitingResponse = true;
               videoCallState.isGroupCall = chat.isGroup;
               videoCallState.callRequester = msgData.name || chat.name;
-              showIncomingCallModal();
+              showIncomingCallModal('video', chat);
             }
             continue;
           case 'voice_call_request':
@@ -17433,7 +17556,7 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
               voiceCallState.isAwaitingResponse = true;
               voiceCallState.isGroupCall = chat.isGroup;
               voiceCallState.callRequester = msgData.name || chat.name;
-              showIncomingCallModal();
+              showIncomingCallModal('voice', chat);
             }
             continue;
           case 'group_call_request':
@@ -17443,7 +17566,7 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
               videoCallState.isGroupCall = true;
               videoCallState.initiator = 'ai';
               videoCallState.callRequester = msgData.name;
-              showIncomingCallModal();
+              showIncomingCallModal('video', chat);
             }
             continue;
           case 'group_voice_request':
@@ -17453,7 +17576,7 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
               voiceCallState.isGroupCall = true;
               voiceCallState.initiator = 'ai';
               voiceCallState.callRequester = msgData.name;
-              showIncomingCallModal();
+              showIncomingCallModal('voice', chat);
             }
             continue;
           case 'pat_user':
@@ -20531,11 +20654,20 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
   }
 
   async function generateNpcActions(npc, tasks) {
+    // 优先使用后台API，如果未配置则使用主API
+    const useBackgroundApi = state.apiConfig.backgroundProxyUrl && state.apiConfig.backgroundApiKey && state.apiConfig.backgroundModel;
     const {
       proxyUrl,
       apiKey,
       model
-    } = state.apiConfig;
+    } = useBackgroundApi
+      ? {
+          proxyUrl: state.apiConfig.backgroundProxyUrl,
+          apiKey: state.apiConfig.backgroundApiKey,
+          model: state.apiConfig.backgroundModel
+        }
+      : state.apiConfig;
+    
     if (!proxyUrl || !apiKey || !model) {
       console.error("NPC行动失败：API未配置。");
       return null;
@@ -20698,13 +20830,64 @@ ${tasksString}
         return;
       }
     }
+    
+    // ===== 新增：后台查看用户手机逻辑 =====
+    // 1. 判断是否启用后台查看手机功能
+    const enableViewMyPhoneInBg = chat.settings.enableViewMyPhoneInBackground !== null
+      ? chat.settings.enableViewMyPhoneInBackground
+      : state.globalSettings.enableViewMyPhoneInBackground;
+    
+    // 2. 获取查看概率
+    let viewMyPhoneChance = null;
+    if (chat.settings.viewMyPhoneChance !== null && chat.settings.viewMyPhoneChance !== undefined) {
+      viewMyPhoneChance = chat.settings.viewMyPhoneChance;
+    } else {
+      viewMyPhoneChance = state.globalSettings.viewMyPhoneChance;
+    }
+    
+    // 3. 判断是否触发查看
+    let shouldForceViewPhone = false;
+    let viewMyPhonePromptHint = '';
+    
+    if (enableViewMyPhoneInBg) {
+      if (viewMyPhoneChance !== null && viewMyPhoneChance !== undefined) {
+        // 有设置概率，进行随机判断
+        const randomValue = Math.random() * 100;
+        shouldForceViewPhone = randomValue < viewMyPhoneChance;
+        
+        if (shouldForceViewPhone) {
+          const userNickname = chat.settings.myNickname || (state.qzoneSettings.nickname === '{{user}}' ? '用户' : state.qzoneSettings.nickname) || '用户';
+          viewMyPhonePromptHint = `
+# 当前情境提示
+你现在有些好奇${userNickname}最近在做什么，想了解一下TA的近况。
+你可以通过查看TA的手机APP来了解TA的生活动态（比如聊天记录、相册、购物记录等）。
+你可以选择查看你感兴趣的APP（可以是一个、几个，或者全部），然后根据看到的内容决定是否要主动联系TA。
+
+提示：使用 {"type": "view_myphone", "apps": ["qq", "album", ...]} 来查看手机。
+`;
+          console.log(`角色 "${chat.name}" 触发了后台查看用户手机 (概率: ${viewMyPhoneChance}%)`);
+        }
+      }
+      // 如果概率为null，则不强制，让AI自主决定（原有行为）
+    }
+    // ===== 后台查看用户手机逻辑结束 =====
+    
     setAvatarActingState(chatId, true);
 
+    // 优先使用后台API，如果未配置则使用主API
+    const useBackgroundApi = state.apiConfig.backgroundProxyUrl && state.apiConfig.backgroundApiKey && state.apiConfig.backgroundModel;
     const {
       proxyUrl,
       apiKey,
       model
-    } = state.apiConfig;
+    } = useBackgroundApi
+      ? {
+          proxyUrl: state.apiConfig.backgroundProxyUrl,
+          apiKey: state.apiConfig.backgroundApiKey,
+          model: state.apiConfig.backgroundModel
+        }
+      : state.apiConfig;
+    
     if (!proxyUrl || !apiKey || !model) return;
 
     const userNickname = chat.settings.myNickname || (state.qzoneSettings.nickname === '{{user}}' ? '用户' : state.qzoneSettings.nickname) || '用户';
@@ -21142,7 +21325,7 @@ ${chat.settings.enableStructuredMemory && window.structuredMemoryManager
         # 你的任务
         你正在扮演角色"${chat.originalName}"（你的本名）。你已经有一段时间没有和用户（${userNickname}）互动了，现在你有机会【主动】做点什么，来表现你的个性和独立生活。这是一个秘密的、后台的独立行动。
 
-
+${viewMyPhonePromptHint}
      
         # 【最高优先级指令：情感维系】
         **你与用户的关系是最重要的！** 相比于在动态区闲逛，你应该【优先考虑】是否需要主动给用户发消息来维系你们的感情。
@@ -21185,7 +21368,8 @@ ${longTimeNoSee ? `【重要提示】你们已经很久没聊天了！你【必�
         # 你的可选行动指令
         -   **发消息+更新状态**: '[{"type": "update_status", "status_text": "正在做的事", "is_busy": true}, {"type": "text", "content": "你想对用户说的话..."}]'
         ${qzoneActionsPromptForBg}
-        -   **打视频**: '[{"type": "video_call_request"}]'
+        -   **打视频**: '[{"type": "initiate_video_call"}]'
+        -   **打语音**: '[{"type": "initiate_voice_call"}]'
         -   **更换头像**: '{"type": "change_avatar", "name": "头像名"}' (头像名必须从下面的“可用头像列表”中选择)
         -   **删除动态**: '{"type": "qzone_delete_post", "postId": (要删除的、你自己的动态ID)}'
         -   **更新状态**: '[{"type": "update_status", "status_text": "正在做的事", "is_busy": true}]'
@@ -21488,13 +21672,22 @@ ${longTimeNoSee ? `【重要提示】你们已经很久没聊天了！你【必�
             }
             continue;
           }
-          case 'video_call_request':
+          case 'initiate_video_call':
             if (!videoCallState.isActive && !videoCallState.isAwaitingResponse) {
               videoCallState.isAwaitingResponse = true;
               videoCallState.activeChatId = chatId;
               videoCallState.isGroupCall = false;
               videoCallState.callRequester = chat.name;
-              showIncomingCallModal();
+              showIncomingCallModal('video', chat);
+            }
+            break;
+          case 'initiate_voice_call':
+            if (!voiceCallState.isActive && !voiceCallState.isAwaitingResponse) {
+              voiceCallState.isAwaitingResponse = true;
+              voiceCallState.activeChatId = chatId;
+              voiceCallState.isGroupCall = false;
+              voiceCallState.callRequester = chat.name;
+              showIncomingCallModal('voice', chat);
             }
             break;
           case 'view_myphone': {
@@ -21699,11 +21892,20 @@ ${longTimeNoSee ? `【重要提示】你们已经很久没聊天了！你【必�
     }
 
 
+    // 优先使用后台API，如果未配置则使用主API
+    const useBackgroundApi = state.apiConfig.backgroundProxyUrl && state.apiConfig.backgroundApiKey && state.apiConfig.backgroundModel;
     const {
       proxyUrl,
       apiKey,
       model
-    } = state.apiConfig;
+    } = useBackgroundApi
+      ? {
+          proxyUrl: state.apiConfig.backgroundProxyUrl,
+          apiKey: state.apiConfig.backgroundApiKey,
+          model: state.apiConfig.backgroundModel
+        }
+      : state.apiConfig;
+    
     if (!proxyUrl || !apiKey || !model) return;
 
     const myNickname = chat.settings.myNickname || '我';
@@ -24931,25 +25133,33 @@ ${longTermMemoryContext}
   }
 
 
-  function showIncomingCallModal() {
-    const chat = state.chats[state.activeChatId];
+  function showIncomingCallModal(callType = 'video', chat = null) {
+    // 如果没有传入 chat，则从 state 中获取
+    if (!chat) {
+      const activeChatId = callType === 'video' ? videoCallState.activeChatId : voiceCallState.activeChatId;
+      chat = state.chats[activeChatId];
+    }
     if (!chat) return;
 
+    const callTypeText = callType === 'video' ? '视频通话' : '语音通话';
+    const callTypeTextShort = callType === 'video' ? '视频' : '语音';
 
     if (chat.isGroup) {
-
-      const requesterName = videoCallState.callRequester || chat.members[0]?.name || '一位成员';
+      const currentCallState = callType === 'video' ? videoCallState : voiceCallState;
+      const requesterName = currentCallState.callRequester || chat.members[0]?.name || '一位成员';
       document.getElementById('caller-avatar').src = chat.settings.groupAvatar || defaultGroupAvatar;
       document.getElementById('caller-name').textContent = chat.name;
-      document.querySelector('.incoming-call-content .caller-text').textContent = `${requesterName} 邀请你加入群视频`;
+      document.querySelector('.incoming-call-content .caller-text').textContent = `${requesterName} 邀请你加入群${callTypeTextShort}`;
     } else {
-
       document.getElementById('caller-avatar').src = chat.settings.aiAvatar || defaultAvatar;
       document.getElementById('caller-name').textContent = chat.name;
-      document.querySelector('.incoming-call-content .caller-text').textContent = '邀请你视频通话';
+      document.querySelector('.incoming-call-content .caller-text').textContent = `邀请你${callTypeText}`;
     }
 
-    document.getElementById('incoming-call-modal').classList.add('visible');
+    // 保存通话类型到 modal 的 dataset 中，以便接听/拒绝时使用
+    const modal = document.getElementById('incoming-call-modal');
+    modal.dataset.callType = callType;
+    modal.classList.add('visible');
   }
 
 
@@ -25065,14 +25275,20 @@ ${linkedContents}
         你现在是一个场景描述引擎。你的任务是扮演 ${chat.name} (${chat.settings.aiPersona})，并以【第三人称旁观视角】来描述TA在视频通话中的所有动作和语言。
         # 核心规则
         1.  **【【【视角铁律】】】**: 你的回复【绝对不能】使用第一人称“我”。必须使用第三人称，如“他”、“她”、或直接使用角色名“${chat.name}”。
-        2.  **格式**: 你的回复【必须】是一段描述性的文本。
+        2.  **【格式要求】**: 你的回复【必须】是一个JSON数组，包含旁白和对话。格式如下：
+           - 旁白（动作、表情描述）：\`{"type": "narration", "content": "他笑了笑，挠了挠头"}\`
+           - 对话（角色说的话）：\`{"type": "dialogue", "content": "你好啊！"}\`
+        3.  **【多句发言】**: 你可以一次说多句话，每句话作为独立的dialogue对象。例如：
+           \`[{"type": "narration", "content": "他笑了笑"}, {"type": "dialogue", "content": "你好啊！"}, {"type": "dialogue", "content": "最近怎么样？"}]\`
+        4.  **【旁白规则】**: 旁白只描述动作、表情、神态等视觉信息，所有旁白会合并显示为一段灰色文字。
+        5.  **【对话规则】**: 对话是角色实际说出的话，每句对话会独立显示，可以连续说多句话。
         # 当前情景
         你正在和用户（${userNickname}，人设: ${chat.settings.myPersona}）进行视频通话。
         ${longTermMemoryContext}
         **${openingContext}**
         **通话前的聊天摘要 (这是你们通话的原因，至关重要！)**:
         ${videoCallState.preCallContext}
-        现在，请根据【通话前摘要】和下面的【通话实时记录】，继续进行对话。
+        现在，请根据【通话前摘要】和下面的【通话实时记录】，继续进行对话。记住：必须返回JSON数组格式，区分旁白和对话。
         `;
     }
 
@@ -25144,35 +25360,70 @@ ${linkedContents}
           }
         });
       } else {
-        const aiTimestamp = Date.now();
-        const aiBubble = document.createElement('div');
-        aiBubble.className = 'call-message-bubble ai-speech';
-        aiBubble.textContent = aiResponse;
-        aiBubble.dataset.timestamp = aiTimestamp;
-        addLongPressListener(aiBubble, () => showCallMessageActions(aiTimestamp));
-        callFeed.appendChild(aiBubble);
-        videoCallState.callHistory.push({
-          role: 'assistant',
-          content: aiResponse,
-          timestamp: aiTimestamp
-        });
+        // 单人视频通话：支持旁白和多句对话
         const enableTts = chat.settings.enableTts !== false;
         const voiceId = chat.settings.minimaxVoiceId;
 
-        if (enableTts && voiceId) {
-          playVideoCallPureTTS(aiResponse, voiceId);
+        // 尝试解析为JSON数组
+        const messagesArray = parseAiResponse(aiResponse);
+
+        // 分离旁白和对话
+        const narrations = messagesArray.filter(m => m.type === 'narration');
+        const dialogues = messagesArray.filter(m => m.type === 'dialogue');
+
+        // 显示旁白（如果有）
+        if (narrations.length > 0) {
+          const narrationTimestamp = Date.now();
+          const narrationBubble = document.createElement('div');
+          narrationBubble.className = 'call-message-bubble ai-narration';
+          narrationBubble.style.color = '#999'; // 浅灰色
+          narrationBubble.style.fontStyle = 'italic';
+          const narrationText = narrations.map(n => n.content).join(' ');
+          narrationBubble.textContent = narrationText;
+          narrationBubble.dataset.timestamp = narrationTimestamp;
+          addLongPressListener(narrationBubble, () => showCallMessageActions(narrationTimestamp));
+          callFeed.appendChild(narrationBubble);
+
+          // 旁白也记录到历史中
+          videoCallState.callHistory.push({
+            role: 'assistant',
+            content: `[旁白] ${narrationText}`,
+            timestamp: narrationTimestamp
+          });
         }
-        // ===============================================
+
+        // 显示每句对话
+        dialogues.forEach((msg, index) => {
+          const messageContent = msg.content;
+          const aiTimestamp = Date.now() + index + 1;
+
+          const aiBubble = document.createElement('div');
+          aiBubble.className = 'call-message-bubble ai-speech';
+          aiBubble.textContent = messageContent;
+          aiBubble.dataset.timestamp = aiTimestamp;
+          addLongPressListener(aiBubble, () => showCallMessageActions(aiTimestamp));
+          callFeed.appendChild(aiBubble);
+
+          videoCallState.callHistory.push({
+            role: 'assistant',
+            content: messageContent,
+            timestamp: aiTimestamp
+          });
+
+          // 为每句对话播放TTS
+          if (enableTts && voiceId) {
+            playVideoCallPureTTS(messageContent, voiceId);
+          }
+        });
 
         // ================= 头像动画修复 =================
-        // 原因：querySelector 默认只选第一个元素（通常是用户自己），导致AI说话时用户头像在动，或者样式错位。
-        // 修复：增加 [data-participant-id="ai"] 精确查找对方的头像。
         const speakingAvatar = document.querySelector(`.participant-avatar-wrapper[data-participant-id="ai"] .participant-avatar`);
 
         if (speakingAvatar) {
           speakingAvatar.classList.add('speaking');
-          // 动态计算说话时长：每字200ms，最长5秒
-          const speakTime = Math.min(aiResponse.length * 200, 5000);
+          // 动态计算说话时长：基于所有对话的总长度
+          const totalLength = dialogues.reduce((sum, msg) => sum + (msg.content || '').length, 0);
+          const speakTime = Math.min(totalLength * 200, 5000);
           setTimeout(() => speakingAvatar.classList.remove('speaking'), speakTime);
         }
       }
@@ -25827,14 +26078,19 @@ ${worldBookContent}
     if (!activeCallMessageTimestamp) return;
 
     const timestampToEdit = activeCallMessageTimestamp;
-    const message = videoCallState.callHistory.find(m => m.timestamp === timestampToEdit);
+    
+    // 判断当前是视频通话还是语音通话
+    const isVideoCall = videoCallState.isActive || document.getElementById('video-call-screen').classList.contains('active');
+    const currentCallState = isVideoCall ? videoCallState : voiceCallState;
+    
+    const message = currentCallState.callHistory.find(m => m.timestamp === timestampToEdit);
     if (!message) return;
 
     hideCallMessageActions();
 
     let contentForEditing = message.content;
 
-    if (videoCallState.isGroupCall && message.role === 'assistant') {
+    if (currentCallState.isGroupCall && message.role === 'assistant') {
       const parts = message.content.split(': ');
       if (parts.length > 1) {
         contentForEditing = parts.slice(1).join(': ');
@@ -25849,27 +26105,28 @@ ${worldBookContent}
     );
 
     if (newContent !== null) {
-      await saveEditedCallMessage(timestampToEdit, newContent);
+      await saveEditedCallMessage(timestampToEdit, newContent, isVideoCall);
     }
   }
 
 
-  async function saveEditedCallMessage(timestamp, newContent) {
-    const message = videoCallState.callHistory.find(m => m.timestamp === timestamp);
+  async function saveEditedCallMessage(timestamp, newContent, isVideoCall = true) {
+    const currentCallState = isVideoCall ? videoCallState : voiceCallState;
+    const message = currentCallState.callHistory.find(m => m.timestamp === timestamp);
+    
     if (message) {
       let finalContent = newContent;
 
-      if (videoCallState.isGroupCall && message.role === 'assistant') {
+      if (currentCallState.isGroupCall && message.role === 'assistant') {
         const parts = message.content.split(': ');
         const senderName = parts[0];
         finalContent = `${senderName}: ${newContent}`;
       }
       message.content = finalContent;
 
-
       const messageBubble = document.querySelector(`.call-message-bubble[data-timestamp="${timestamp}"]`);
       if (messageBubble) {
-        if (videoCallState.isGroupCall && message.role === 'assistant') {
+        if (currentCallState.isGroupCall && message.role === 'assistant') {
           const parts = message.content.split(': ');
           const senderName = parts[0];
           messageBubble.innerHTML = `<strong>${senderName}:</strong> ${newContent}`;
@@ -25892,12 +26149,14 @@ ${worldBookContent}
       const timestampToDelete = activeCallMessageTimestamp;
       hideCallMessageActions();
 
+      // 判断当前是视频通话还是语音通话
+      const isVideoCall = videoCallState.isActive || document.getElementById('video-call-screen').classList.contains('active');
+      const currentCallState = isVideoCall ? videoCallState : voiceCallState;
 
-      const messageIndex = videoCallState.callHistory.findIndex(m => m.timestamp === timestampToDelete);
+      const messageIndex = currentCallState.callHistory.findIndex(m => m.timestamp === timestampToDelete);
       if (messageIndex > -1) {
-        videoCallState.callHistory.splice(messageIndex, 1);
+        currentCallState.callHistory.splice(messageIndex, 1);
       }
-
 
       const messageBubble = document.querySelector(`.call-message-bubble[data-timestamp="${timestampToDelete}"]`);
       if (messageBubble) {
@@ -27856,6 +28115,31 @@ ${worldBookContent}
 
   function applyMinimalChatUI(isEnabled) {
     document.body.classList.toggle('minimal-chat-ui-active', isEnabled);
+  }
+
+  function applyTrueFullscreen(isEnabled) {
+    document.body.classList.toggle('true-fullscreen-active', isEnabled);
+    // 更新meta标签
+    const metaViewport = document.querySelector('meta[name="viewport"]');
+    const metaStatusBar = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    
+    if (isEnabled) {
+      // 启用真全屏：内容延伸到状态栏下方
+      if (metaViewport) {
+        metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+      }
+      if (metaStatusBar) {
+        metaStatusBar.setAttribute('content', 'black-translucent');
+      }
+    } else {
+      // 关闭真全屏：恢复默认
+      if (metaViewport) {
+        metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, viewport-fit=cover');
+      }
+      if (metaStatusBar) {
+        metaStatusBar.setAttribute('content', 'black-translucent');
+      }
+    }
   }
 
 
@@ -47382,6 +47666,16 @@ ${charactersContext}
       description: '将重置选定角色的在线状态为默认值"在线"。(不适用于群聊)'
     },
     {
+      id: 'countdown_memories',
+      name: '倒计时/约定',
+      description: '将清空与该角色的所有倒计时和约定。(不适用于群聊)'
+    },
+    {
+      id: 'ai_memories',
+      name: 'AI回忆',
+      description: '将清空该角色创建的所有AI回忆记录。(不适用于群聊)'
+    },
+    {
       id: 'favorites',
       name: '收藏',
       description: '将清空收藏夹中所有与该角色相关的内容（如聊天、动态、日记等）。(不适用于群聊)'
@@ -47640,6 +47934,32 @@ ${charactersContext}
                 }
                 chat.status = { text: '在线', isBusy: false, lastUpdate: Date.now() };
                 await db.chats.put(chat);
+              }
+            }
+
+            if (type === 'countdown_memories' && charId !== 'user') {
+              const chat = await db.chats.get(charId);
+              if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的倒计时清理（群聊不适用）`);
+                  continue;
+                }
+                // 删除该角色的所有倒计时/约定
+                await db.memories.where('chatId').equals(charId).and(m => m.type === 'countdown').delete();
+                console.log(`已清空角色 ${chat.name} 的所有倒计时/约定`);
+              }
+            }
+
+            if (type === 'ai_memories' && charId !== 'user') {
+              const chat = await db.chats.get(charId);
+              if (chat) {
+                if (chat.isGroup) {
+                  console.log(`跳过群聊 ${chat.name} 的AI回忆清理（群聊不适用）`);
+                  continue;
+                }
+                // 删除该角色的所有AI生成的回忆
+                await db.memories.where('chatId').equals(charId).and(m => m.type === 'ai_generated').delete();
+                console.log(`已清空角色 ${chat.name} 的所有AI回忆`);
               }
             }
 
@@ -52053,6 +52373,20 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
       if (!isDragging) return;
       isDragging = false;
 
+      // 保存观影对话框的位置
+      if (windowEl.id === 'watch-together-chat-float' && watchTogetherState.isActive && watchTogetherState.chatId) {
+        const chat = state.chats[watchTogetherState.chatId];
+        if (chat) {
+          if (!chat.watchTogetherSettings) {
+            chat.watchTogetherSettings = {};
+          }
+          chat.watchTogetherSettings.position = {
+            top: windowEl.style.top,
+            left: windowEl.style.left
+          };
+          saveChatsToIndexedDB();
+        }
+      }
 
       if (!hasMoved) {
 
@@ -52618,8 +52952,41 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
 
       transcriptEl.style.display = 'none';
     } else {
-
-      transcriptEl.textContent = text;
+      // 【双语模式】检查是否有原始双语内容
+      const originalContent = bodyElement.dataset.originalContent;
+      
+      if (originalContent) {
+        // 有双语内容：显示外语 + 中文翻译
+        const decodedOriginal = decodeURIComponent(originalContent);
+        
+        // 提取外语部分（去掉〖〗中的内容）
+        const foreignText = decodedOriginal.replace(/[〖【][^〗】]*[〗】]/g, '').trim();
+        
+        // 提取中文翻译
+        const translationMatches = decodedOriginal.match(/[〖【]\s*([^〗】]+?)\s*[〗】]/g);
+        let translation = '';
+        if (translationMatches && translationMatches.length > 0) {
+          translation = translationMatches
+            .map(m => m.replace(/[〖【〗】]/g, '').trim())
+            .filter(t => t.length > 0)
+            .join(' ');
+        }
+        
+        // 构建显示内容：外语 + 换行 + 中文翻译
+        if (translation) {
+          transcriptEl.innerHTML = `
+            <div style="margin-bottom: 6px;">${foreignText}</div>
+            <div style="color: var(--text-secondary); font-size: 0.92em; opacity: 0.85; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 6px; margin-top: 6px;">${translation}</div>
+          `;
+        } else {
+          // 没有找到翻译，只显示外语
+          transcriptEl.textContent = foreignText;
+        }
+      } else {
+        // 没有双语内容，正常显示
+        transcriptEl.textContent = text;
+      }
+      
       transcriptEl.style.display = 'block';
     }
   }
@@ -52633,19 +53000,32 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
     const contentEl = bubble.querySelector('.content');
     const displayMode = chat.settings.bilingualDisplayMode || 'outside';
     
+    // 检查是否是语音消息
+    const isVoiceMessage = bubble.classList.contains('is-voice-message');
+    
     if (isShowingTranslation) {
       // 隐藏翻译
-      if (displayMode === 'inside') {
-        // 内部模式：恢复只显示外语
-        const englishOnly = originalContent.replace(/〖[^〗]*〗/g, '');
-        contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>');
+      if (isVoiceMessage) {
+        // 语音消息：在 voice-transcript 区域隐藏翻译
+        const transcriptEl = bubble.querySelector('.voice-transcript');
+        if (transcriptEl) {
+          transcriptEl.textContent = '';
+          transcriptEl.style.display = 'none';
+        }
       } else {
-        // 外部模式：移除翻译元素（从wrapper中移除）
-        const contentRow = bubble.closest('.message-content-row');
-        const wrapper = contentRow ? contentRow.parentElement : null;
-        if (wrapper) {
-          const transEl = wrapper.querySelector('.translation-bubble');
-          if (transEl) transEl.remove();
+        // 文本消息：原有逻辑
+        if (displayMode === 'inside') {
+          // 内部模式：恢复只显示外语
+          const englishOnly = originalContent.replace(/[〖【][^〗】]*[〗】]/g, '');
+          contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>');
+        } else {
+          // 外部模式：移除翻译元素（从wrapper中移除）
+          const contentRow = bubble.closest('.message-content-row');
+          const wrapper = contentRow ? contentRow.parentElement : null;
+          if (wrapper) {
+            const transEl = wrapper.querySelector('.translation-bubble');
+            if (transEl) transEl.remove();
+          }
         }
       }
       bubble.dataset.showingTranslation = 'false';
@@ -52657,24 +53037,38 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
         return;
       }
       
-      if (displayMode === 'inside') {
-        // 内部模式：外语 + 翻译（用换行分隔）
-        const englishOnly = originalContent.replace(/〖[^〗]*〗/g, '');
-        contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>') + 
-          '<br><span style="color: var(--text-secondary); font-size: 0.95em;">' + 
-          translation + '</span>';
+      if (isVoiceMessage) {
+        // 语音消息：在 voice-transcript 区域显示翻译
+        const transcriptEl = bubble.querySelector('.voice-transcript');
+        if (transcriptEl) {
+          transcriptEl.textContent = `翻译：${translation}`;
+          transcriptEl.style.display = 'block';
+          transcriptEl.style.marginTop = '8px';
+          transcriptEl.style.fontSize = '13px';
+          transcriptEl.style.color = 'var(--text-secondary)';
+          transcriptEl.style.opacity = '0.85';
+        }
       } else {
-        // 外部模式：在wrapper中添加翻译气泡（作为contentRow的兄弟元素）
-        const contentRow = bubble.closest('.message-content-row');
-        const wrapper = contentRow ? contentRow.parentElement : null;
-        if (wrapper) {
-          const transEl = document.createElement('div');
-          transEl.className = 'translation-bubble';
-          transEl.textContent = translation;
-          transEl.dataset.linkedBubble = bubble.dataset.timestamp || Date.now();
-          
-          // 添加到wrapper的末尾（contentRow下方）
-          wrapper.appendChild(transEl);
+        // 文本消息：原有逻辑
+        if (displayMode === 'inside') {
+          // 内部模式：外语 + 翻译（用换行分隔）
+          const englishOnly = originalContent.replace(/[〖【][^〗】]*[〗】]/g, '');
+          contentEl.innerHTML = parseMarkdown(englishOnly).replace(/\n/g, '<br>') + 
+            '<br><span style="color: var(--text-secondary); font-size: 0.95em;">' + 
+            translation + '</span>';
+        } else {
+          // 外部模式：在wrapper中添加翻译气泡（作为contentRow的兄弟元素）
+          const contentRow = bubble.closest('.message-content-row');
+          const wrapper = contentRow ? contentRow.parentElement : null;
+          if (wrapper) {
+            const transEl = document.createElement('div');
+            transEl.className = 'translation-bubble';
+            transEl.textContent = translation;
+            transEl.dataset.linkedBubble = bubble.dataset.timestamp || Date.now();
+            
+            // 添加到wrapper的末尾（contentRow下方）
+            wrapper.appendChild(transEl);
+          }
         }
       }
       bubble.dataset.showingTranslation = 'true';
@@ -52688,11 +53082,44 @@ ${werewolfGameState.discussionLog.map(d => `${d.speaker}: ${d.content}`).join('\
       return bubble.dataset.cachedTranslation;
     }
     
-    // 提取〖〗中的内容
-    const matches = content.match(/〖([^〗]*)〗/g);
-    if (!matches || matches.length === 0) return null;
+    // 【调试日志】
+    console.log('[双语调试] 原始内容:', content);
+    console.log('[双语调试] 内容长度:', content.length);
+    console.log('[双语调试] 包含〖:', content.includes('〖'));
+    console.log('[双语调试] 包含〗:', content.includes('〗'));
     
-    const translation = matches.map(m => m.replace(/〖|〗/g, '')).join(' ');
+    // 【预处理】清理可能的隐藏字符和统一符号
+    let cleanedContent = content
+      // 清理零宽字符
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      // 统一全角括号为〖〗
+      .replace(/【/g, '〖')
+      .replace(/】/g, '〗')
+      // 清理可能的多余空格
+      .trim();
+    
+    console.log('[双语调试] 清理后内容:', cleanedContent);
+    
+    // 【增强正则】支持多种格式
+    // 1. 标准格式：〖中文〗
+    // 2. 带空格：〖 中文 〗
+    // 3. 换行格式：\n〖中文〗
+    const matches = cleanedContent.match(/[〖【]\s*([^〗】]+?)\s*[〗】]/g);
+    
+    console.log('[双语调试] 匹配结果:', matches);
+    
+    if (!matches || matches.length === 0) {
+      console.warn('[双语调试] 未匹配到翻译内容！');
+      return null;
+    }
+    
+    // 提取括号内的内容
+    const translation = matches
+      .map(m => m.replace(/[〖【〗】]/g, '').trim())
+      .filter(t => t.length > 0)
+      .join(' ');
+    
+    console.log('[双语调试] 提取的翻译:', translation);
     
     // 缓存结果
     bubble.dataset.cachedTranslation = translation;
@@ -65300,6 +65727,32 @@ ${recentHistoryWithUser}
       }
     });
     
+    // 限制长期记忆开关实时生效
+    document.getElementById('limit-memory-toggle').addEventListener('change', async (e) => {
+      const chat = state.chats[state.activeChatId];
+      if (chat) {
+        chat.settings.limitLongTermMemory = e.target.checked;
+        await db.chats.put(chat);
+        
+        // 显示/隐藏输入框
+        document.getElementById('memory-limit-input-group').style.display = 
+          e.target.checked ? 'block' : 'none';
+      }
+    });
+    
+    // 限制数量输入框实时保存
+    document.getElementById('memory-limit-count').addEventListener('change', async (e) => {
+      const chat = state.chats[state.activeChatId];
+      if (chat) {
+        const value = parseInt(e.target.value) || 50;
+        // 确保值在合理范围内
+        const clampedValue = Math.max(1, Math.min(1000, value));
+        e.target.value = clampedValue;
+        chat.settings.longTermMemoryLimit = clampedValue;
+        await db.chats.put(chat);
+      }
+    });
+    
     // 显示隐藏消息开关实时生效
     document.getElementById('show-hidden-msg-toggle').addEventListener('change', (e) => {
       const chat = state.chats[state.activeChatId];
@@ -65895,6 +66348,7 @@ ${recentHistoryWithUser}
       state.globalSettings.enableMinimalChatUI = document.getElementById('minimal-chat-ui-switch').checked;
       state.globalSettings.alwaysShowMusicIsland = document.getElementById('dynamic-island-music-toggle-switch').checked;
       state.globalSettings.detachStatusBar = document.getElementById('detach-status-bar-switch').checked;
+      state.globalSettings.trueFullscreen = document.getElementById('true-fullscreen-switch').checked;
       state.globalSettings.lockScreenEnabled = document.getElementById('lock-screen-toggle').checked;
       state.globalSettings.lockScreenPassword = document.getElementById('lock-screen-password-input').value.trim();
 
@@ -65917,6 +66371,7 @@ ${recentHistoryWithUser}
       applyGlobalCss(state.globalSettings.globalCss);
       applyStatusBarVisibility();
       applyMinimalChatUI(state.globalSettings.enableMinimalChatUI);
+      applyTrueFullscreen(state.globalSettings.trueFullscreen);
       initLockScreen();
       alert('外观设置已保存并应用！');
       showScreen('home-screen');
@@ -65967,6 +66422,13 @@ ${recentHistoryWithUser}
       // 优先使用手写输入框的值，如果为空则使用下拉框的值
       const secondaryModelInput = document.getElementById('secondary-model-input').value.trim();
       state.apiConfig.secondaryModel = secondaryModelInput || document.getElementById('secondary-model-select').value;
+      
+      state.apiConfig.backgroundProxyUrl = document.getElementById('background-proxy-url').value.trim();
+      state.apiConfig.backgroundApiKey = document.getElementById('background-api-key').value.trim();
+      // 优先使用手写输入框的值，如果为空则使用下拉框的值
+      const backgroundModelInput = document.getElementById('background-model-input').value.trim();
+      state.apiConfig.backgroundModel = backgroundModelInput || document.getElementById('background-model-select').value;
+      
       const imgbbEnable = document.getElementById('imgbb-enable-switch').checked;
       const imgbbApiKey = document.getElementById('imgbb-api-key').value.trim();
       const catboxEnable = document.getElementById('catbox-enable-switch').checked;
@@ -66038,6 +66500,11 @@ ${recentHistoryWithUser}
       state.globalSettings.enableQzoneActions = document.getElementById('global-enable-qzone-actions-switch').checked;
       state.globalSettings.enableViewMyPhone = document.getElementById('global-enable-view-myphone-switch').checked;
       state.globalSettings.enableCrossChat = document.getElementById('global-enable-cross-chat-switch').checked;
+      
+      // 新增：保存后台查看用户手机设置
+      state.globalSettings.enableViewMyPhoneInBackground = document.getElementById('global-enable-view-myphone-bg-switch').checked;
+      const viewMyPhoneChanceInput = document.getElementById('global-view-myphone-chance-input');
+      state.globalSettings.viewMyPhoneChance = viewMyPhoneChanceInput.value.trim() === '' ? null : parseInt(viewMyPhoneChanceInput.value);
 
       state.globalSettings.chatRenderWindow = parseInt(document.getElementById('chat-render-window-input').value) || 50;
       state.globalSettings.chatListRenderWindow = parseInt(document.getElementById('chat-list-render-window-input').value) || 30;
@@ -66174,6 +66641,10 @@ ${recentHistoryWithUser}
       fetchModels('secondary-proxy-url', 'secondary-api-key', 'secondary-model-select');
     });
 
+    document.getElementById('fetch-background-models-btn').addEventListener('click', () => {
+      fetchModels('background-proxy-url', 'background-api-key', 'background-model-select');
+    });
+
     // 监听主模型下拉框变化，自动填入手写框
     document.getElementById('model-select').addEventListener('change', (e) => {
       const selectedModel = e.target.value;
@@ -66187,6 +66658,14 @@ ${recentHistoryWithUser}
       const selectedModel = e.target.value;
       if (selectedModel) {
         document.getElementById('secondary-model-input').value = selectedModel;
+      }
+    });
+
+    // 监听后台模型下拉框变化，自动填入手写框
+    document.getElementById('background-model-select').addEventListener('change', (e) => {
+      const selectedModel = e.target.value;
+      if (selectedModel) {
+        document.getElementById('background-model-input').value = selectedModel;
       }
     });
 
@@ -66439,10 +66918,22 @@ ${recentHistoryWithUser}
       if (bubble && bubble.dataset.originalContent && state.activeChatId) {
         const chat = state.chats[state.activeChatId];
         if (chat && chat.settings.enableBilingualMode) {
-          // 排除点击图片、按钮等特殊元素
-          if (!e.target.closest('img, button, a, .voice-message-body, .voice-transcript')) {
-            toggleBilingualTranslation(bubble, chat);
-            return;
+          // 检查是否是语音消息
+          const isVoiceMessage = bubble.classList.contains('is-voice-message');
+          
+          if (isVoiceMessage) {
+            // 语音消息：点击 voice-transcript 区域或整个气泡都可以切换翻译
+            // 但排除点击播放按钮（voice-message-body 内的波形区域）
+            if (!e.target.closest('.voice-waveform, .loading-spinner')) {
+              toggleBilingualTranslation(bubble, chat);
+              return;
+            }
+          } else {
+            // 文本消息：排除点击图片、按钮等特殊元素
+            if (!e.target.closest('img, button, a')) {
+              toggleBilingualTranslation(bubble, chat);
+              return;
+            }
           }
         }
       }
@@ -66984,6 +67475,15 @@ ${recentHistoryWithUser}
         document.getElementById('char-background-activity-switch').checked = chat.settings.enableBackgroundActivity;
         document.getElementById('inject-thought-toggle').checked = chat.settings.injectLatestThought;
         document.getElementById('char-auto-cart-clear-switch').checked = chat.settings.enableAutoCartClear || false;
+        
+        // 新增：加载后台查看用户手机设置
+        const charViewMyPhoneBgSelect = document.getElementById('char-view-myphone-bg-select');
+        if (chat.settings.enableViewMyPhoneInBackground === null || chat.settings.enableViewMyPhoneInBackground === undefined) {
+          charViewMyPhoneBgSelect.value = 'null';
+        } else {
+          charViewMyPhoneBgSelect.value = String(chat.settings.enableViewMyPhoneInBackground);
+        }
+        document.getElementById('char-view-myphone-chance-input').value = chat.settings.viewMyPhoneChance !== null && chat.settings.viewMyPhoneChance !== undefined ? chat.settings.viewMyPhoneChance : '';
 
         // 新增：读取AI行为控制设置
         const thoughtsSelect = document.getElementById('chat-enable-thoughts-select');
@@ -67178,6 +67678,13 @@ ${recentHistoryWithUser}
       document.getElementById('auto-memory-interval').value = chat.settings.autoMemoryInterval || 20;
       document.getElementById('diary-mode-toggle').checked = chat.settings.enableDiaryMode || false;
       document.getElementById('structured-memory-toggle').checked = chat.settings.enableStructuredMemory || false;
+      
+      // 加载限制长期记忆设置
+      document.getElementById('limit-memory-toggle').checked = chat.settings.limitLongTermMemory || false;
+      document.getElementById('memory-limit-count').value = chat.settings.longTermMemoryLimit || 50;
+      document.getElementById('memory-limit-input-group').style.display = 
+        (chat.settings.limitLongTermMemory) ? 'block' : 'none';
+      
       document.getElementById('show-hidden-msg-toggle').checked = chat.settings.showHiddenMessages || false;
 
       // 加载并显示/隐藏角色知晓窥屏开关（仅单聊）
@@ -67399,6 +67906,11 @@ ${recentHistoryWithUser}
       chat.settings.autoMemoryInterval = parseInt(document.getElementById('auto-memory-interval').value) || 20;
       chat.settings.enableDiaryMode = document.getElementById('diary-mode-toggle').checked;
       chat.settings.enableStructuredMemory = document.getElementById('structured-memory-toggle').checked;
+      
+      // 保存限制长期记忆设置
+      chat.settings.limitLongTermMemory = document.getElementById('limit-memory-toggle').checked;
+      chat.settings.longTermMemoryLimit = parseInt(document.getElementById('memory-limit-count').value) || 50;
+      
       chat.settings.showHiddenMessages = document.getElementById('show-hidden-msg-toggle').checked;
 
       // 保存角色知晓窥屏设置
@@ -67428,6 +67940,17 @@ ${recentHistoryWithUser}
       } else {
         chat.settings.enableBackgroundActivity = document.getElementById('char-background-activity-switch').checked;
         chat.settings.enableAutoCartClear = document.getElementById('char-auto-cart-clear-switch').checked;
+        
+        // 新增：保存后台查看用户手机设置
+        const charViewMyPhoneBgSelect = document.getElementById('char-view-myphone-bg-select');
+        if (charViewMyPhoneBgSelect.value === 'null') {
+          chat.settings.enableViewMyPhoneInBackground = null;
+        } else {
+          chat.settings.enableViewMyPhoneInBackground = charViewMyPhoneBgSelect.value === 'true';
+        }
+        const charViewMyPhoneChanceInput = document.getElementById('char-view-myphone-chance-input');
+        chat.settings.viewMyPhoneChance = charViewMyPhoneChanceInput.value.trim() === '' ? null : parseInt(charViewMyPhoneChanceInput.value);
+        
         chat.settings.enableTodoList = document.getElementById('enable-todo-list-switch').checked;
         const newOfflineModeState = document.getElementById('offline-mode-toggle').checked;
         chat.settings.isOfflineMode = newOfflineModeState;
@@ -70095,46 +70618,48 @@ ${recentHistoryWithUser}
 
     document.getElementById('decline-call-btn').addEventListener('click', async () => {
       hideIncomingCallModal();
-      const chat = state.chats[videoCallState.activeChatId];
+      
+      // 获取通话类型
+      const modal = document.getElementById('incoming-call-modal');
+      const callType = modal.dataset.callType || 'video';
+      const isVideoCall = callType === 'video';
+      
+      const currentCallState = isVideoCall ? videoCallState : voiceCallState;
+      const chat = state.chats[currentCallState.activeChatId];
       if (!chat) return;
 
+      const callTypeText = isVideoCall ? '视频通话' : '语音通话';
 
-      if (videoCallState.isGroupCall) {
-        videoCallState.isUserParticipating = false;
-
+      if (currentCallState.isGroupCall) {
+        currentCallState.isUserParticipating = false;
 
         const systemNote = {
           role: 'system',
-          content: `[系统提示：用户拒绝了通话邀请，但你们可以自己开始。请你们各自决策是否加入。]`,
+          content: `[系统提示：用户拒绝了${callTypeText}邀请，但你们可以自己开始。请你们各自决策是否加入。]`,
           timestamp: Date.now(),
           isHidden: true
         };
         chat.history.push(systemNote);
         await db.chats.put(chat);
 
-
-
         await triggerAiResponse();
 
       } else {
         const declineMessage = {
           role: 'user',
-          content: '我拒绝了你的视频通话请求。',
+          content: `我拒绝了你的${callTypeText}请求。`,
           timestamp: Date.now()
         };
         chat.history.push(declineMessage);
         await db.chats.put(chat);
 
-
         showScreen('chat-interface-screen');
         appendMessage(declineMessage, chat);
-
 
         triggerAiResponse();
       }
 
-
-      videoCallState.isAwaitingResponse = false;
+      currentCallState.isAwaitingResponse = false;
     });
 
 
@@ -70143,25 +70668,33 @@ ${recentHistoryWithUser}
     document.getElementById('accept-call-btn').addEventListener('click', async () => {
       hideIncomingCallModal();
 
-      videoCallState.initiator = 'ai';
-      videoCallState.isUserParticipating = true;
-      videoCallState.activeChatId = state.activeChatId;
+      // 获取通话类型
+      const modal = document.getElementById('incoming-call-modal');
+      const callType = modal.dataset.callType || 'video';
+      const isVideoCall = callType === 'video';
+      
+      const currentCallState = isVideoCall ? videoCallState : voiceCallState;
+      
+      currentCallState.initiator = 'ai';
+      currentCallState.isUserParticipating = true;
+      currentCallState.activeChatId = state.activeChatId;
 
-
-      if (videoCallState.isGroupCall) {
-
-        const chat = state.chats[videoCallState.activeChatId];
-        const requester = chat.members.find(m => m.name === videoCallState.callRequester);
+      if (currentCallState.isGroupCall) {
+        const chat = state.chats[currentCallState.activeChatId];
+        const requester = chat.members.find(m => m.name === currentCallState.callRequester);
         if (requester) {
-
-          videoCallState.participants = [requester];
+          currentCallState.participants = [requester];
         } else {
-          videoCallState.participants = [];
+          currentCallState.participants = [];
         }
       }
 
-
-      startVideoCall();
+      // 根据通话类型启动对应的通话界面
+      if (isVideoCall) {
+        startVideoCall();
+      } else {
+        startVoiceCall();
+      }
     });
 
 
@@ -75229,7 +75762,15 @@ ${truthGameHistoryContext}
 
       // 使聊天框可拖动
       setTimeout(() => {
-        makeDraggable(document.getElementById('watch-together-chat-float'), document.getElementById('watch-together-chat-header'));
+        const chatFloat = document.getElementById('watch-together-chat-float');
+        makeDraggable(chatFloat, document.getElementById('watch-together-chat-header'));
+        
+        // 恢复保存的位置
+        if (chat.watchTogetherSettings && chat.watchTogetherSettings.position) {
+          chatFloat.style.top = chat.watchTogetherSettings.position.top;
+          chatFloat.style.left = chat.watchTogetherSettings.position.left;
+          chatFloat.style.transform = '';
+        }
       }, 100);
 
       renderWatchTogetherMessages();
@@ -75373,6 +75914,28 @@ ${truthGameHistoryContext}
     // 取消设置
     document.getElementById('cancel-watch-together-settings-btn').addEventListener('click', () => {
       document.getElementById('watch-together-settings-modal').classList.remove('visible');
+    });
+
+    // 重置位置按钮
+    document.getElementById('reset-watch-together-position-btn').addEventListener('click', () => {
+      const chat = state.chats[watchTogetherState.chatId];
+      if (!chat) return;
+      
+      // 清除保存的位置
+      if (chat.watchTogetherSettings) {
+        delete chat.watchTogetherSettings.position;
+        saveChatsToIndexedDB();
+      }
+      
+      // 重置对话框到默认位置（居中）
+      const chatFloat = document.getElementById('watch-together-chat-float');
+      if (chatFloat) {
+        chatFloat.style.top = '50%';
+        chatFloat.style.left = '50%';
+        chatFloat.style.transform = 'translate(-50%, -50%)';
+      }
+      
+      alert('对话框位置已重置到默认位置！');
     });
 
     // 聊天框收起/展开
