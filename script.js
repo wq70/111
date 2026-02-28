@@ -3774,9 +3774,89 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /**
+   * 旁观群聊 · 记忆设置弹窗：多选哪些角色保留与用户有关的长期/短期记忆。
+   * @param {Array<{id: string, groupNickname: string, originalName: string, isNpc?: boolean}>} members - 群成员列表（仅角色，不含 NPC 也可传入，会过滤）
+   * @param {string[]} [initialSelectedIds] - 初始选中的成员 id，不传则默认全选
+   * @returns {Promise<string[]|null>} 选中的成员 id 数组，取消则 null
+   */
+  function showSpectatorMemorySelectionModal(members, initialSelectedIds) {
+    const characterMembers = members.filter(m => !m.isNpc);
+    if (characterMembers.length === 0) return Promise.resolve([]);
 
+    return new Promise(resolve => {
+      const modal = document.getElementById('custom-modal-overlay');
+      const modalTitle = document.getElementById('custom-modal-title');
+      const modalBody = document.getElementById('custom-modal-body');
+      const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
 
+      modalTitle.textContent = '旁观群聊 · 记忆设置';
+      const defaultChecked = initialSelectedIds === undefined || initialSelectedIds === null;
+      const checkedSet = new Set(defaultChecked ? characterMembers.map(m => m.id) : (initialSelectedIds || []));
 
+      modalBody.innerHTML = `
+        <div style="margin-bottom: 12px; color: #555; font-size: 14px; line-height: 1.5;">
+          勾选的角色会在旁观剧情中保留与您有关的长期记忆，可能会提到或 @ 您；未勾选的角色仅根据自身人设对话，不会带入与您的记忆。
+        </div>
+        <div id="spectator-memory-checkbox-list" style="max-height: 50vh; overflow-y: auto;"></div>
+      `;
+      const listEl = document.getElementById('spectator-memory-checkbox-list');
+      characterMembers.forEach(m => {
+        const label = document.createElement('label');
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '8px';
+        label.style.padding = '8px 0';
+        label.style.borderBottom = '1px solid #eee';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.memberId = m.id;
+        cb.checked = checkedSet.has(m.id);
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(`${m.groupNickname || m.originalName}（本名: ${m.originalName}）`));
+        listEl.appendChild(label);
+      });
+
+      modalFooter.innerHTML = '';
+      modalFooter.style.flexDirection = 'row';
+      modalFooter.style.flexWrap = 'wrap';
+      modalFooter.style.gap = '8px';
+      modalFooter.style.justifyContent = 'flex-end';
+      const btnStyle = 'padding: 8px 14px; border-radius: 8px; border: none; font-size: 14px;';
+      const btnCancel = document.createElement('button');
+      btnCancel.textContent = '取消';
+      btnCancel.style.cssText = btnStyle + ' background: #f0f0f0; color: #333;';
+      const btnNone = document.createElement('button');
+      btnNone.textContent = '全不选';
+      btnNone.style.cssText = btnStyle + ' background: #f5f5f5; color: #666;';
+      const btnAll = document.createElement('button');
+      btnAll.textContent = '全选';
+      btnAll.style.cssText = btnStyle + ' background: #e8e8e8; color: #333;';
+      const btnConfirm = document.createElement('button');
+      btnConfirm.textContent = '确定';
+      btnConfirm.className = 'confirm-btn';
+      btnConfirm.style.cssText = btnStyle + ' background: #07c160; color: #fff;';
+
+      btnNone.onclick = () => listEl.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+      btnAll.onclick = () => listEl.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+      btnCancel.onclick = () => {
+        modal.classList.remove('visible');
+        resolve(null);
+      };
+      btnConfirm.onclick = () => {
+        const selected = [];
+        listEl.querySelectorAll('input[type=checkbox]:checked').forEach(cb => selected.push(cb.dataset.memberId));
+        modal.classList.remove('visible');
+        resolve(selected);
+      };
+
+      modalFooter.appendChild(btnNone);
+      modalFooter.appendChild(btnAll);
+      modalFooter.appendChild(btnCancel);
+      modalFooter.appendChild(btnConfirm);
+      modal.classList.add('visible');
+    });
+  }
 
   // 增强版 showChoiceModal：优化滑动体验
   function showChoiceModal(title, options) {
@@ -13431,8 +13511,11 @@ ${linkedContents}
 
       let longTermMemoryContext = '# 长期记忆 (最高优先级，这是群内已经确立的事实，所有角色必须严格遵守)\n';
       let collectedMemories = false;
+      const includeUserMemoryIds = chat.settings.spectatorIncludeUserMemoryForMemberIds;
+      const allowMemberMemory = (member) => !includeUserMemoryIds || includeUserMemoryIds.includes(member.id);
 
       chat.members.forEach(member => {
+        if (!allowMemberMemory(member)) return;
         const memberChat = state.chats[member.id];
         if (memberChat && memberChat.longTermMemory && memberChat.longTermMemory.length > 0) {
           longTermMemoryContext += `\n## --- 关于“${member.groupNickname}”的记忆 ---\n`;
@@ -14620,6 +14703,12 @@ ${linkedContents}
 -   **【角色发言 (第二步)】**: 在思维链对象【之后】，才是所有角色的具体行动JSON对象 (text, sticker, etc.)。
 
 - 数组中的每个对象都【必须】包含 "type" 和 "name" 字段。'name'字段【必须】使用角色的【本名】。
+
+# 【【【name 字段铁律 - 防止幻觉拦截】】】
+- 除 \`thought_chain\`、\`narration\` 外，数组中**每一个**对象【必须】包含 \`"name"\` 字段，否则该条消息会被系统拦截无法显示。
+- \`"name"\`【必须】且【只能】是以下群成员本名之一（严禁使用群名、用户昵称或任何未列出的名字）：**${memberNames.join('、 ')}**
+- 发文本时必须写 \`{"type": "text", "name": "上列本名之一", "message": "内容"}\`，\`name\` 与 \`message\` 缺一不可。
+
 ${chat.settings.enableBilingualMode ? `
 
 # 【双语输出铁律 - 最高优先级】
@@ -16272,11 +16361,15 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
       let messageTimestamp = Date.now();
       let newMessagesToRender = [];
       let notificationShown = false;
+      /** 用于兜底：从本轮的 thought_chain 中取第一个出现的群成员本名，缺 name 时优先用其补全 */
+      let lastThoughtChainName = null;
 
       for (const msgData of consolidatedMessages) {
         if (msgData.type === 'thought_chain') {
-          // 如果你仍想在控制台看到它，可以保留下面这行 console.log
-          // console.log("🤖 AI 感性思维链 (已过滤):", msgData); 
+          if (chat.isGroup && msgData.character_thoughts && typeof msgData.character_thoughts === 'object') {
+            const firstKey = Object.keys(msgData.character_thoughts)[0];
+            if (firstKey && chat.members && chat.members.some(m => m.originalName === firstKey)) lastThoughtChainName = firstKey;
+          }
           continue; // 直接跳过，不执行任何保存操作
         }
         if (chat.settings.enableTts !== false && msgData.type === 'text' && typeof msgData.content === 'string' && msgData.content.trim().startsWith('[V]')) {
@@ -16357,8 +16450,14 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
         }
 
         if (chat.isGroup && !msgData.name && msgData.type !== 'narration') {
-          console.error(`AI幻觉已被拦截！试图在群聊中发送一条没有“name”的消息。消息内容:`, msgData);
-          continue;
+          if (chat.members && chat.members.length > 0) {
+            const fallbackName = lastThoughtChainName && chat.members.some(m => m.originalName === lastThoughtChainName) ? lastThoughtChainName : chat.members[0].originalName;
+            msgData.name = fallbackName;
+            console.warn(`[群聊兜底] 消息缺少 name，已自动补全为: ${fallbackName}`, msgData);
+          } else {
+            console.error(`AI幻觉已被拦截！试图在群聊中发送一条没有“name”的消息。消息内容:`, msgData);
+            continue;
+          }
         }
 
         // 纠正AI可能返回群昵称而非本名的问题
@@ -24314,6 +24413,12 @@ ${longTermMemoryContext}
       }
     }
 
+    let spectatorIncludeUserMemoryForMemberIds = [];
+    if (currentSpectatorMode === 'group' && members.some(m => !m.isNpc)) {
+      const selected = await showSpectatorMemorySelectionModal(members);
+      spectatorIncludeUserMemoryForMemberIds = selected || members.filter(m => !m.isNpc).map(m => m.id);
+    }
+
     const newGroupChat = {
       id: newChatId,
       name: groupName.trim(),
@@ -24321,7 +24426,7 @@ ${longTermMemoryContext}
       isSpectatorGroup: true,
       members: members,
       settings: {
-
+        spectatorIncludeUserMemoryForMemberIds: spectatorIncludeUserMemoryForMemberIds,
         maxMemory: 10,
         groupAvatar: defaultGroupAvatar,
         background: '',
@@ -61369,7 +61474,8 @@ ${stickerList}
 
   let grState = {
     activeStoryId: null,
-    isGenerating: false
+    isGenerating: false,
+    currentReaderChapter: null
   };
 
   // 默认作者预设
@@ -61679,6 +61785,7 @@ ${stickerList}
     // 如果 settings 里有值，就用 settings 里的；如果没有（新建时），就用默认值 500 和 20
     document.getElementById('gr-output-length').value = settings.outputLength || 500;
     document.getElementById('gr-context-limit').value = settings.contextLimit || 20;
+    document.getElementById('gr-reader-comments-enabled').checked = settings.readerCommentsEnabled || false;
     document.getElementById('gr-macro-world-view').value = settings.macroWorldView || '';
 
     // 6. 加载作者追更相关设置
@@ -61834,6 +61941,7 @@ ${stickerList}
     // 【核心修复】：确保这里取到的是数字，并且有默认值
     const outputLength = parseInt(outputLengthInput.value) || 500;
     const contextLimit = parseInt(contextLimitInput.value) || 20;
+    const readerCommentsEnabled = document.getElementById('gr-reader-comments-enabled').checked;
     const macroWorldView = macroWorldViewInput.value.trim();
     if (!title) return alert("请输入书名");
     if (charIds.length === 0) return alert("请至少选择一个角色或群聊");
@@ -61841,7 +61949,13 @@ ${stickerList}
     // 获取作者追更设置
     const autoUpdateEnabled = document.getElementById('gr-auto-update-enabled').checked;
     let autoUpdate;
-    
+    // 编辑已有作品时，先读取之前的 lastUpdate，避免在 settings 声明前访问
+    let existingLastUpdate = null;
+    if (grState.activeStoryId) {
+      const existingStory = await db.grStories.get(grState.activeStoryId);
+      existingLastUpdate = existingStory?.settings?.autoUpdate?.lastUpdate ?? null;
+    }
+
     if (autoUpdateEnabled) {
       const updateType = document.getElementById('gr-auto-update-type').value;
       const updateAuthorId = parseInt(document.getElementById('gr-update-author-select').value) || null;
@@ -61868,7 +61982,7 @@ ${stickerList}
         dailyHour: parseInt(document.getElementById('gr-daily-update-hour').value) || 12,
         weeklyDay: parseInt(document.getElementById('gr-weekly-update-day').value) || 1,
         weeklyHour: parseInt(document.getElementById('gr-weekly-update-hour').value) || 12,
-        lastUpdate: settings.autoUpdate?.lastUpdate || null // 保留之前的更新时间
+        lastUpdate: existingLastUpdate // 保留之前的更新时间
       };
     } else {
       autoUpdate = {
@@ -61883,6 +61997,7 @@ ${stickerList}
       outputLength, // 这里的名字要和 prompt 里的对应
       contextLimit,
       macroWorldView,
+      readerCommentsEnabled,
       autoUpdate // 添加作者追更设置
     };
 
@@ -61907,6 +62022,23 @@ ${stickerList}
     const story = await db.grStories.get(grState.activeStoryId);
     const lastIndex = Math.max(0, story.chapters.length - 1);
     openReader(grState.activeStoryId, lastIndex);
+  }
+
+  function showReaderCommentsPopup(comments) {
+    const popup = document.getElementById('gr-reader-comments-popup');
+    const listEl = popup && popup.querySelector('.gr-comments-popup-list');
+    if (!popup || !listEl) return;
+    const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    listEl.innerHTML = (comments || []).map(c => {
+      const name = escapeHtml(c.name || '读者');
+      const content = escapeHtml(c.content || '');
+      return `<div class="gr-comment-item"><div class="gr-comment-name">${name}</div><div class="gr-comment-content">${content}</div></div>`;
+    }).join('');
+    popup.style.display = 'flex';
+    const close = () => { popup.style.display = 'none'; };
+    popup.onclick = (e) => { if (e.target === popup) close(); };
+    const closeBtn = popup.querySelector('.gr-comments-popup-close');
+    if (closeBtn) closeBtn.onclick = close;
   }
 
   // 6. 阅读器逻辑 - 分页版 (Jinjiang Style)
@@ -61949,6 +62081,7 @@ ${stickerList}
 
     // --- 场景 B: 显示特定章节 ---
     const chapter = story.chapters[chapterIndex];
+    grState.currentReaderChapter = chapter;
     const chapterTitle = chapter.title || `第 ${chapterIndex + 1} 章`; // 如果没有标题，使用默认
 
     document.getElementById('gr-chapter-title-display').textContent = chapterTitle;
@@ -61966,8 +62099,45 @@ ${stickerList}
     // 2. 章节大标题
     contentArea.innerHTML += `<div class="gr-chapter-title-large">${chapterTitle}</div>`;
 
-    // 3. 正文
-    contentArea.innerHTML += `<div class="gr-chapter-text">${chapter.content.replace(/\n/g, '<br>')}</div>`;
+    // 3. 正文（有读者评论时按段渲染+气泡，否则整块）
+    const commentMap = {};
+    (chapter.readerComments || []).forEach(rc => {
+      const idx = typeof rc.segmentIndex === 'number' ? rc.segmentIndex : parseInt(rc.segmentIndex, 10);
+      if (!isNaN(idx)) commentMap[idx] = Array.isArray(rc.comments) ? rc.comments : [];
+    });
+    const segments = (chapter.content || '').split(/\n\n/);
+    const escapeHtml = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    if (segments.length <= 1 && Object.keys(commentMap).length === 0) {
+      contentArea.innerHTML += `<div class="gr-chapter-text">${(chapter.content || '').replace(/\n/g, '<br>')}</div>`;
+    } else {
+      let bodyHtml = '';
+      segments.forEach((seg, i) => {
+        const text = escapeHtml(seg.trim()).replace(/\n/g, '<br>');
+        const comments = commentMap[i];
+        bodyHtml += '<div class="gr-chapter-segment">' + text;
+        if (comments && comments.length > 0) {
+          bodyHtml += ` <span class="gr-reader-comment-bubble" data-segment-index="${i}">${comments.length}条</span>`;
+        }
+        bodyHtml += '</div>';
+      });
+      contentArea.innerHTML += bodyHtml;
+    }
+
+    // 读者评论气泡：事件委托，避免被后续 innerHTML 替换掉绑定
+    if (!contentArea._readerCommentDelegation) {
+      contentArea._readerCommentDelegation = true;
+      contentArea.addEventListener('click', function (e) {
+        const bubble = e.target.closest('.gr-reader-comment-bubble');
+        if (!bubble) return;
+        e.preventDefault();
+        const curChapter = grState.currentReaderChapter;
+        if (!curChapter || !curChapter.readerComments) return;
+        const idx = parseInt(bubble.dataset.segmentIndex, 10);
+        const list = curChapter.readerComments.find(r => Number(r.segmentIndex) === idx);
+        const comments = list ? (list.comments || []) : [];
+        showReaderCommentsPopup(comments);
+      });
+    }
 
     // 4. 底部：本章摘要 (可编辑)
     const summaryHtml = `
@@ -62221,12 +62391,16 @@ ${charsContext}
 - **用户指示**: ${userDirection || "（无指示，请顺其自然地发展剧情，重点是写够字数！）"}
 
 # 输出格式 (JSON)
-回复必须且只能是一个JSON对象：
+回复必须且只能是一个JSON对象：${(story.settings.readerCommentsEnabled ? `
+- **content** 正文必须用双换行 \\n\\n 分段，以便与读者评论对应。
+- **readerComments**（仅当开启读者评论时）：可选。模拟网文读者在部分段落后留下的评论，不必每段都有，由你判断（高能、好笑、虐、吐槽等）。段落序号 = content 按 \\n\\n 分割后的下标（从0开始）。最多 5 段有评论，每段最多 3 条。每条评论包含 name（读者昵称）和 content（评论内容）。` : '')}
 \`\`\`json
 {
   "title": "四字或多字标题 (如：月下对酌、危机四伏)",
-  "content": "正文内容 (必须使用${author.style}风格，**强制写满 ${targetWordCount} 字**，多用换行符\\n增加阅读感)",
-  "summary": "用陈述句概括本章关键事实（谁、在哪里、做了什么），供下一章记忆使用。"
+  "content": "正文内容 (必须使用${author.style}风格，**强制写满 ${targetWordCount} 字**，段落之间用换行符\\n\\n分隔)",
+  "summary": "用陈述句概括本章关键事实（谁、在哪里、做了什么），供下一章记忆使用。"${story.settings.readerCommentsEnabled ? `,
+  "readerComments": [{"segmentIndex": 0, "comments": [{"name": "读者昵称", "content": "评论内容"}]}]
+` : ''}
 }
 \`\`\`
 `;
@@ -62294,11 +62468,15 @@ ${charsContext}
         }
       }
 
+      const readerComments = (result.readerComments && Array.isArray(result.readerComments))
+        ? result.readerComments
+        : [];
       const newChapter = {
         title: result.title || `第 ${story.chapters.length + 1} 章`,
         content: result.content,
         summary: result.summary,
         prevSummary: prevSummary,
+        readerComments,
         timestamp: Date.now()
       };
 
@@ -62810,12 +62988,12 @@ ${charsContext}
         }
       }
 
-      // 获取历史章节
+      // 获取历史章节（追更仅使用摘要以控制长度，避免截断）
       const recentChapters = story.chapters.slice(-historyLimit);
       let chaptersText = "";
       recentChapters.forEach((ch, idx) => {
         const chTitle = ch.title || `第 ${idx + 1} 章`;
-        chaptersText += `\n\n[${chTitle}]\n摘要: ${ch.summary || '无'}\n正文:\n${ch.content}`;
+        chaptersText += `\n\n[${chTitle}]\n摘要: ${ch.summary || '无'}`;
       });
 
       // 根据追更方式构建特殊提示词
@@ -62848,8 +63026,44 @@ ${charsContext}
         }
       }
 
-      // 构建完整提示词
-      const fullPrompt = `你是一位专业的小说续写AI。请根据以下信息，续写下一章节内容。
+      const readerCommentsEnabled = story.settings.readerCommentsEnabled || false;
+      const fullPrompt = readerCommentsEnabled
+        ? `你是一位专业的小说续写AI。请根据以下信息，续写下一章节内容。
+
+【基础设定】
+${story.settings.macroWorldView || '无特殊设定'}
+
+【角色信息】
+${charsContext}
+
+${worldBookContext}
+
+【已有章节】（作为上下文参考）${chaptersText}
+
+【作者文风】
+${author.style}
+
+${updatePrompt}
+
+【续写要求】
+1. 这是自动追更功能生成的新章节，请自然地推进剧情发展
+2. 字数要求：约 ${targetWordCount} 字
+3. 保持与前文的连贯性
+4. 符合角色性格和世界观设定
+5. 正文必须用双换行 \\n\\n 分段。可选：在部分段落后添加模拟读者评论（readerComments），不必每段都有，最多5段有评论、每段最多3条。段落序号 = content 按 \\n\\n 分割后的下标（从0开始）。
+
+请只输出一个 JSON 对象，不要其他文字：
+\`\`\`json
+{
+  "title": "第X章 标题",
+  "summary": "本章摘要（50字以内）",
+  "content": "正文，段落之间用\\\\n\\\\n分隔",
+  "readerComments": [{"segmentIndex": 0, "comments": [{"name": "读者昵称", "content": "评论内容"}]}]
+}
+\`\`\`
+
+现在开始续写：`
+        : `你是一位专业的小说续写AI。请根据以下信息，续写下一章节内容。
 
 【基础设定】
 ${story.settings.macroWorldView || '无特殊设定'}
@@ -62977,56 +63191,68 @@ ${updatePrompt}
 
       console.log('[作者追更] AI生成内容:', aiOutput);
 
-      // 解析AI输出
-      console.log('[作者追更] 开始解析AI输出...');
-      const lines = aiOutput.split('\n');
       let newTitle = `第 ${story.chapters.length + 1} 章`;
       let newSummary = '';
       let newContent = '';
+      let readerComments = [];
 
-      let currentSection = '';
-      let hasFoundTitle = false;
-      let hasFoundSummary = false;
-      let hasFoundContent = false;
-      
-      for (let line of lines) {
-        const trimmedLine = line.trim(); // 去除前后空白
-        
-        if (!hasFoundTitle && (trimmedLine.startsWith('标题:') || trimmedLine.startsWith('标题：') || trimmedLine.startsWith('# '))) {
-          newTitle = trimmedLine.replace(/^(标题[:：]|#)\s*/, '').trim();
-          currentSection = 'title';
-          hasFoundTitle = true;
-          console.log('[作者追更] 找到标题:', newTitle);
-        } else if (!hasFoundSummary && (trimmedLine.startsWith('摘要:') || trimmedLine.startsWith('摘要：'))) {
-          newSummary = trimmedLine.replace(/^摘要[:：]\s*/, '').trim();
-          currentSection = 'summary';
-          hasFoundSummary = true;
-          console.log('[作者追更] 找到摘要:', newSummary);
-        } else if (!hasFoundContent && (trimmedLine.startsWith('正文:') || trimmedLine.startsWith('正文：'))) {
-          currentSection = 'content';
-          hasFoundContent = true;
-          console.log('[作者追更] 找到正文标记');
-        } else if (currentSection === 'content' && line) {
-          newContent += line + '\n';
-        } else if (currentSection === 'summary' && trimmedLine && !trimmedLine.startsWith('正文')) {
-          newSummary += ' ' + trimmedLine;
+      if (readerCommentsEnabled) {
+        const jsonMatch = aiOutput.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            const fixedStr = jsonMatch[0].replace(/\\([^"\\\/bfnrtu])/g, '\\\\$1');
+            const result = JSON.parse(fixedStr);
+            newTitle = result.title || newTitle;
+            newSummary = (result.summary || '').trim();
+            newContent = (result.content || '').trim();
+            readerComments = Array.isArray(result.readerComments) ? result.readerComments : [];
+            console.log('[作者追更] JSON 解析成功，读者评论条数:', readerComments.length);
+          } catch (e) {
+            console.warn('[作者追更] JSON 解析失败，回退到文本解析', e);
+          }
         }
       }
 
-      // 如果没有找到标准格式，尝试直接使用整个输出作为正文
-      if (!hasFoundContent && aiOutput.length > 50) {
-        console.warn('[作者追更] 未找到标准格式标记，尝试将整个输出作为正文');
-        newContent = aiOutput;
-        // 尝试从开头提取标题（如果第一行很短）
-        const firstLine = lines[0]?.trim();
-        if (firstLine && firstLine.length < 30 && firstLine.length > 0) {
-          newTitle = firstLine;
-          newContent = lines.slice(1).join('\n');
-        }
-      }
+      if (!newContent) {
+        // 文本格式解析
+        console.log('[作者追更] 开始解析AI输出（文本格式）...');
+        const lines = aiOutput.split('\n');
+        let currentSection = '';
+        let hasFoundTitle = false;
+        let hasFoundSummary = false;
+        let hasFoundContent = false;
 
-      newContent = newContent.trim();
-      newSummary = newSummary.trim();
+        for (let line of lines) {
+          const trimmedLine = line.trim();
+          if (!hasFoundTitle && (trimmedLine.startsWith('标题:') || trimmedLine.startsWith('标题：') || trimmedLine.startsWith('# '))) {
+            newTitle = trimmedLine.replace(/^(标题[:：]|#)\s*/, '').trim();
+            currentSection = 'title';
+            hasFoundTitle = true;
+          } else if (!hasFoundSummary && (trimmedLine.startsWith('摘要:') || trimmedLine.startsWith('摘要：'))) {
+            newSummary = trimmedLine.replace(/^摘要[:：]\s*/, '').trim();
+            currentSection = 'summary';
+            hasFoundSummary = true;
+          } else if (!hasFoundContent && (trimmedLine.startsWith('正文:') || trimmedLine.startsWith('正文：'))) {
+            currentSection = 'content';
+            hasFoundContent = true;
+          } else if (currentSection === 'content' && line) {
+            newContent += line + '\n';
+          } else if (currentSection === 'summary' && trimmedLine && !trimmedLine.startsWith('正文')) {
+            newSummary += ' ' + trimmedLine;
+          }
+        }
+
+        if (!hasFoundContent && aiOutput.length > 50) {
+          newContent = aiOutput;
+          const firstLine = lines[0]?.trim();
+          if (firstLine && firstLine.length < 30 && firstLine.length > 0) {
+            newTitle = firstLine;
+            newContent = lines.slice(1).join('\n');
+          }
+        }
+        newContent = newContent.trim();
+        newSummary = newSummary.trim();
+      }
 
       console.log('[作者追更] 解析结果 - 标题:', newTitle);
       console.log('[作者追更] 解析结果 - 摘要长度:', newSummary.length);
@@ -63039,14 +63265,15 @@ ${updatePrompt}
         return false;
       }
 
-      // 添加新章节
-      story.chapters.push({
+      const newChapter = {
         title: newTitle,
         content: newContent,
         summary: newSummary,
         createdAt: Date.now(),
-        autoGenerated: true // 标记为自动生成
-      });
+        autoGenerated: true
+      };
+      if (readerComments.length > 0) newChapter.readerComments = readerComments;
+      story.chapters.push(newChapter);
 
       // 更新最后更新时间
       story.settings.autoUpdate.lastUpdate = Date.now();
@@ -67330,6 +67557,20 @@ ${recentHistoryWithUser}
       document.getElementById('my-nickname-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('group-avatar-group').style.display = isGroup ? 'block' : 'none';
       document.getElementById('group-members-group').style.display = isGroup ? 'block' : 'none';
+      const spectatorMemoryGroup = document.getElementById('spectator-memory-settings-group');
+      if (isGroup && chat.isSpectatorGroup) {
+        spectatorMemoryGroup.style.display = 'block';
+        const spectatorMemoryBtn = document.getElementById('spectator-memory-settings-btn');
+        spectatorMemoryBtn.onclick = async () => {
+          const selected = await showSpectatorMemorySelectionModal(chat.members, chat.settings.spectatorIncludeUserMemoryForMemberIds);
+          if (selected !== null) {
+            chat.settings.spectatorIncludeUserMemoryForMemberIds = selected;
+            await showCustomAlert('已保存', '旁观记忆设置将在下次「推进剧情」时生效。');
+          }
+        };
+      } else {
+        spectatorMemoryGroup.style.display = 'none';
+      }
       document.getElementById('ai-persona-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('ai-avatar-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('assign-group-section').style.display = isGroup ? 'none' : 'block';

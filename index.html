@@ -4407,6 +4407,11 @@
                 <div id="group-members-settings" class="horizontal-scroll-list"></div> 
                 <button id="manage-members-btn" class="settings-full-btn">管理所有群成员</button>
             </div>
+            <div class="settings-item-block" id="spectator-memory-settings-group" style="display: none;">
+                <label>旁观记忆设置</label>
+                <div class="settings-desc" style="margin-bottom: 8px;">选择在旁观剧情中保留与您有关的长期记忆的角色；未选中的角色不会带入与您的记忆，不会 @ 您。</div>
+                <button id="spectator-memory-settings-btn" class="settings-full-btn">设置哪些角色保留与用户的记忆</button>
+            </div>
             
             <div class="settings-item" id="switch-greeting-group" style="display: none;">
                  <label>开场白</label>
@@ -5588,6 +5593,16 @@
     
     <div class="gr-reader-content" id="gr-reader-content">
         </div>
+
+    <div id="gr-reader-comments-popup" class="gr-comments-popup" style="display:none;">
+        <div class="gr-comments-popup-inner">
+            <div class="gr-comments-popup-header">
+                <span>💬 读者评论</span>
+                <button type="button" class="gr-comments-popup-close" aria-label="关闭">&times;</button>
+            </div>
+            <div class="gr-comments-popup-list"></div>
+        </div>
+    </div>
 
     <div class="gr-control-panel">
         <div id="gr-pagination-controls" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
@@ -7424,6 +7439,14 @@
              <div class="gr-form-group">
                 <label>上下文引用条数 (History)</label>
                 <input type="number" id="gr-context-limit" class="gr-input" value="20">
+            </div>
+
+            <div class="gr-form-group">
+                <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                    <span>💬 生成时开启读者评论</span>
+                    <input type="checkbox" id="gr-reader-comments-enabled" style="width: 44px; height: 24px; cursor: pointer;">
+                </label>
+                <div style="font-size: 12px; color: #999; margin-top: 5px;">续写或追更时，AI 会在部分段落后生成模拟读者评论，阅读时点击段尾气泡可查看</div>
             </div>
 
             <!-- 作者追更功能 -->
