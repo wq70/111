@@ -1110,11 +1110,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       recoveryInfo += '\n\n您可以继续正常使用，数据已经恢复完成。如有任何疑问，可以检查云备份记录。';
       
-      // 显示恢复提示（使用原有的 showCustomAlert）
-      if (typeof showCustomAlert === 'function') {
+      // 显示恢复提示（带「备份本站数据」入口，便于用户先备份再清除缓存）
+      if (typeof showRecoveryAlertWithBackup === 'function') {
+        await showRecoveryAlertWithBackup('正常启动提示', recoveryInfo);
+      } else if (typeof showCustomAlert === 'function') {
         await showCustomAlert('正常启动提示', recoveryInfo);
       } else {
-        // 如果 showCustomAlert 还未定义，使用 alert
         alert('正常启动提示\n\n' + recoveryInfo);
       }
       
@@ -3674,6 +3675,51 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 崩溃恢复专用：带「备份本站数据」按钮的弹窗（先备份再清除缓存时可从此入口导出）
+  function showRecoveryAlertWithBackup(title, message) {
+    return new Promise(resolve => {
+      modalResolve = resolve;
+      modalTitle.textContent = title;
+      const backupHint = '\n\n【若页面卡住无法操作】可先点击下方「备份本站数据」导出，再清除浏览器中本网站的数据；清除后重新打开，到 设置→导入备份文件 恢复即可。';
+      modalBody.innerHTML = `<p style="text-align: left; white-space: pre-wrap;">${message}${backupHint}</p>`;
+
+      const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
+      if (modalFooter) {
+        modalFooter.style.flexDirection = 'row';
+        modalFooter.innerHTML = `
+          <button id="recovery-modal-backup-btn" class="confirm-btn" style="margin-right: 8px;">📤 备份本站数据</button>
+          <button id="custom-modal-confirm">好的</button>
+        `;
+      }
+
+      const confirmBtn = document.getElementById('custom-modal-confirm');
+      const backupBtn = document.getElementById('recovery-modal-backup-btn');
+
+      if (confirmBtn) {
+        confirmBtn.onclick = () => {
+          resolve(true);
+          hideCustomModal();
+        };
+      }
+      if (backupBtn) {
+        backupBtn.onclick = async () => {
+          backupBtn.disabled = true;
+          backupBtn.textContent = '正在准备备份...';
+          const fn = window.ephoneExportBackupFromPopup;
+          if (typeof fn === 'function') {
+            const ok = await fn();
+            backupBtn.textContent = ok ? '✓ 已触发下载' : '📤 备份本站数据';
+          } else {
+            backupBtn.textContent = '📤 备份本站数据';
+            if (typeof showCustomAlert === 'function') await showCustomAlert('无法备份', '导出功能尚未就绪，请稍候再试。');
+          }
+          backupBtn.disabled = false;
+        };
+      }
+
+      showCustomModal();
+    });
+  }
 
   async function copyTextToClipboard(textToCopy, successMessage = '内容已复制到剪贴板！') {
     if (!textToCopy) {
@@ -9246,6 +9292,9 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'speech-2.6-turbo', name: 'Speech-2.6 Turbo' },
         { id: 'speech-2.6-hd', name: 'Speech-2.6 HD' },
 
+        // --- 2.8 系列 ---
+        { id: 'speech-2.8-turbo', name: 'Speech-2.8 Turbo' },
+        { id: 'speech-2.8-hd', name: 'Speech-2.8 HD' },
 
       ];
 
@@ -11603,7 +11652,7 @@ https://xx.com/4.jpg 疑惑`;
     return new Promise(resolve => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.txt,.json,.docx'; // 限制文件类型
+      input.accept = '.txt,.json,.docx,text/plain,application/json'; // 扩展名 + MIME，便于各环境正确识别 .txt
 
       input.onchange = async e => {
         const file = e.target.files[0];
@@ -23198,12 +23247,12 @@ ${longTermMemoryContext}
     }
     parts.push({ name: '世界书', tokens: estimateTokens(worldBookStr) });
 
-    // 2. 记忆
+    // 2. 记忆（与发请求一致：尊重「限制长期记忆读取数量」）
     let memoryStr = '';
     if (chat.settings.enableStructuredMemory && window.structuredMemoryManager) {
       memoryStr = window.structuredMemoryManager.serializeForPrompt(chat);
     } else if (chat.longTermMemory && chat.longTermMemory.length > 0) {
-      memoryStr = chat.longTermMemory.map(mem => mem.content).join('\n');
+      memoryStr = getMemoryContextForPrompt(chat);
     }
     parts.push({ name: '长期记忆', tokens: estimateTokens(memoryStr) });
 
@@ -37173,6 +37222,10 @@ ${chat.settings.myPersona}
         }
       }
     }
+    // 纪念日天数按日期实时更新（含恢复保存的日期后）
+    if (typeof window.updateAnniversaryDayCount === 'function') {
+      window.updateAnniversaryDayCount();
+    }
   }
 
 
@@ -40800,7 +40853,34 @@ ${chat.settings.myPersona}
   function renderCharHomeScreen() {
     // 新布局不需要在这里更新大时钟了
     switchToCharScreen('char-home-screen');
+    // 纪念日天数按日期实时更新
+    if (typeof window.updateAnniversaryDayCount === 'function') {
+      window.updateAnniversaryDayCount();
+    }
   }
+
+  // ==========================================
+  // 纪念日天数：根据 p3-circle-date 实时计算并更新 p3-day-count
+  // ==========================================
+  window.updateAnniversaryDayCount = function () {
+    const dateEl = document.getElementById('p3-circle-date');
+    const countEl = document.getElementById('p3-day-count');
+    if (!dateEl || !countEl) return;
+    const raw = (dateEl.textContent || dateEl.innerText || '').trim().replace(/\s/g, '');
+    if (!raw) return;
+    // 支持 2025.3.14 / 2025.03.14 / 2025-03-14
+    const parts = raw.split(/[.\-/]/).map(p => parseInt(p, 10)).filter(n => !isNaN(n));
+    if (parts.length < 3) return;
+    const [y, m, d] = parts;
+    const start = new Date(y, m - 1, d);
+    if (isNaN(start.getTime())) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    start.setHours(0, 0, 0, 0);
+    const diff = today - start;
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+    countEl.textContent = days >= 0 ? String(days) : '0';
+  };
 
   // ==========================================
   // CPhone 气泡文字专用编辑函数 (弹窗编辑模式)
@@ -40945,6 +41025,10 @@ ${chat.settings.myPersona}
         }
         state.globalSettings.widgetData[elementId] = newText;
         await db.globalSettings.put(state.globalSettings);
+        // 若修改的是纪念日日期，则重新计算并更新天数
+        if (elementId === 'p3-circle-date' && typeof window.updateAnniversaryDayCount === 'function') {
+          window.updateAnniversaryDayCount();
+        }
       }
       closeModal();
     }
@@ -54036,6 +54120,48 @@ ${recentHistoryContext}
     }
   }
 
+  // 供更新弹窗/崩溃恢复弹窗使用：先选备份方式再导出，避免卡在「正在准备」
+  window.ephoneExportBackupFromPopup = async function () {
+    if (typeof showChoiceModal !== 'function' || typeof exportDataAsBlob !== 'function') {
+      if (typeof showCustomAlert === 'function') {
+        await showCustomAlert('无法备份', '导出功能尚未加载完成，请稍候几秒再试。');
+      } else {
+        alert('导出功能尚未加载完成，请稍候几秒再试。');
+      }
+      return false;
+    }
+    // 若从更新弹窗内调用，其 z-index 很高，选择/导出过程弹窗会被挡住，故临时降低直到流程结束
+    const updateOverlay = document.getElementById('update-notification-overlay');
+    const prevZ = updateOverlay ? updateOverlay.style.zIndex : '';
+    if (updateOverlay) updateOverlay.style.zIndex = '10000';
+    try {
+      const choice = await showChoiceModal('选择备份方式', [
+        { text: '分片导出 (推荐，ZIP 包，大数据也稳定)', value: 'slice' },
+        { text: '智能导出 (单个大文件，数据大时可能较慢)', value: 'stream' },
+        { text: '传统导出 (兼容旧设备，单文件)', value: 'blob' }
+      ]);
+      if (!choice) return false;
+      if (choice === 'slice') {
+        await exportDataAsSlicedZip();
+      } else if (choice === 'stream') {
+        await exportDataAsStream();
+      } else {
+        await exportDataAsBlob();
+      }
+      return true;
+    } catch (e) {
+      console.error('[备份]', e);
+      if (typeof showCustomAlert === 'function') {
+        await showCustomAlert('备份失败', '导出时出错：' + (e && e.message ? e.message : String(e)));
+      } else {
+        alert('备份失败：' + (e && e.message ? e.message : String(e)));
+      }
+      return false;
+    } finally {
+      if (updateOverlay) updateOverlay.style.zIndex = prevZ || '999999';
+    }
+  };
+
   // 高级导出导入功能 - 按类别导出导入（支持多选角色/群聊）
   let advancedExportSelectedChats = []; // 存储选中的角色/群聊ID
   
@@ -55077,7 +55203,8 @@ ${stickerList}
     if (chat.settings.enableStructuredMemory && window.structuredMemoryManager) {
       fullContextString += window.structuredMemoryManager.serializeForPrompt(chat);
     } else if (chat.longTermMemory && chat.longTermMemory.length > 0) {
-      fullContextString += chat.longTermMemory.map(mem => mem.content).join('\n');
+      // 与发请求时一致：尊重「限制长期记忆读取数量」设置
+      fullContextString += getMemoryContextForPrompt(chat);
     }
 
 
@@ -57284,39 +57411,60 @@ ${stickerList}
 
     const char = state.chats[activeMyPhoneCharacterId];
     const originalUsage = char.myPhoneAppUsage || [];
-    const usageData = originalUsage.slice().sort((a, b) => b.usageTimeMinutes - a.usageTimeMinutes);
     const isDeleteMode = myPhoneDeleteMode.active && myPhoneDeleteMode.appType === 'usage';
 
-    if (usageData.length === 0) {
+    if (originalUsage.length === 0) {
       listEl.innerHTML = '<p style="text-align:center; color: var(--text-secondary); padding: 50px 0;">暂无使用记录，<br>点击右上角+号添加或刷新按钮生成！</p>';
       return;
     }
 
-    usageData.forEach((item, displayIdx) => {
+    // 展示层：非删除模式下按应用名+分类合并，显示总时长；删除模式保持逐条以保留正确索引
+    let listToRender;
+    if (isDeleteMode) {
+      // 删除模式：带原始索引的列表，按时长排序
+      listToRender = originalUsage.map((item, idx) => ({ ...item, _originalIndex: idx }))
+        .sort((a, b) => b.usageTimeMinutes - a.usageTimeMinutes);
+    } else {
+      // 正常模式：按 appName+category 合并，时长相加
+      const merged = new Map();
+      originalUsage.forEach(item => {
+        const key = `${item.appName}\t${item.category || ''}`;
+        const existing = merged.get(key);
+        if (!existing) {
+          merged.set(key, {
+            appName: item.appName,
+            category: item.category || '其他',
+            usageTimeMinutes: item.usageTimeMinutes || 0,
+            iconUrl: item.iconUrl || ''
+          });
+        } else {
+          existing.usageTimeMinutes += item.usageTimeMinutes || 0;
+        }
+      });
+      listToRender = Array.from(merged.values()).sort((a, b) => b.usageTimeMinutes - a.usageTimeMinutes);
+    }
+
+    listToRender.forEach((item) => {
       const itemEl = document.createElement('div');
       itemEl.className = 'char-usage-item';
 
-      // 找到在原始数组中的索引
-      const actualIndex = originalUsage.indexOf(item);
-
-      // 计算时长显示
-      const hours = Math.floor(item.usageTimeMinutes / 60);
-      const minutes = item.usageTimeMinutes % 60;
+      const totalMinutes = item.usageTimeMinutes || 0;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
       let timeString = '';
       if (hours > 0) timeString += `${hours}小时`;
       if (minutes > 0) timeString += `${minutes}分钟`;
       if (!timeString) timeString = '小于1分钟';
 
-      // 图标处理：如果用户提供了iconUrl就用用户的，否则用默认图标
       let iconHtml = '';
       if (item.iconUrl) {
         iconHtml = `<img src="${item.iconUrl}" class="usage-item-icon">`;
       } else {
-        // 使用默认灰色图标占位
         iconHtml = `<div class="usage-item-icon" style="background-color: #e0e0e0; display: flex; align-items: center; justify-content: center; color: #999; font-size: 20px;">📱</div>`;
       }
 
       if (isDeleteMode) {
+        const actualIndex = item._originalIndex;
         itemEl.innerHTML = `
         <input type="checkbox" class="myphone-delete-checkbox" data-index="${actualIndex}" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;" onchange="toggleMyPhoneItemSelection(${actualIndex})">
         ${iconHtml}
@@ -68178,6 +68326,9 @@ ${recentHistoryWithUser}
         chat.settings.myNickname = document.getElementById('my-group-nickname-input').value.trim();
         chat.settings.groupAvatar = document.getElementById('group-avatar-preview').src;
         chat.settings.actionCooldownMinutes = parseInt(document.getElementById('group-action-cooldown-input').value) || 10;
+        // 群聊也保存表情包识图与智能匹配，与单聊一致
+        chat.settings.enableStickerVision = document.getElementById('enable-sticker-vision-checkbox').checked;
+        chat.settings.enableStickerSmartMatch = document.getElementById('enable-sticker-smart-match-checkbox').checked;
       } else {
         chat.settings.enableBackgroundActivity = document.getElementById('char-background-activity-switch').checked;
         chat.settings.enableAutoCartClear = document.getElementById('char-auto-cart-clear-switch').checked;
@@ -74689,7 +74840,10 @@ ${recentHistoryWithUser}
       aiChoice: null,
       winner: null,
       messages: [],
-      abortController: null // 用于中断API请求
+      abortController: null, // 用于中断API请求
+      isGroupMode: false,      // 是否群聊版
+      currentAiMember: null,  // 群聊时当前轮对战的成员 { id, originalName, groupNickname, ... }
+      phase: null             // 'rps' | 'qna' | 'spectator_comment'（回答完毕后的围观评论阶段）
     };
 
     // 辅助函数：更新真心话悬浮球红点状态
@@ -74703,21 +74857,54 @@ ${recentHistoryWithUser}
       }
     }
 
+    // 真心话：获取当前轮用于提问/回答的“有效聊天”（单聊=当前聊天，群聊=当前选中成员的单聊）
+    function getTruthGameEffectiveChat() {
+      if (!state.activeChatId) return null;
+      const chat = state.chats[state.activeChatId];
+      if (!truthGameState.isGroupMode || !truthGameState.currentAiMember) return chat;
+      const memberChat = state.chats[truthGameState.currentAiMember.id];
+      return memberChat || chat;
+    }
+
+    // 真心话群聊：获取当前轮对手的显示名
+    function getTruthGameCurrentDisplayName() {
+      const chat = state.chats[state.activeChatId];
+      if (!chat || !truthGameState.isGroupMode || !truthGameState.currentAiMember)
+        return chat ? chat.name : '';
+      return getDisplayNameInGroup(chat, truthGameState.currentAiMember.originalName) || truthGameState.currentAiMember.originalName;
+    }
+
+    // 真心话群聊：每轮随机选一名成员（排除上一轮可选）
+    function pickTruthGameRoundMember(chat) {
+      if (!chat.isGroup || !chat.members || chat.members.length === 0) return null;
+      const members = chat.members;
+      if (members.length === 1) {
+        truthGameState.currentAiMember = members[0];
+        return;
+      }
+      let idx = Math.floor(Math.random() * members.length);
+      if (truthGameState.currentAiMember && members.length > 1) {
+        const prevId = truthGameState.currentAiMember.id;
+        const sameIdx = members.findIndex(m => m.id === prevId);
+        if (sameIdx !== -1 && members.length > 1) {
+          idx = (sameIdx + 1) % members.length;
+        }
+      }
+      truthGameState.currentAiMember = members[idx];
+    }
+
     document.getElementById('open-truth-game-btn').addEventListener('click', () => {
       if (!state.activeChatId) {
         alert('请先选择一个聊天对象！');
         return;
       }
       const chat = state.chats[state.activeChatId];
-      if (chat.isGroup) {
-        alert('真心话游戏仅支持单人聊天！');
-        return;
-      }
 
       if (!chat.settings.truthGameHistoryLimit) {
         chat.settings.truthGameHistoryLimit = 5;
       }
 
+      const isGroup = !!chat.isGroup;
       truthGameState = {
         isActive: true,
         currentRound: 1,
@@ -74726,14 +74913,22 @@ ${recentHistoryWithUser}
         winner: null,
         messages: [],
         waitingForAI: false,
-        hasStartedRound: false
+        hasStartedRound: false,
+        isGroupMode: isGroup,
+        currentAiMember: null,
+        phase: null
       };
       document.getElementById('truth-game-modal').classList.add('visible');
       document.getElementById('truth-input').value = '';
       document.getElementById('truth-input').placeholder = '输入消息...';
       document.getElementById('truth-rps-selector').style.display = 'none';
+      document.getElementById('truth-start-game-btn').textContent = '开始游戏';
       renderTruthGameMessages();
-      addTruthGameMessage('system', '欢迎来到真心话大冒险！点击"开始游戏"按钮开始第一轮。');
+      if (isGroup) {
+        addTruthGameMessage('system', '欢迎来到真心话大冒险（群聊版）！每轮会随机选一位成员与你猜拳，回答完后其他人可以围观评论。点击「开始游戏」开始第一轮。');
+      } else {
+        addTruthGameMessage('system', '欢迎来到真心话大冒险！点击"开始游戏"按钮开始第一轮。');
+      }
     });
 
     document.getElementById('truth-game-settings-btn').addEventListener('click', () => {
@@ -74926,8 +75121,9 @@ ${recentHistoryWithUser}
             } else if (msg.content.includes('你赢了')) {
               currentRound += ' 结果: 我获胜';
               currentWinner = 'user';
-            } else if (msg.content.includes(chat.name + '赢了')) {
-              currentRound += ' 结果: ' + chat.name + '获胜';
+            } else if (msg.content.includes('赢了')) {
+              const aiName = chat.isGroup ? 'AI方' : chat.name;
+              currentRound += ' 结果: ' + aiName + '获胜';
               currentWinner = 'ai';
             } else if (msg.content.includes('平局')) {
               currentRound += ' 结果: 平局';
@@ -74944,14 +75140,15 @@ ${recentHistoryWithUser}
               roundDetails.push(`我: ${msg.content}`);
             }
           } else if (msg.role === 'assistant') {
+            const assistantName = (msg.senderName && chat.isGroup) ? (getDisplayNameInGroup(chat, msg.senderName) || msg.senderName) : chat.name;
             if (msg.content.startsWith('出了：')) {
-              currentRound += chat.name + msg.content;
+              currentRound += assistantName + msg.content;
             } else {
               if (currentRound) {
                 roundDetails.push(currentRound);
                 currentRound = '';
               }
-              roundDetails.push(`${chat.name}: ${msg.content}`);
+              roundDetails.push(`${assistantName}: ${msg.content}`);
             }
           }
         }
@@ -75015,7 +75212,12 @@ ${recentHistoryWithUser}
 
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        addTruthGameMessage('assistant', `出了：${choiceText[aiChoice]}`);
+        const aiDisplayName = getTruthGameCurrentDisplayName();
+        const aiOpts = truthGameState.isGroupMode && truthGameState.currentAiMember ? {
+          senderName: truthGameState.currentAiMember.originalName,
+          senderAvatar: (state.chats[truthGameState.currentAiMember.id] && state.chats[truthGameState.currentAiMember.id].settings?.aiAvatar) || undefined
+        } : {};
+        addTruthGameMessage('assistant', `出了：${choiceText[aiChoice]}`, aiOpts);
 
         const winner = determineRPSWinner(userChoice, aiChoice);
         truthGameState.winner = winner;
@@ -75028,7 +75230,7 @@ ${recentHistoryWithUser}
           document.getElementById('truth-input').placeholder = '输入你想问的问题...';
           document.getElementById('truth-input').focus();
         } else if (winner === 'ai') {
-          addTruthGameMessage('system', `${chat.name}赢了！正在思考问题...`);
+          addTruthGameMessage('system', `${aiDisplayName}赢了！正在思考问题...`);
           document.getElementById('truth-rps-selector').style.display = 'none';
           truthGameState.waitingForAI = true;
           updateTruthGameFloatIndicator();
@@ -75052,21 +75254,123 @@ ${recentHistoryWithUser}
     document.getElementById('truth-start-game-btn').addEventListener('click', async () => {
       if (!truthGameState.isActive || truthGameState.waitingForAI) return;
 
-      // 只有真正开始过一轮游戏后，再点击才增加轮数
+      const chat = state.chats[state.activeChatId];
+      if (!chat) return;
+
+      if (truthGameState.phase === 'spectator_comment') {
+        truthGameState.waitingForAI = true;
+        updateTruthGameFloatIndicator();
+        try {
+          await generateTruthGameSpectatorComments();
+        } catch (e) {
+          console.error('围观评论生成失败:', e);
+        }
+        truthGameState.waitingForAI = false;
+        updateTruthGameFloatIndicator();
+        goToTruthGameNextRound();
+        return;
+      }
+
       if (truthGameState.hasStartedRound) {
         truthGameState.currentRound++;
       }
       truthGameState.hasStartedRound = true;
       truthGameState.winner = null;
+      truthGameState.phase = null;
+      if (truthGameState.isGroupMode && chat.members && chat.members.length > 0) {
+        pickTruthGameRoundMember(chat);
+        const name = getTruthGameCurrentDisplayName();
+        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：本轮与 ${name} 猜拳，请选择石头、剪刀或布！`);
+      } else {
+        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：请选择石头、剪刀或布！`);
+      }
       document.getElementById('truth-rps-selector').style.display = 'flex';
       document.getElementById('truth-input').placeholder = '输入消息...';
-      addTruthGameMessage('system', `第${truthGameState.currentRound}轮：请选择石头、剪刀或布！`);
+      document.getElementById('truth-start-game-btn').textContent = '开始游戏';
     });
+
+    function goToTruthGameNextRound() {
+      const chat = state.chats[state.activeChatId];
+      if (!chat) return;
+      truthGameState.phase = null;
+      truthGameState.currentRound++;
+      truthGameState.winner = null;
+      document.getElementById('truth-rps-selector').style.display = 'flex';
+      document.getElementById('truth-input').placeholder = '输入消息...';
+      document.getElementById('truth-start-game-btn').textContent = '开始游戏';
+      if (truthGameState.isGroupMode && chat.members && chat.members.length > 0) {
+        pickTruthGameRoundMember(chat);
+        const name = getTruthGameCurrentDisplayName();
+        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：本轮与 ${name} 猜拳，请选择石头、剪刀或布！`);
+      } else {
+        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：请选择石头、剪刀或布！`);
+      }
+    }
+
+    async function generateTruthGameSpectatorComments() {
+      const chat = state.chats[state.activeChatId];
+      if (!chat || !chat.isGroup || !truthGameState.currentAiMember || !chat.members) return;
+      const others = chat.members.filter(m => m.id !== truthGameState.currentAiMember.id);
+      if (others.length === 0) return;
+      const { proxyUrl, apiKey, model } = state.apiConfig;
+      if (!proxyUrl || !apiKey || !model) return;
+      const answeredName = getDisplayNameInGroup(chat, truthGameState.currentAiMember.originalName) || truthGameState.currentAiMember.originalName;
+      const lastFew = truthGameState.messages.slice(-12);
+      let qaContext = '';
+      lastFew.forEach(m => {
+        if (m.role === 'user') qaContext += `用户: ${m.content}\n`;
+        else if (m.role === 'assistant') qaContext += `${m.senderName ? (getDisplayNameInGroup(chat, m.senderName) || m.senderName) : answeredName}: ${m.content}\n`;
+      });
+      const memberList = others.map(m => `${m.originalName}(${(getDisplayNameInGroup(chat, m.originalName) || m.groupNickname || m.originalName)})`).join('、');
+      const systemPrompt = `# 任务
+你正在导演一场群聊真心话游戏。刚才是「${answeredName}」被提问并回答了上面的内容。请让【除${answeredName}以外的】其他成员每人说一句简短的围观评论（起哄、吐槽、追问、表情反应均可）。成员名单（请严格使用本名作为 name）：${memberList}。
+
+# 刚才的问答摘要
+${qaContext}
+
+# 输出格式（必须严格遵守）
+直接输出一个JSON数组，不要用\`\`\`包裹。每一条必须包含 "type":"text"、"content":"该角色说的一句话"、"name":"该角色的本名（originalName）"。
+示例：[{"type":"text","content":"哇好敢说！","name":"角色A本名"},{"type":"text","content":"我也想知道更多～","name":"角色B本名"}]
+每人仅一条，简短口语化。`;
+
+      truthGameState.abortController = new AbortController();
+      const timeoutId = setTimeout(() => truthGameState.abortController.abort(), 45000);
+      try {
+        const response = await fetch(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.8 }),
+          signal: truthGameState.abortController.signal
+        });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error('API调用失败');
+        const data = await response.json();
+        const rawContent = (data.choices[0].message.content || '').trim();
+        const arr = parseAiResponse(rawContent);
+        for (const item of arr) {
+          if (!item || item.type !== 'text' || !item.content) continue;
+          const name = item.name || (others[0] && others[0].originalName);
+          const member = chat.members.find(m => m.originalName === name || m.groupNickname === name);
+          const origName = member ? member.originalName : name;
+          const avatar = member && state.chats[member.id] ? (state.chats[member.id].settings?.aiAvatar) : undefined;
+          addTruthGameMessage('assistant', item.content.trim(), { senderName: origName, senderAvatar: avatar });
+          await new Promise(r => setTimeout(r, 400));
+        }
+      } catch (e) {
+        clearTimeout(timeoutId);
+        if (e.name !== 'AbortError') console.error('围观评论生成失败:', e);
+      } finally {
+        truthGameState.abortController = null;
+      }
+    }
 
     document.getElementById('truth-send-btn').addEventListener('click', async () => {
       const input = document.getElementById('truth-input');
       const content = input.value.trim();
       if (!content || truthGameState.waitingForAI) return;
+
+      const chat = state.chats[state.activeChatId];
+      const hasSpectatorPhase = truthGameState.isGroupMode && chat && chat.members && chat.members.length > 1;
 
       if (truthGameState.winner === 'user') {
         addTruthGameMessage('user', content);
@@ -75077,8 +75381,15 @@ ${recentHistoryWithUser}
         input.value = '';
         input.style.height = 'auto';
         await new Promise(resolve => setTimeout(resolve, 500));
-        addTruthGameMessage('system', '回答完毕！点击"开始游戏"按钮继续下一轮。');
-        truthGameState.winner = null;
+        if (hasSpectatorPhase) {
+          truthGameState.phase = 'spectator_comment';
+          truthGameState.winner = null;
+          addTruthGameMessage('system', '回答完毕！其他人可以围观评论，或点击「下一轮」继续。');
+          document.getElementById('truth-start-game-btn').textContent = '下一轮';
+        } else {
+          addTruthGameMessage('system', '回答完毕！点击"开始游戏"按钮继续下一轮。');
+          truthGameState.winner = null;
+        }
       } else {
         addTruthGameMessage('user', content);
         input.value = '';
@@ -75089,7 +75400,12 @@ ${recentHistoryWithUser}
     document.getElementById('truth-call-api-btn').addEventListener('click', async () => {
       if (!state.activeChatId || truthGameState.waitingForAI) return;
 
-      const chat = state.chats[state.activeChatId];
+      const chat = getTruthGameEffectiveChat();
+      if (!chat) return;
+      const aiOpts = truthGameState.isGroupMode && truthGameState.currentAiMember ? {
+        senderName: truthGameState.currentAiMember.originalName,
+        senderAvatar: (state.chats[truthGameState.currentAiMember.id] && state.chats[truthGameState.currentAiMember.id].settings?.aiAvatar) || undefined
+      } : {};
       truthGameState.waitingForAI = true;
 
       const input = document.getElementById('truth-input');
@@ -75159,12 +75475,11 @@ ${recentHistoryWithUser}
 
         if (messages.length > 0) {
           for (const msg of messages) {
-            addTruthGameMessage('assistant', msg);
+            addTruthGameMessage('assistant', msg, aiOpts);
             await new Promise(resolve => setTimeout(resolve, 300));
           }
         } else {
-          // 如果解析后没有有效消息，使用原始内容
-          addTruthGameMessage('assistant', rawContent || '...');
+          addTruthGameMessage('assistant', rawContent || '...', aiOpts);
         }
       } catch (error) {
         clearTimeout(timeoutId);
@@ -75208,7 +75523,8 @@ ${recentHistoryWithUser}
       return 'ai';
     }
 
-    function addTruthGameMessage(role, content) {
+    function addTruthGameMessage(role, content, opts) {
+      opts = opts || {};
       // 验证并清理消息内容
       if (!content || typeof content !== 'string') {
         console.warn('真心话消息内容无效:', content);
@@ -75222,16 +75538,19 @@ ${recentHistoryWithUser}
         return;
       }
 
-      truthGameState.messages.push({ role, content: cleanContent, timestamp: Date.now() });
+      const msg = { role, content: cleanContent, timestamp: Date.now() };
+      if (opts.senderName) msg.senderName = opts.senderName;
+      if (opts.senderAvatar) msg.senderAvatar = opts.senderAvatar;
+      truthGameState.messages.push(msg);
       renderTruthGameMessages();
     }
 
     function renderTruthGameMessages() {
       const container = document.getElementById('truth-game-messages');
       const chat = state.chats[state.activeChatId];
+      if (!chat) return;
       const defaultAvatar = 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
       const userAvatar = chat.settings?.myAvatar || defaultAvatar;
-      const aiAvatar = chat.settings?.aiAvatar || defaultAvatar;
 
       container.innerHTML = '';
 
@@ -75247,12 +75566,31 @@ ${recentHistoryWithUser}
             ? 'display: flex; justify-content: flex-end; align-items: flex-end; margin: 10px 0; gap: 10px;'
             : 'display: flex; justify-content: flex-start; align-items: flex-end; margin: 10px 0; gap: 10px;';
 
+          let aiAvatar = defaultAvatar;
+          let aiLabel = '';
+          if (msg.role === 'assistant') {
+            if (msg.senderName) {
+              aiLabel = chat.isGroup ? (getDisplayNameInGroup(chat, msg.senderName) || msg.senderName) : msg.senderName;
+              if (msg.senderAvatar) aiAvatar = msg.senderAvatar;
+              else if (chat.isGroup && chat.members) {
+                const m = chat.members.find(mem => mem.originalName === msg.senderName);
+                if (m && state.chats[m.id]) aiAvatar = state.chats[m.id].settings?.aiAvatar || defaultAvatar;
+              } else if (!chat.isGroup) aiAvatar = chat.settings?.aiAvatar || defaultAvatar;
+            } else if (truthGameState.isGroupMode && truthGameState.currentAiMember) {
+              aiLabel = getDisplayNameInGroup(chat, truthGameState.currentAiMember.originalName) || truthGameState.currentAiMember.originalName;
+              const mc = state.chats[truthGameState.currentAiMember.id];
+              aiAvatar = mc && mc.settings?.aiAvatar ? mc.settings.aiAvatar : defaultAvatar;
+            } else {
+              aiLabel = chat.name;
+              aiAvatar = chat.settings?.aiAvatar || defaultAvatar;
+            }
+          }
+
           const bubble = document.createElement('div');
           bubble.style.cssText = msg.role === 'user'
             ? 'background: #95ec69; padding: 10px 15px; border-radius: 4px; max-width: 60%; word-wrap: break-word; font-size: 14px; line-height: 1.5; cursor: pointer; white-space: pre-wrap;'
             : 'background: white; padding: 10px 15px; border-radius: 4px; max-width: 60%; word-wrap: break-word; font-size: 14px; line-height: 1.5; cursor: pointer; white-space: pre-wrap;';
 
-          // 使用escapeHTML函数进行转义，然后再处理换行
           const escapedContent = escapeHTML(msg.content);
           bubble.innerHTML = escapedContent.replace(/\n/g, '<br>');
 
@@ -75268,8 +75606,20 @@ ${recentHistoryWithUser}
             wrapper.appendChild(bubble);
             wrapper.appendChild(avatar);
           } else {
-            wrapper.appendChild(avatar);
-            wrapper.appendChild(bubble);
+            if (aiLabel) {
+              const labelDiv = document.createElement('div');
+              labelDiv.style.cssText = 'font-size: 11px; color: #888; margin-bottom: 2px;';
+              labelDiv.textContent = aiLabel;
+              const leftCol = document.createElement('div');
+              leftCol.style.cssText = 'display: flex; flex-direction: column; align-items: flex-start; max-width: 60%;';
+              leftCol.appendChild(labelDiv);
+              leftCol.appendChild(bubble);
+              wrapper.appendChild(avatar);
+              wrapper.appendChild(leftCol);
+            } else {
+              wrapper.appendChild(avatar);
+              wrapper.appendChild(bubble);
+            }
           }
 
           addLongPressListener(bubble, () => showTruthGameMessageActions(msg.timestamp));
@@ -75282,12 +75632,17 @@ ${recentHistoryWithUser}
     }
 
     async function generateAITruthQuestion() {
-      const chat = state.chats[state.activeChatId];
+      const chat = getTruthGameEffectiveChat();
+      if (!chat) return;
       const { proxyUrl, apiKey, model } = state.apiConfig;
+      const aiOpts = truthGameState.isGroupMode && truthGameState.currentAiMember ? {
+        senderName: truthGameState.currentAiMember.originalName,
+        senderAvatar: (state.chats[truthGameState.currentAiMember.id] && state.chats[truthGameState.currentAiMember.id].settings?.aiAvatar) || undefined
+      } : {};
 
       if (!proxyUrl || !apiKey || !model) {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        addTruthGameMessage('assistant', '你最喜欢什么？');
+        addTruthGameMessage('assistant', '你最喜欢什么？', aiOpts);
         updateTruthGameFloatIndicator();
         document.getElementById('truth-input').placeholder = '输入你的回答...';
         document.getElementById('truth-input').focus();
@@ -75339,7 +75694,7 @@ ${recentHistoryWithUser}
           if (i > 0) {
             await new Promise(resolve => setTimeout(resolve, 800));
           }
-          addTruthGameMessage('assistant', messages[i]);
+          addTruthGameMessage('assistant', messages[i], aiOpts);
         }
 
         updateTruthGameFloatIndicator();
@@ -75355,7 +75710,7 @@ ${recentHistoryWithUser}
         }
 
         console.error('生成问题失败:', error);
-        addTruthGameMessage('assistant', '你最喜欢什么？');
+        addTruthGameMessage('assistant', '你最喜欢什么？', aiOpts);
         updateTruthGameFloatIndicator();
         alert('真心话生成问题失败：' + error.message + '\n\n已使用默认问题，请检查API配置。');
         document.getElementById('truth-input').placeholder = '输入你的回答...';
@@ -75366,24 +75721,34 @@ ${recentHistoryWithUser}
     }
 
     async function generateAITruthAnswer(question) {
-      const chat = state.chats[state.activeChatId];
+      const chat = getTruthGameEffectiveChat();
+      if (!chat) return;
       const { proxyUrl, apiKey, model } = state.apiConfig;
+      const groupChat = state.chats[state.activeChatId];
+      const hasSpectatorPhase = truthGameState.isGroupMode && groupChat && groupChat.members && groupChat.members.length > 1;
+      const aiOpts = truthGameState.isGroupMode && truthGameState.currentAiMember ? {
+        senderName: truthGameState.currentAiMember.originalName,
+        senderAvatar: (state.chats[truthGameState.currentAiMember.id] && state.chats[truthGameState.currentAiMember.id].settings?.aiAvatar) || undefined
+      } : {};
 
       addTruthGameMessage('system', '对方正在思考答案...');
       updateTruthGameFloatIndicator();
 
       if (!proxyUrl || !apiKey || !model) {
         await new Promise(resolve => setTimeout(resolve, 1500));
-        addTruthGameMessage('assistant', '我...我不知道该怎么回答。');
+        addTruthGameMessage('assistant', '我...我不知道该怎么回答。', aiOpts);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        addTruthGameMessage('system', '回答完毕！准备下一轮...');
-        updateTruthGameFloatIndicator();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        truthGameState.currentRound++;
-        truthGameState.winner = null;
-        document.getElementById('truth-rps-selector').style.display = 'flex';
-        document.getElementById('truth-input').placeholder = '输入消息...';
-        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：请选择石头、剪刀或布！`);
+        if (hasSpectatorPhase) {
+          truthGameState.phase = 'spectator_comment';
+          truthGameState.winner = null;
+          addTruthGameMessage('system', '回答完毕！其他人可以围观评论，或点击「下一轮」继续。');
+          document.getElementById('truth-start-game-btn').textContent = '下一轮';
+        } else {
+          addTruthGameMessage('system', '回答完毕！准备下一轮...');
+          updateTruthGameFloatIndicator();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          goToTruthGameNextRound();
+        }
         return;
       }
 
@@ -75432,18 +75797,21 @@ ${recentHistoryWithUser}
           if (i > 0) {
             await new Promise(resolve => setTimeout(resolve, 800));
           }
-          addTruthGameMessage('assistant', messages[i]);
+          addTruthGameMessage('assistant', messages[i], aiOpts);
         }
 
         await new Promise(resolve => setTimeout(resolve, 1000));
-        addTruthGameMessage('system', '回答完毕！准备下一轮...');
-        updateTruthGameFloatIndicator();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        truthGameState.currentRound++;
-        truthGameState.winner = null;
-        document.getElementById('truth-rps-selector').style.display = 'flex';
-        document.getElementById('truth-input').placeholder = '输入消息...';
-        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：请选择石头、剪刀或布！`);
+        if (hasSpectatorPhase) {
+          truthGameState.phase = 'spectator_comment';
+          truthGameState.winner = null;
+          addTruthGameMessage('system', '回答完毕！其他人可以围观评论，或点击「下一轮」继续。');
+          document.getElementById('truth-start-game-btn').textContent = '下一轮';
+        } else {
+          addTruthGameMessage('system', '回答完毕！准备下一轮...');
+          updateTruthGameFloatIndicator();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          goToTruthGameNextRound();
+        }
       } catch (error) {
         clearTimeout(timeoutId);
 
@@ -75454,17 +75822,20 @@ ${recentHistoryWithUser}
         }
 
         console.error('生成回答失败:', error);
-        addTruthGameMessage('assistant', '我...我不知道该怎么回答。');
+        addTruthGameMessage('assistant', '我...我不知道该怎么回答。', aiOpts);
         alert('真心话生成回答失败：' + error.message + '\n\n已使用默认回答，请检查API配置。');
         await new Promise(resolve => setTimeout(resolve, 1000));
-        addTruthGameMessage('system', '回答完毕！准备下一轮...');
-        updateTruthGameFloatIndicator();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        truthGameState.currentRound++;
-        truthGameState.winner = null;
-        document.getElementById('truth-rps-selector').style.display = 'flex';
-        document.getElementById('truth-input').placeholder = '输入消息...';
-        addTruthGameMessage('system', `第${truthGameState.currentRound}轮：请选择石头、剪刀或布！`);
+        if (hasSpectatorPhase) {
+          truthGameState.phase = 'spectator_comment';
+          truthGameState.winner = null;
+          addTruthGameMessage('system', '回答完毕！其他人可以围观评论，或点击「下一轮」继续。');
+          document.getElementById('truth-start-game-btn').textContent = '下一轮';
+        } else {
+          addTruthGameMessage('system', '回答完毕！准备下一轮...');
+          updateTruthGameFloatIndicator();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          goToTruthGameNextRound();
+        }
       } finally {
         truthGameState.abortController = null;
       }
@@ -75501,6 +75872,8 @@ ${recentHistoryWithUser}
 
       const historyLimit = chat.settings.truthGameHistoryLimit || 5;
       const recentMessages = truthGameState.messages.slice(-historyLimit * 6);
+      const groupChat = state.chats[state.activeChatId];
+      const currentMemberName = truthGameState.isGroupMode && truthGameState.currentAiMember ? truthGameState.currentAiMember.originalName : null;
 
       let truthGameHistoryContext = '';
       if (recentMessages.length > 0) {
@@ -75509,7 +75882,9 @@ ${recentHistoryWithUser}
           if (msg.role === 'user') {
             truthGameHistoryContext += `用户: ${msg.content}\n`;
           } else if (msg.role === 'assistant') {
-            truthGameHistoryContext += `你: ${msg.content}\n`;
+            const label = (currentMemberName && msg.senderName && msg.senderName !== currentMemberName && groupChat && groupChat.isGroup)
+              ? (getDisplayNameInGroup(groupChat, msg.senderName) || msg.senderName) : '你';
+            truthGameHistoryContext += `${label}: ${msg.content}\n`;
           } else if (msg.role === 'system' && !msg.content.includes('正在')) {
             truthGameHistoryContext += `[${msg.content}]\n`;
           }

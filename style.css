@@ -25159,6 +25159,9 @@
                color: rgba(255,255,255,0.9);
                text-shadow: 0 1px 4px rgba(0,0,0,0.12);
            }
+           .anni-day-count-auto {
+               cursor: default;
+           }
            .anni-photos {
                display: flex;
                justify-content: center;

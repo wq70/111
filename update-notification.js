@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.25'; // 当前更新版本号
+    this.currentVersion = '0.0.28'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,21 +22,19 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.修复不读旁白的问题，现在应该读了。</div>
-      <div class="update-item">2.修复群聊发送私信发送不了的BUG</div>
-      <div class="update-item">3.新增长期记忆读取条数。不开启的话默认读取所有长期记忆。</div>
-      <div class="update-item">4.修复语音通话不能编辑，角色不能主动打语音的问题</div>
-      <div class="update-item">5.优化了结构化提示词提取的逻辑</div>
-      <div class="update-item">6.新增一个真全屏开关。</div>
-      <div class="update-item">7.新增一起看窗口重置位置的按钮，拖到外面重置一下即可</div>
-      <div class="update-item">8.优化双语模式（灵感来源1900老师）</div>
-      <div class="update-item">9.新增后台活动API</div>
-      <div class="update-item">10.优化番茄钟APP</div>
-      <div class="update-item">11.新增后台决定查手机概率，平时聊天的话自己引导触发即可</div>
-      <div class="update-item">12.修改视频通话的提示词，改成旁白和语言分开读，现在应该可以只读旁白了！</div>
-      <div class="update-item">13.修复月经无法编辑的问题。</div>
-      <div class="update-item tips" style="margin-top: 8px;">优化一些其他的地方，不细写了</div>
-      <div class="update-item tips">注意：现在逻辑改变为如果开启了结构化记忆和长期记忆，只读结构化记忆省TOKEN。</div>
+      <div class="update-item">1.修复群聊幻觉拦截问题</div>
+      <div class="update-item">2.新增旁观群聊可以选择角色是否记得用户，降低用户被艾特的风险</div>
+      <div class="update-item">3.修复追更老失败的BUG，包括勾选了追更无法创建的BUG，哦对了现在绿江有很多文风了张爱玲、冰心、林语堂、巴金等等那些，可以尝试一下，都好好吃</div>
+      <div class="update-item">4.新增绿江可以看到读者评论了！谁说生活没有观众！（不喜欢的可以不用打开，这个是默认关闭的）</div>
+      <div class="update-item">5.修复群聊没有表情包匹配，MYPHONE我的APP使用记录重复的问题</div>
+      <div class="update-item">6.修复长期记忆修改读取数量后TOKEN没有变化的情况</div>
+      <div class="update-item">7.新增真心话（群聊版）</div>
+      <div class="update-item">8.优化了小组件部分</div>
+      <div class="update-divider">遇到页面卡住、无法操作？</div>
+      <div class="update-item tips" style="margin-bottom: 6px;">可先在此备份本站数据，再清除浏览器中「本网站」的缓存/存储；清除后重新打开，到 设置→导入备份文件 恢复即可。</div>
+      <button type="button" id="update-btn-export-backup" class="update-btn update-btn-secondary" style="margin-bottom: 12px;">
+        📤 备份本站数据（清除缓存前请先备份）
+      </button>
     `;
 
     return `
@@ -44,7 +42,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">2.25 更新</div>
+            <div class="update-title">2.28 更新</div>
           </div>
           
           <div class="update-notification-body">
@@ -148,6 +146,33 @@ class UpdateNotification {
     if (modal) {
       modal.addEventListener('click', (e) => {
         e.stopPropagation();
+      });
+    }
+
+    // 备份本站数据（清除缓存前可从此入口导出）
+    const btnExportBackup = document.getElementById('update-btn-export-backup');
+    if (btnExportBackup) {
+      btnExportBackup.addEventListener('click', async () => {
+        if (btnExportBackup.disabled) return;
+        const fn = window.ephoneExportBackupFromPopup;
+        if (typeof fn !== 'function') {
+          alert('导出功能尚未就绪，请稍候几秒再试。');
+          return;
+        }
+        btnExportBackup.disabled = true;
+        btnExportBackup.textContent = '请选择备份方式...';
+        try {
+          const ok = await fn();
+          if (ok) {
+            btnExportBackup.textContent = '✓ 已触发下载，请保存好文件后再清除缓存';
+          } else {
+            btnExportBackup.disabled = false;
+            btnExportBackup.textContent = '📤 备份本站数据（清除缓存前请先备份）';
+          }
+        } catch (e) {
+          btnExportBackup.disabled = false;
+          btnExportBackup.textContent = '📤 备份本站数据（清除缓存前请先备份）';
+        }
       });
     }
 
