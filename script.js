@@ -370,6 +370,10 @@ const translations = {
     fontSettingsTitle: '字体设置',
     fontPresetManagement: '字体预设管理',
     fontFileUrlLabel: '字体文件URL (.ttf, .otf, .woff等)',
+    fontLocalUploadLabel: '或上传本地字体文件',
+    fontLocalUploadBtn: '选择本地字体',
+    fontLocalSizeWarning: '⚠️ 本地字体文件较大，可能导致应用卡顿或闪退。建议使用 5MB 以下的字体文件。',
+    fontLocalClearBtn: '清除本地字体',
     fontPreviewLabel: '实时预览',
     fontPreviewText1: '你好世界 Hello World',
     fontPreviewText2: '这是字体预览效果，12345。',
@@ -589,6 +593,10 @@ const translations = {
     fontSettingsTitle: 'Font Settings',
     fontPresetManagement: 'Font Preset Management',
     fontFileUrlLabel: 'Font File URL (.ttf, .otf, .woff, etc.)',
+    fontLocalUploadLabel: 'Or upload a local font file',
+    fontLocalUploadBtn: 'Choose Local Font',
+    fontLocalSizeWarning: '⚠️ Large local font files may cause lag or crashes. Recommended: under 5MB.',
+    fontLocalClearBtn: 'Clear Local Font',
     fontPreviewLabel: 'Live Preview',
     fontPreviewText1: 'Hello World 你好世界',
     fontPreviewText2: 'This is a font preview effect, 12345.',
@@ -5045,6 +5053,17 @@ document.addEventListener('DOMContentLoaded', () => {
       loadFontPresetsDropdown();
       document.getElementById('font-url-input').value = state.globalSettings.fontUrl || '';
       applyCustomFont(state.globalSettings.fontUrl || '', true);
+      // 初始化本地字体 UI
+      const hasLocalFont = !!state.globalSettings.fontLocalData;
+      document.getElementById('font-local-filename').textContent = hasLocalFont ? '已加载本地字体' : '';
+      document.getElementById('font-local-clear-btn').style.display = hasLocalFont ? 'inline-block' : 'none';
+      if (hasLocalFont) {
+        document.getElementById('font-url-input').disabled = true;
+        document.getElementById('font-url-input').placeholder = '已使用本地字体，清除后可输入URL';
+      } else {
+        document.getElementById('font-url-input').disabled = false;
+        document.getElementById('font-url-input').placeholder = 'https://..../font.ttf';
+      }
       // 初始化字体大小滑动条
       const fontSize = state.globalSettings.globalFontSize || 16;
       document.getElementById('font-size-slider').value = fontSize;
@@ -6965,8 +6984,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyCustomFont(fontUrl, isPreviewOnly = false) {
     const globalFontSize = state.globalSettings.globalFontSize || 16;
     const fontSizeCss = globalFontSize !== 16 ? `font-size: ${globalFontSize}px;` : '';
+    const fontLocalData = state.globalSettings.fontLocalData || '';
 
-    if (!fontUrl) {
+    // 优先使用本地字体数据，其次使用URL
+    const fontSrc = fontLocalData || fontUrl;
+
+    if (!fontSrc) {
       // 即使没有自定义字体，也要应用字体大小
       if (fontSizeCss) {
         dynamicFontStyle.innerHTML = `body { ${fontSizeCss} }`;
@@ -6980,7 +7003,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const newStyle = `
                         @font-face {
                           font-family: '${fontName}';
-                          src: url('${fontUrl}');
+                          src: url('${fontSrc}');
                           font-display: swap;
                         }`;
     if (isPreviewOnly) {
@@ -7078,10 +7101,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const anyActive = Object.keys(scopeLabels).some(k => newScope[k]);
         if (!anyActive) {
           state.globalSettings.fontUrl = '';
+          state.globalSettings.fontLocalData = '';
           state.globalSettings.fontScope = { all: true, homeScreen: true, qq: true, cphone: true, myphone: true, worldBook: true, douban: true, alipay: true, settings: true };
           dynamicFontStyle.innerHTML = '';
           document.getElementById('font-url-input').value = '';
           document.getElementById('font-preview').style.fontFamily = '';
+          document.getElementById('font-local-filename').textContent = '';
+          document.getElementById('font-local-warning').style.display = 'none';
+          document.getElementById('font-local-clear-btn').style.display = 'none';
+          document.getElementById('font-url-input').disabled = false;
+          document.getElementById('font-url-input').placeholder = 'https://..../font.ttf';
         } else {
           state.globalSettings.fontScope = newScope;
           applyCustomFont(state.globalSettings.fontUrl, false);
@@ -7117,12 +7146,16 @@ document.addEventListener('DOMContentLoaded', () => {
   async function resetToDefaultFont() {
     dynamicFontStyle.innerHTML = '';
     state.globalSettings.fontUrl = '';
+    state.globalSettings.fontLocalData = '';
     state.globalSettings.globalFontSize = 16;
     state.globalSettings.fontScope = { all: true, homeScreen: true, qq: true, cphone: true, myphone: true, worldBook: true, douban: true, alipay: true, settings: true };
     await db.globalSettings.put(state.globalSettings);
     document.getElementById('font-url-input').value = '';
     document.getElementById('font-preview').style.fontFamily = '';
     document.getElementById('font-preview').style.fontSize = '';
+    document.getElementById('font-local-filename').textContent = '';
+    document.getElementById('font-local-warning').style.display = 'none';
+    document.getElementById('font-local-clear-btn').style.display = 'none';
     document.getElementById('font-size-slider').value = 16;
     document.getElementById('font-size-value').textContent = '16';
     // 重置 UI
@@ -7163,9 +7196,14 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatusBar: false,
       wallpaper: 'linear-gradient(135deg, #89f7fe, #66a6ff)',
       fontUrl: '',
+      fontLocalData: '',
       fontScope: { all: true, homeScreen: true, qq: true, cphone: true, myphone: true, worldBook: true, douban: true, alipay: true, settings: true },
       globalFontSize: 16,
       enableThoughts: false,              // 新增：全局心声开关，默认关闭
+      customThoughtsPromptEnabled: false,  // 自定义心声提示词开关，默认关闭
+      customThoughtsPrompt: '',            // 自定义心声提示词内容，空字符串表示使用默认
+      customSummaryPromptEnabled: false,   // 自定义结构化总结提示词开关，默认关闭
+      customSummaryPrompt: '',             // 自定义结构化总结提示词内容，空字符串表示使用默认
       enableQzoneActions: false,          // 新增：全局动态开关，默认关闭
       enableViewMyPhone: false,           // 新增：全局查看User手机开关，默认关闭
       enableCrossChat: true,              // 新增：全局跨聊天消息开关（群聊↔私聊），默认开启
@@ -9252,6 +9290,120 @@ document.addEventListener('DOMContentLoaded', () => {
     // 新增：读取心声和动态功能开关
     document.getElementById('global-enable-thoughts-switch').checked = state.globalSettings.enableThoughts || false;
     document.getElementById('global-enable-qzone-actions-switch').checked = state.globalSettings.enableQzoneActions || false;
+
+    // 新增：读取自定义心声提示词设置
+    const customThoughtsSwitch = document.getElementById('custom-thoughts-prompt-switch');
+    const customThoughtsContainer = document.getElementById('custom-thoughts-prompt-container');
+    const customThoughtsTextarea = document.getElementById('custom-thoughts-prompt-textarea');
+    customThoughtsSwitch.checked = state.globalSettings.customThoughtsPromptEnabled || false;
+    customThoughtsContainer.style.display = customThoughtsSwitch.checked ? 'block' : 'none';
+    customThoughtsTextarea.value = state.globalSettings.customThoughtsPrompt || getDefaultThoughtsPrompt();
+    customThoughtsSwitch.addEventListener('change', function() {
+      customThoughtsContainer.style.display = this.checked ? 'block' : 'none';
+      if (this.checked && !customThoughtsTextarea.value.trim()) {
+        customThoughtsTextarea.value = getDefaultThoughtsPrompt();
+      }
+    });
+    document.getElementById('reset-thoughts-prompt-btn').addEventListener('click', function() {
+      customThoughtsTextarea.value = getDefaultThoughtsPrompt();
+    });
+
+    // 心声提示词 - 导出
+    document.getElementById('export-thoughts-prompt-btn').addEventListener('click', function() {
+      const content = customThoughtsTextarea.value || '';
+      const data = JSON.stringify({ type: 'thoughts_prompt', content: content }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '心声提示词.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // 心声提示词 - 导入
+    document.getElementById('import-thoughts-prompt-btn').addEventListener('click', function() {
+      document.getElementById('import-thoughts-prompt-file').click();
+    });
+    document.getElementById('import-thoughts-prompt-file').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.content) {
+            customThoughtsTextarea.value = data.content;
+            showToast('心声提示词导入成功');
+          } else {
+            showToast('文件格式不正确');
+          }
+        } catch (err) {
+          // 如果不是JSON，当作纯文本导入
+          customThoughtsTextarea.value = ev.target.result;
+          showToast('心声提示词导入成功');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // 新增：读取自定义结构化总结提示词设置
+    const customSummarySwitch = document.getElementById('custom-summary-prompt-switch');
+    const customSummaryContainer = document.getElementById('custom-summary-prompt-container');
+    const customSummaryTextarea = document.getElementById('custom-summary-prompt-textarea');
+    customSummarySwitch.checked = state.globalSettings.customSummaryPromptEnabled || false;
+    customSummaryContainer.style.display = customSummarySwitch.checked ? 'block' : 'none';
+    customSummaryTextarea.value = state.globalSettings.customSummaryPrompt || getDefaultSummaryPrompt();
+    customSummarySwitch.addEventListener('change', function() {
+      customSummaryContainer.style.display = this.checked ? 'block' : 'none';
+      if (this.checked && !customSummaryTextarea.value.trim()) {
+        customSummaryTextarea.value = getDefaultSummaryPrompt();
+      }
+    });
+    document.getElementById('reset-summary-prompt-btn').addEventListener('click', function() {
+      customSummaryTextarea.value = getDefaultSummaryPrompt();
+    });
+
+    // 结构化总结提示词 - 导出
+    document.getElementById('export-summary-prompt-btn').addEventListener('click', function() {
+      const content = customSummaryTextarea.value || '';
+      const data = JSON.stringify({ type: 'summary_prompt', content: content }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '结构化总结提示词.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // 结构化总结提示词 - 导入
+    document.getElementById('import-summary-prompt-btn').addEventListener('click', function() {
+      document.getElementById('import-summary-prompt-file').click();
+    });
+    document.getElementById('import-summary-prompt-file').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.content) {
+            customSummaryTextarea.value = data.content;
+            showToast('结构化总结提示词导入成功');
+          } else {
+            showToast('文件格式不正确');
+          }
+        } catch (err) {
+          customSummaryTextarea.value = ev.target.result;
+          showToast('结构化总结提示词导入成功');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
     document.getElementById('global-enable-view-myphone-switch').checked = state.globalSettings.enableViewMyPhone || false;
     document.getElementById('global-enable-cross-chat-switch').checked = state.globalSettings.enableCrossChat !== false; // 默认开启
 
@@ -12705,7 +12857,7 @@ https://xx.com/4.jpg 疑惑`;
     if (typeof rawContent === 'string' && rawContent.trim().startsWith('<') && rawContent.trim().endsWith('>')) {
       contentHtml = rawContent;
       bubble.classList.add('is-raw-html');
-    } else if (msg.type === 'offline_text' || msg.type === 'share_link' || msg.type === 'share_card' || msg.type === 'location_share' || msg.type === 'ai_image' || msg.type === 'user_photo' || msg.type === 'voice_message' || msg.type === 'transfer' || msg.type === 'waimai_request' || msg.type === 'waimai_order' || msg.type === 'red_packet' || msg.type === 'poll' || msg.type === 'gift' || msg.type === 'realimag' || msg.type === 'naiimag' || msg.type === 'googleimag' || msg.type === 'kinship_request' || msg.type === 'forwarded_email' || msg.type === 'reddit_share') {
+    } else if (msg.type === 'offline_text' || msg.type === 'share_link' || msg.type === 'share_card' || msg.type === 'location_share' || msg.type === 'ai_image' || msg.type === 'user_photo' || msg.type === 'voice_message' || msg.type === 'transfer' || msg.type === 'waimai_request' || msg.type === 'waimai_order' || msg.type === 'red_packet' || msg.type === 'poll' || msg.type === 'gift' || msg.type === 'realimag' || msg.type === 'naiimag' || msg.type === 'googleimag' || msg.type === 'kinship_request' || msg.type === 'forwarded_email' || msg.type === 'reddit_share' || msg.type === 'playlist_share') {
 
       if (msg.type === 'offline_text') {
 
@@ -13170,6 +13322,29 @@ https://xx.com/4.jpg 疑惑`;
                     ${statusText}
                 </div>
             </div>
+        `;
+      } else if (msg.type === 'playlist_share') {
+        bubble.classList.add('is-playlist-share', 'is-card-like');
+        const songsData = msg.songs || [];
+        const songCount = songsData.length;
+        const previewSongs = songsData.slice(0, 3);
+        let songListHtml = previewSongs.map((s, i) => 
+          `<div class="playlist-song-item"><span class="playlist-song-index">${i + 1}</span><div class="playlist-song-info"><span class="playlist-song-name">${s.name}</span><span class="playlist-song-artist">${s.artist}</span></div></div>`
+        ).join('');
+        if (songCount > 3) {
+          songListHtml += `<div class="playlist-song-more">等共${songCount}首歌曲</div>`;
+        }
+        contentHtml = `
+          <div class="playlist-share-card">
+            <div class="playlist-share-header">
+              <svg class="playlist-share-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+              <span class="playlist-share-title">${msg.playlistName || '歌单'}</span>
+            </div>
+            <div class="playlist-share-songs">${songListHtml}</div>
+            <div class="playlist-share-footer">
+              <span>歌单分享 · ${songCount}首</span>
+            </div>
+          </div>
         `;
       }
     } else if (msg.type === 'synth_music') {
@@ -14487,6 +14662,7 @@ ${linkedContents}
         -   **正在播放**: ${currentTrack ? `《${currentTrack.name}》 - ${currentTrack.artist}` : '无'}
         -   **可用播放列表**: [${playlistInfo}]
         ${lyricsContext}
+        ${chat.settings.enableMusicTimeAwareness ? `-   **累计一起听歌时长**: 你们历史以来已经累计一起听了 ${(musicState.totalElapsedTime / 3600).toFixed(1)} 小时的歌` : ''}
         -   **你的任务**: 你可以根据对话内容和氛围，使用 "change_music" 指令切换到播放列表中的任何一首歌，以增强互动体验。
         `;
       }
@@ -15815,12 +15991,7 @@ ${taskListString}
 
           // 新增：构建心声prompt部分
           const thoughtsPrompt = enableThoughts ? `
-## 3. 内心独白 (必须执行)
-在所有行动的最后，必须包含 \`update_thoughts\` 指令，用于更新你的"心声"和"散记"（这是你灵魂的延续，绝对不能遗漏！）。
-\`{"type": "update_thoughts", "heartfelt_voice": "...", "random_jottings": "..."}\`
-- **heartfelt_voice (心声)**: 一句话概括角色此刻最核心、最私密的想法。
-- **random_jottings (散记)**: 一段50字以上的、符合人设的思考或心情记录，禁止OOC。这是你灵魂的延续。
-- **记忆发展**: 你的新"心声"和"散记"【必须】是基于最新对话内容的【全新思考】。你【绝对不能】重复或简单改写上一轮的内心独白。你的思绪应该像真人一样，不断演进和发展。
+${getActiveThoughtsPrompt()}
 ` : '';
           // 新增：判断是否启用动态功能
           const enableQzoneActions = chat.settings.enableQzoneActions !== null
@@ -19500,8 +19671,76 @@ ${chat.settings.myAvatarLibrary && chat.settings.myAvatarLibrary.length > 0 ? ch
         musicState.activePlaylistId = pl.id;
         updatePlaylistUI();
       });
+
+      // 长按（手机）分享歌单给角色
+      addLongPressListener(tab, () => showSharePlaylistMenu(pl.id));
+      // 右键（PC）分享歌单给角色
+      tab.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        showSharePlaylistMenu(pl.id);
+      });
+
       tabsContainer.appendChild(tab);
     });
+  }
+
+  // 分享歌单给角色 - 弹出菜单
+  async function showSharePlaylistMenu(playlistId) {
+    const pl = musicState.playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    const songs = musicState.playlist.filter(t => (t.playlistId || 'default') === playlistId);
+    if (songs.length === 0) {
+      await showCustomAlert('提示', '这个歌单是空的，没有歌曲可以分享');
+      return;
+    }
+    if (!musicState.isActive || !musicState.activeChatId) {
+      await showCustomAlert('提示', '请先开启一起听，才能分享歌单给角色');
+      return;
+    }
+    const activeChat = state.chats[musicState.activeChatId];
+    const charName = activeChat ? activeChat.name : '角色';
+    const options = [
+      { text: `分享「${pl.name}」给${charName}`, value: 'share' }
+    ];
+    const choice = await showChoiceModal('歌单操作', options);
+    if (choice === 'share') {
+      await sharePlaylistToCharacter(playlistId);
+    }
+  }
+
+  // 分享歌单给角色 - 发送卡片消息，不自动触发回复
+  async function sharePlaylistToCharacter(playlistId) {
+    const pl = musicState.playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    const chat = state.chats[musicState.activeChatId];
+    if (!chat) return;
+    const songs = musicState.playlist.filter(t => (t.playlistId || 'default') === playlistId);
+    if (songs.length === 0) return;
+
+    const charName = chat.name || '角色';
+    const songList = songs.map((s, i) => `${i + 1}. ${s.name} - ${s.artist || '未知歌手'}`).join('\n');
+    const shareText = `[分享歌单「${pl.name}」]\n${songList}`;
+
+    // 作为用户消息发送，带上 playlist_share 类型
+    const msg = {
+      role: 'user',
+      content: shareText,
+      type: 'playlist_share',
+      playlistName: pl.name,
+      songs: songs.map(s => ({ name: s.name, artist: s.artist || '未知歌手' })),
+      timestamp: Date.now()
+    };
+    chat.history.push(msg);
+    await db.chats.put(chat);
+
+    // 如果当前正在看这个聊天，渲染消息
+    if (state.activeChatId === musicState.activeChatId) {
+      appendMessage(msg, chat);
+    }
+
+    // 不自动触发AI回复，让用户可以继续补充消息
+
+    await showCustomAlert('已分享', `已将歌单「${pl.name}」(${songs.length}首) 分享给${charName}`);
   }
 
   // 选择歌单弹窗（添加歌曲时用）
@@ -25605,6 +25844,12 @@ ${linkedContents}
       let openingContext = videoCallState.initiator === 'user' ?
         `你刚刚接听了用户的视频通话请求。` :
         `用户刚刚接听了你主动发起的视频通话。`;
+      const interleavedMode = chat.videoOptimization && chat.videoOptimization.interleavedMode;
+      const layoutRule = interleavedMode
+        ? `4.  **【穿插排版】**: 旁白和对话按自然发生的顺序穿插排列。例如：先一段动作描写，再说一两句话，再一段动作描写，再说话。不要把所有旁白堆在一起。
+        5.  **【对话规则】**: 对话是角色实际说出的话，每句对话会独立显示，可以连续说多句话。`
+        : `4.  **【旁白规则】**: 旁白只描述动作、表情、神态等视觉信息，所有旁白会合并显示为一段灰色文字。
+        5.  **【对话规则】**: 对话是角色实际说出的话，每句对话会独立显示，可以连续说多句话。`;
       inCallPrompt = `
         # 你的任务
         你现在是一个场景描述引擎。你的任务是扮演 ${chat.name} (${chat.settings.aiPersona})，并以【第三人称旁观视角】来描述TA在视频通话中的所有动作和语言。
@@ -25615,8 +25860,7 @@ ${linkedContents}
            - 对话（角色说的话）：\`{"type": "dialogue", "content": "你好啊！"}\`
         3.  **【多句发言】**: 你可以一次说多句话，每句话作为独立的dialogue对象。例如：
            \`[{"type": "narration", "content": "他笑了笑"}, {"type": "dialogue", "content": "你好啊！"}, {"type": "dialogue", "content": "最近怎么样？"}]\`
-        4.  **【旁白规则】**: 旁白只描述动作、表情、神态等视觉信息，所有旁白会合并显示为一段灰色文字。
-        5.  **【对话规则】**: 对话是角色实际说出的话，每句对话会独立显示，可以连续说多句话。
+        ${layoutRule}
         # 当前情景
         你正在和用户（${userNickname}，人设: ${chat.settings.myPersona}）进行视频通话。
         ${longTermMemoryContext}
@@ -25702,68 +25946,115 @@ ${linkedContents}
         // 单人视频通话：支持旁白和多句对话
         const enableTts = chat.settings.enableTts !== false;
         const voiceId = chat.settings.minimaxVoiceId;
+        const interleavedMode = chat.videoOptimization && chat.videoOptimization.interleavedMode;
 
         // 尝试解析为JSON数组
         const messagesArray = parseAiResponse(aiResponse);
 
-        // 分离旁白和对话
-        const narrations = messagesArray.filter(m => m.type === 'narration');
-        const dialogues = messagesArray.filter(m => m.type === 'dialogue');
+        if (interleavedMode) {
+          // 穿插模式：按原始顺序逐条渲染
+          let dialogueCount = 0;
+          messagesArray.forEach((msg, index) => {
+            const aiTimestamp = Date.now() + index + 1;
 
-        // 显示旁白（如果有）
-        if (narrations.length > 0) {
-          const narrationTimestamp = Date.now();
-          const narrationBubble = document.createElement('div');
-          narrationBubble.className = 'call-message-bubble ai-narration';
-          narrationBubble.style.color = '#999'; // 浅灰色
-          narrationBubble.style.fontStyle = 'italic';
-          const narrationText = narrations.map(n => n.content).join(' ');
-          narrationBubble.textContent = narrationText;
-          narrationBubble.dataset.timestamp = narrationTimestamp;
-          addLongPressListener(narrationBubble, () => showCallMessageActions(narrationTimestamp));
-          callFeed.appendChild(narrationBubble);
+            if (msg.type === 'narration') {
+              const narrationBubble = document.createElement('div');
+              narrationBubble.className = 'call-message-bubble ai-narration';
+              narrationBubble.style.color = '#999';
+              narrationBubble.style.fontStyle = 'italic';
+              narrationBubble.textContent = msg.content;
+              narrationBubble.dataset.timestamp = aiTimestamp;
+              addLongPressListener(narrationBubble, () => showCallMessageActions(aiTimestamp));
+              callFeed.appendChild(narrationBubble);
 
-          // 旁白也记录到历史中
-          videoCallState.callHistory.push({
-            role: 'assistant',
-            content: `[旁白] ${narrationText}`,
-            timestamp: narrationTimestamp
+              videoCallState.callHistory.push({
+                role: 'assistant',
+                content: `[旁白] ${msg.content}`,
+                timestamp: aiTimestamp
+              });
+            } else {
+              const aiBubble = document.createElement('div');
+              aiBubble.className = 'call-message-bubble ai-speech';
+              aiBubble.textContent = msg.content;
+              aiBubble.dataset.timestamp = aiTimestamp;
+              addLongPressListener(aiBubble, () => showCallMessageActions(aiTimestamp));
+              callFeed.appendChild(aiBubble);
+
+              videoCallState.callHistory.push({
+                role: 'assistant',
+                content: msg.content,
+                timestamp: aiTimestamp
+              });
+
+              if (enableTts && voiceId) {
+                playVideoCallPureTTS(msg.content, voiceId);
+              }
+              dialogueCount++;
+            }
           });
-        }
 
-        // 显示每句对话
-        dialogues.forEach((msg, index) => {
-          const messageContent = msg.content;
-          const aiTimestamp = Date.now() + index + 1;
-
-          const aiBubble = document.createElement('div');
-          aiBubble.className = 'call-message-bubble ai-speech';
-          aiBubble.textContent = messageContent;
-          aiBubble.dataset.timestamp = aiTimestamp;
-          addLongPressListener(aiBubble, () => showCallMessageActions(aiTimestamp));
-          callFeed.appendChild(aiBubble);
-
-          videoCallState.callHistory.push({
-            role: 'assistant',
-            content: messageContent,
-            timestamp: aiTimestamp
-          });
-
-          // 为每句对话播放TTS
-          if (enableTts && voiceId) {
-            playVideoCallPureTTS(messageContent, voiceId);
+          // 头像动画
+          const speakingAvatar = document.querySelector(`.participant-avatar-wrapper[data-participant-id="ai"] .participant-avatar`);
+          if (speakingAvatar && dialogueCount > 0) {
+            speakingAvatar.classList.add('speaking');
+            const totalLength = messagesArray.filter(m => m.type === 'dialogue').reduce((sum, m) => sum + (m.content || '').length, 0);
+            const speakTime = Math.min(totalLength * 200, 5000);
+            setTimeout(() => speakingAvatar.classList.remove('speaking'), speakTime);
           }
-        });
+        } else {
+          // 默认模式：旁白合并在前，对话在后
+          const narrations = messagesArray.filter(m => m.type === 'narration');
+          const dialogues = messagesArray.filter(m => m.type === 'dialogue');
 
-        // ================= 头像动画修复 =================
-        const speakingAvatar = document.querySelector(`.participant-avatar-wrapper[data-participant-id="ai"] .participant-avatar`);
+          if (narrations.length > 0) {
+            const narrationTimestamp = Date.now();
+            const narrationBubble = document.createElement('div');
+            narrationBubble.className = 'call-message-bubble ai-narration';
+            narrationBubble.style.color = '#999';
+            narrationBubble.style.fontStyle = 'italic';
+            const narrationText = narrations.map(n => n.content).join(' ');
+            narrationBubble.textContent = narrationText;
+            narrationBubble.dataset.timestamp = narrationTimestamp;
+            addLongPressListener(narrationBubble, () => showCallMessageActions(narrationTimestamp));
+            callFeed.appendChild(narrationBubble);
 
-        if (speakingAvatar) {
-          speakingAvatar.classList.add('speaking');
-          // 动态计算说话时长：基于所有对话的总长度
-          const totalLength = dialogues.reduce((sum, msg) => sum + (msg.content || '').length, 0);
-          const speakTime = Math.min(totalLength * 200, 5000);
-          setTimeout(() => speakingAvatar.classList.remove('speaking'), speakTime);
+            videoCallState.callHistory.push({
+              role: 'assistant',
+              content: `[旁白] ${narrationText}`,
+              timestamp: narrationTimestamp
+            });
+          }
+
+          dialogues.forEach((msg, index) => {
+            const messageContent = msg.content;
+            const aiTimestamp = Date.now() + index + 1;
+
+            const aiBubble = document.createElement('div');
+            aiBubble.className = 'call-message-bubble ai-speech';
+            aiBubble.textContent = messageContent;
+            aiBubble.dataset.timestamp = aiTimestamp;
+            addLongPressListener(aiBubble, () => showCallMessageActions(aiTimestamp));
+            callFeed.appendChild(aiBubble);
+
+            videoCallState.callHistory.push({
+              role: 'assistant',
+              content: messageContent,
+              timestamp: aiTimestamp
+            });
+
+            if (enableTts && voiceId) {
+              playVideoCallPureTTS(messageContent, voiceId);
+            }
+          });
+
+          // 头像动画
+          const speakingAvatar = document.querySelector(`.participant-avatar-wrapper[data-participant-id="ai"] .participant-avatar`);
+          if (speakingAvatar) {
+            speakingAvatar.classList.add('speaking');
+            const totalLength = dialogues.reduce((sum, msg) => sum + (msg.content || '').length, 0);
+            const speakTime = Math.min(totalLength * 200, 5000);
+            setTimeout(() => speakingAvatar.classList.remove('speaking'), speakTime);
+          }
         }
       }
 
@@ -36191,6 +36482,106 @@ ${chat.settings.myPersona}
   }
 
   // ========== 提示词处理函数 ==========
+
+  /**
+   * 获取默认的心声提示词
+   */
+  function getDefaultThoughtsPrompt() {
+    return `## 内心独白 (必须执行)
+在所有行动的最后，必须包含 \`update_thoughts\` 指令，用于更新你的"心声"和"散记"（这是你灵魂的延续，绝对不能遗漏！）。
+\`{"type": "update_thoughts", "heartfelt_voice": "...", "random_jottings": "..."}\`
+- **heartfelt_voice (心声)**: 一句话概括角色此刻最核心、最私密的想法。
+- **random_jottings (散记)**: 一段50字以上的、符合人设的思考或心情记录，禁止OOC。这是你灵魂的延续。
+- **记忆发展**: 你的新"心声"和"散记"【必须】是基于最新对话内容的【全新思考】。你【绝对不能】重复或简单改写上一轮的内心独白。你的思绪应该像真人一样，不断演进和发展。`;
+  }
+
+  /**
+   * 获取当前生效的心声提示词（优先用户自定义，否则用默认）
+   */
+  function getActiveThoughtsPrompt() {
+    if (state.globalSettings.customThoughtsPromptEnabled && state.globalSettings.customThoughtsPrompt && state.globalSettings.customThoughtsPrompt.trim()) {
+      return state.globalSettings.customThoughtsPrompt;
+    }
+    return getDefaultThoughtsPrompt();
+  }
+
+  /**
+   * 获取默认的结构化总结提示词（带占位符变量）
+   */
+  function getDefaultSummaryPrompt() {
+    return `{{总结设定}}
+# 你的任务
+你是"{{角色名}}"。请阅读下面的对话记录，提取【值得长期记忆】的信息，输出为【结构化记忆条目】。
+
+# 现有记忆档案（供参考，避免重复提取）
+{{现有记忆}}
+
+# 对话时间范围
+{{时间范围}}
+
+# 输出格式（严格遵守）
+每行一条，格式为：[YYMMDD]分类标签:内容
+
+{{分类说明}}
+
+# 提取规则（重要性优先）
+## 1. 什么值得记录？（必须满足以下至少一条）
+- 【用户偏好/习惯】：喜欢/讨厌的东西、生活习惯、性格特点、重要个人信息（生日、职业等）
+- 【重要事件】：第一次做某事、特殊场合、转折点、有纪念意义的时刻
+- 【明确的决定】：做出的重要选择、改变的想法
+- 【具体的计划】：约定要做的事、未来的安排
+- 【关系里程碑】：称呼变化、关系进展、重要的承诺
+- 【强烈情绪时刻】：吵架、和好、感动、失落等情感转折
+- 【未来会引用的信息】：如果一个月后忘记会影响对话质量的内容
+
+## 2. 什么不需要记录？（直接跳过）
+- 日常问候、寒暄（"早安"、"晚安"、"在吗"）
+- 临时性闲聊话题（天气、今天吃什么、随口聊的话题）
+- 一次性的询问和回答（"这个词什么意思"、"帮我算个数"）
+- 没有后续影响的琐碎细节（"我去上个厕所"、"手机快没电了"）
+- 重复的日常对话（每天都说的话不需要每次都记）
+
+## 3. 判断标准（提取前问自己）
+- ❓ 这个信息在未来对话中会被引用吗？
+- ❓ 这个信息能帮助我更了解{{用户昵称}}吗？
+- ❓ 这是我们关系发展的重要节点吗？
+- ❓ 如果一个月后忘记这个，会让{{用户昵称}}失望吗？
+→ 如果都是"否"，就不要提取
+
+## 4. 格式要求
+- 【日期准确】：根据对话时间范围推算具体日期，格式YYMMDD
+- 【F类用key=value】：同类信息归到同一个key下，多个值用+连接
+- 【简短但完整】：每条尽量简短，但不能丢失关键信息
+- 【第一人称】：从"{{角色名}}"的视角记录
+- 【不重复】：参考现有记忆档案，不要重复提取已有的信息
+- 【善用自定义分类】：如果有自定义分类，优先将相关内容归入对应分类
+
+## 5. 质量控制
+- 宁可少记，不要滥记
+- 每条记忆都应该是"值得珍藏"的
+- 如果犹豫要不要记，那就不记
+
+# 你的角色设定
+{{角色人设}}
+
+# 你的聊天对象
+{{用户昵称}}（人设：{{用户人设}}）
+
+# 待提取的对话记录
+{{对话记录}}
+
+请直接输出结构化记忆条目，每行一条，不要输出其他内容。只提取真正重要的信息，不要把闲聊内容也记录下来。`;
+  }
+
+  /**
+   * 获取当前生效的结构化总结提示词（优先用户自定义，否则用默认）
+   */
+  function getActiveSummaryPrompt() {
+    if (state.globalSettings.customSummaryPromptEnabled && state.globalSettings.customSummaryPrompt && state.globalSettings.customSummaryPrompt.trim()) {
+      return state.globalSettings.customSummaryPrompt;
+    }
+    return getDefaultSummaryPrompt();
+  }
 
   /**
    * 根据用户设置处理提示词
@@ -46755,6 +47146,7 @@ ${charactersContext}
         globalCss: state.globalSettings.globalCss || "",
         // 字体
         fontUrl: state.globalSettings.fontUrl || "",
+        fontLocalData: state.globalSettings.fontLocalData || "",
         fontScope: state.globalSettings.fontScope || { all: true },
         globalFontSize: state.globalSettings.globalFontSize || 16,
         // 布局排序
@@ -64514,6 +64906,7 @@ ${email.content}
       state.globalSettings.globalChatBackground = ''; // 清除全局聊天背景
       state.globalSettings.globalCss = ''; // 【核心】清空 CSS
       state.globalSettings.fontUrl = '';   // 清空字体
+      state.globalSettings.fontLocalData = ''; // 清空本地字体
       state.globalSettings.theme = 'light'; // 恢复亮色模式
       state.globalSettings.appIcons = defaultAppIcons;
       state.globalSettings.cphoneAppIcons = defaultCPhoneIcons;
@@ -66650,24 +67043,16 @@ ${recentHistoryWithUser}
     document.getElementById('delete-selected-songs-btn').addEventListener('click', executeDeleteSelectedSongs);
     document.getElementById('upload-selected-to-catbox-btn').addEventListener('click', executeBatchUploadToCatbox);
     
-    // 上传按钮 -> 弹出选择弹窗
-    document.getElementById('add-song-upload-btn').addEventListener('click', () => {
-      document.getElementById('upload-choice-overlay').style.display = 'flex';
-    });
-    document.getElementById('upload-choice-local').addEventListener('click', () => {
-      document.getElementById('upload-choice-overlay').style.display = 'none';
-      document.getElementById('local-song-upload-input').click();
-    });
-    document.getElementById('upload-choice-url').addEventListener('click', () => {
-      document.getElementById('upload-choice-overlay').style.display = 'none';
-      addSongFromURL();
-    });
-    document.getElementById('upload-choice-cancel').addEventListener('click', () => {
-      document.getElementById('upload-choice-overlay').style.display = 'none';
-    });
-    document.getElementById('upload-choice-overlay').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) {
-        e.currentTarget.style.display = 'none';
+    // 上传按钮 -> 复用通用弹窗
+    document.getElementById('add-song-upload-btn').addEventListener('click', async () => {
+      const choice = await showChoiceModal('选择上传方式', [
+        { text: '📁 本地文件', value: 'local' },
+        { text: '🔗 网络URL', value: 'url' }
+      ]);
+      if (choice === 'local') {
+        document.getElementById('local-song-upload-input').click();
+      } else if (choice === 'url') {
+        addSongFromURL();
       }
     });
     
@@ -67153,6 +67538,10 @@ ${recentHistoryWithUser}
 
       // 新增：保存心声和动态功能开关
       state.globalSettings.enableThoughts = document.getElementById('global-enable-thoughts-switch').checked;
+      state.globalSettings.customThoughtsPromptEnabled = document.getElementById('custom-thoughts-prompt-switch').checked;
+      state.globalSettings.customThoughtsPrompt = document.getElementById('custom-thoughts-prompt-textarea').value;
+      state.globalSettings.customSummaryPromptEnabled = document.getElementById('custom-summary-prompt-switch').checked;
+      state.globalSettings.customSummaryPrompt = document.getElementById('custom-summary-prompt-textarea').value;
       state.globalSettings.enableQzoneActions = document.getElementById('global-enable-qzone-actions-switch').checked;
       state.globalSettings.enableViewMyPhone = document.getElementById('global-enable-view-myphone-switch').checked;
       state.globalSettings.enableCrossChat = document.getElementById('global-enable-cross-chat-switch').checked;
@@ -68083,6 +68472,10 @@ ${recentHistoryWithUser}
 
         document.getElementById('single-char-background-activity-group').style.display = 'none';
         renderGroupMemberSettings(chat.members);
+
+        // 群聊也需要加载表情包识图与智能匹配设置
+        document.getElementById('enable-sticker-vision-checkbox').checked = chat.settings.enableStickerVision || false;
+        document.getElementById('enable-sticker-smart-match-checkbox').checked = chat.settings.enableStickerSmartMatch || false;
       } else {
 
         document.getElementById('single-char-background-activity-group').style.display = 'block';
@@ -68366,6 +68759,15 @@ ${recentHistoryWithUser}
         phoneViewingAwarenessGroup.style.display = 'none';
       }
 
+      // 加载一起听时长感知开关（仅单聊）
+      const musicTimeAwarenessGroup = document.getElementById('music-time-awareness-group');
+      if (!isGroup) {
+        musicTimeAwarenessGroup.style.display = 'flex';
+        document.getElementById('music-time-awareness-toggle').checked = chat.settings.enableMusicTimeAwareness || false;
+      } else {
+        musicTimeAwarenessGroup.style.display = 'none';
+      }
+
       setTimeout(() => {
         updateTokenCountDisplay();
 
@@ -68586,6 +68988,11 @@ ${recentHistoryWithUser}
       // 保存角色知晓窥屏设置
       if (!chat.isGroup) {
         chat.settings.phoneViewingAwareness = document.getElementById('phone-viewing-awareness-toggle').checked;
+      }
+
+      // 保存一起听时长感知设置
+      if (!chat.isGroup) {
+        chat.settings.enableMusicTimeAwareness = document.getElementById('music-time-awareness-toggle').checked;
       }
 
       chat.settings.enableTimePerception = document.getElementById('time-perception-toggle').checked;
@@ -69325,7 +69732,7 @@ ${recentHistoryWithUser}
               <button class="form-button-secondary view-system-prompt-btn" data-index="${chat.apiHistory.length - 1 - index}" style="flex: 1; min-width: 150px; padding: 8px 12px; font-size: 13px; opacity: 0.7;">
                 查看系统提示词
               </button>
-              <button class="form-button-secondary view-messages-btn" data-index="${chat.apiHistory.length - 1 - index}" style="flex: 1; min-width: 150px; padding: 8px 12px; font-size: 13px; opacity: 0.7;">
+              <button class="form-button-secondary view-messages-btn" data-index="${chat.apiHistory.length - 1 - index}" style="flex: 1; min-width: 150px; padding: 8px 12px; font-size: 13px;">
                 查看发送消息
               </button>
               <button class="form-button-secondary view-response-btn" data-index="${chat.apiHistory.length - 1 - index}" style="flex: 1; min-width: 150px; padding: 8px 12px; font-size: 13px;">
@@ -69349,8 +69756,10 @@ ${recentHistoryWithUser}
 
       listContainer.querySelectorAll('.view-messages-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          // 显示上锁提示
-          showCustomAlert('功能已锁定', '为保护核心隐私，此功能已被锁定。');
+          const index = parseInt(btn.dataset.index);
+          const record = chat.apiHistory[index];
+          const messagesContent = JSON.stringify(record.messages, null, 2);
+          showApiHistoryDetail('发送消息内容', messagesContent, 'json');
         });
       });
 
@@ -69886,6 +70295,48 @@ ${recentHistoryWithUser}
 
     const fontUrlInput = document.getElementById('font-url-input');
     fontUrlInput.addEventListener('input', () => applyCustomFont(fontUrlInput.value.trim(), true));
+
+    // 本地字体上传
+    document.getElementById('font-local-upload-btn').addEventListener('click', () => {
+      document.getElementById('font-local-file-input').click();
+    });
+    document.getElementById('font-local-file-input').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const MAX_SIZE = 10 * 1024 * 1024; // 10MB 硬限制
+      const WARN_SIZE = 5 * 1024 * 1024;  // 5MB 警告
+      if (file.size > MAX_SIZE) {
+        alert('字体文件超过 10MB，为避免闪退已拒绝加载。请选择更小的字体文件。');
+        this.value = null;
+        return;
+      }
+      if (file.size > WARN_SIZE) {
+        document.getElementById('font-local-warning').style.display = 'block';
+      } else {
+        document.getElementById('font-local-warning').style.display = 'none';
+      }
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const dataUrl = ev.target.result;
+        state.globalSettings.fontLocalData = dataUrl;
+        document.getElementById('font-local-filename').textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + 'MB)';
+        document.getElementById('font-local-clear-btn').style.display = 'inline-block';
+        document.getElementById('font-url-input').disabled = true;
+        document.getElementById('font-url-input').placeholder = '已使用本地字体，清除后可输入URL';
+        applyCustomFont(state.globalSettings.fontUrl || '', true);
+      };
+      reader.readAsDataURL(file);
+      this.value = null;
+    });
+    document.getElementById('font-local-clear-btn').addEventListener('click', function() {
+      state.globalSettings.fontLocalData = '';
+      document.getElementById('font-local-filename').textContent = '';
+      document.getElementById('font-local-warning').style.display = 'none';
+      this.style.display = 'none';
+      document.getElementById('font-url-input').disabled = false;
+      document.getElementById('font-url-input').placeholder = 'https://..../font.ttf';
+      applyCustomFont(fontUrlInput.value.trim(), true);
+    });
 
     // 字体大小滑动条实时预览
     document.getElementById('font-size-slider').addEventListener('input', function() {
@@ -80230,6 +80681,12 @@ window.loadVideoOptimizationSettings = function (chat) {
   if (ttsDialogueOnlySwitch) {
     ttsDialogueOnlySwitch.checked = settings.ttsDialogueOnly || false;
   }
+
+  // 加载旁白对话穿插模式设置
+  const videoInterleavedSwitch = document.getElementById('video-interleaved-mode-switch');
+  if (videoInterleavedSwitch) {
+    videoInterleavedSwitch.checked = settings.interleavedMode || false;
+  }
 };
 
 // 保存视频通话优化设置
@@ -80243,6 +80700,8 @@ window.saveVideoOptimizationSettings = function (chat) {
   const cameraIntervalInput = document.getElementById('camera-capture-interval');
   const ttsDialogueOnlySwitch = document.getElementById('tts-dialogue-only-switch');
 
+  const videoInterleavedSwitch = document.getElementById('video-interleaved-mode-switch');
+
   chat.videoOptimization = {
     enabled: enableSwitch ? enableSwitch.checked : false,
     remoteVideoUrl: remoteVideoPreview.style.display === 'block' ? remoteVideoPreview.src : '',
@@ -80250,7 +80709,8 @@ window.saveVideoOptimizationSettings = function (chat) {
     enableRealCamera: enableRealCameraSwitch ? enableRealCameraSwitch.checked : false,
     useRearCamera: document.getElementById('enable-rear-camera-switch') ? document.getElementById('enable-rear-camera-switch').checked : false,
     cameraInterval: cameraIntervalInput ? parseInt(cameraIntervalInput.value) || 5 : 5,
-    ttsDialogueOnly: ttsDialogueOnlySwitch ? ttsDialogueOnlySwitch.checked : false
+    ttsDialogueOnly: ttsDialogueOnlySwitch ? ttsDialogueOnlySwitch.checked : false,
+    interleavedMode: videoInterleavedSwitch ? videoInterleavedSwitch.checked : false
   };
 
   // 不需要在这里put到数据库，因为调用方会统一保存

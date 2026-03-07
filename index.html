@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="online-app.css?v=0.0.36">
   <link rel="stylesheet" href="period-tracker.css?v=0.0.36">
   <link rel="stylesheet" href="focus-timer.css?v=0.0.36">
+  <link rel="stylesheet" href="extra.css?v=0.0.36">
   <link rel="apple-touch-icon" href="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg">
   <link rel="manifest" href="manifest.json?v=0.0.36">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2450,6 +2451,53 @@
                     <span class="slider"></span>
                 </label>
             </div>
+
+            <div class="settings-item custom-thoughts-setting" style="flex-direction: column; align-items: stretch;">
+                <div class="custom-thoughts-header">
+                    <div class="custom-thoughts-info">
+                        <div class="custom-thoughts-title">自定义心声提示词</div>
+                        <div class="custom-thoughts-desc">开启后可自定义发送给AI的心声指令内容</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="custom-thoughts-prompt-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="custom-thoughts-prompt-container" class="custom-thoughts-body" style="display: none;">
+                    <textarea id="custom-thoughts-prompt-textarea" class="custom-thoughts-textarea" placeholder="在此输入自定义的心声提示词..."></textarea>
+                    <div class="custom-thoughts-actions">
+                        <button id="export-thoughts-prompt-btn" class="custom-thoughts-io-btn">📤 导出</button>
+                        <button id="import-thoughts-prompt-btn" class="custom-thoughts-io-btn">📥 导入</button>
+                        <input type="file" id="import-thoughts-prompt-file" accept=".json,.txt" style="display:none;">
+                        <button id="reset-thoughts-prompt-btn" class="custom-thoughts-reset-btn">恢复默认</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-item custom-thoughts-setting" style="flex-direction: column; align-items: stretch;">
+                <div class="custom-thoughts-header">
+                    <div class="custom-thoughts-info">
+                        <div class="custom-thoughts-title">自定义结构化总结提示词</div>
+                        <div class="custom-thoughts-desc">开启后可自定义结构化记忆总结时发送给AI的提示词</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="custom-summary-prompt-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="custom-summary-prompt-container" class="custom-thoughts-body" style="display: none;">
+                    <div class="custom-summary-hint" style="font-size: 12px; color: var(--text-secondary, #8e8e93); margin-bottom: 8px; line-height: 1.5;">
+                        可用变量：<code>{{角色名}}</code> <code>{{用户昵称}}</code> <code>{{用户人设}}</code> <code>{{角色人设}}</code> <code>{{现有记忆}}</code> <code>{{时间范围}}</code> <code>{{分类说明}}</code> <code>{{对话记录}}</code> <code>{{总结设定}}</code>
+                    </div>
+                    <textarea id="custom-summary-prompt-textarea" class="custom-thoughts-textarea" style="min-height: 220px;" placeholder="在此输入自定义的结构化总结提示词..."></textarea>
+                    <div class="custom-thoughts-actions">
+                        <button id="export-summary-prompt-btn" class="custom-thoughts-io-btn">📤 导出</button>
+                        <button id="import-summary-prompt-btn" class="custom-thoughts-io-btn">📥 导入</button>
+                        <input type="file" id="import-summary-prompt-file" accept=".json,.txt" style="display:none;">
+                        <button id="reset-summary-prompt-btn" class="custom-thoughts-reset-btn">恢复默认</button>
+                    </div>
+                </div>
+            </div>
             
             <div class="settings-item">
                 <div>
@@ -4023,7 +4071,17 @@
               class="form-button-secondary" style="margin-top: 0; padding: 12px; background-color: #ffebee; color: #d32f2f; border-color: #ffcdd2;"data-lang-key="delete">删除</button> </div>
         </div>
         <hr style="margin: 30px 0; opacity: 0.3;">
-        <div class="form-group"> <label for="font-url-input"data-lang-key="fontFileUrlLabel">字体文件URL (.ttf, .otf, .woff等)</label> <input type="text" id="font-url-input" placeholder="https://..../font.ttf"> </div>
+        <div class="form-group"> <label for="font-url-input" data-lang-key="fontFileUrlLabel">字体文件URL (.ttf, .otf, .woff等)</label> <input type="text" id="font-url-input" placeholder="https://..../font.ttf"> </div>
+        <div class="form-group">
+          <label data-lang-key="fontLocalUploadLabel">或上传本地字体文件</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="form-button-secondary" id="font-local-upload-btn" style="margin-top:0; flex-shrink:0;" data-lang-key="fontLocalUploadBtn">选择本地字体</button>
+            <span id="font-local-filename" style="font-size:13px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+            <input type="file" id="font-local-file-input" accept=".ttf,.otf,.woff,.woff2,.eot" style="display:none;">
+          </div>
+          <p id="font-local-warning" style="font-size:12px; color:#e67e22; margin-top:6px; display:none;" data-lang-key="fontLocalSizeWarning">⚠️ 本地字体文件较大，可能导致应用卡顿或闪退。建议使用 5MB 以下的字体文件。</p>
+          <button id="font-local-clear-btn" class="form-button-secondary" style="margin-top:8px; display:none; background-color:#ffebee; color:#d32f2f; border-color:#ffcdd2;" data-lang-key="fontLocalClearBtn">清除本地字体</button>
+        </div>
         <div class="form-group">
           <label>字体大小 <span id="font-size-value">16</span>px</label>
           <input type="range" id="font-size-slider" min="10" max="28" value="16" step="1" style="width:100%;">
@@ -4489,16 +4547,12 @@
                 
                 <!-- 后台查看用户手机 -->
                 <div class="settings-item" style="display: flex !important; justify-content: space-between !important; align-items: center !important; flex-direction: row !important;">
-                     <div style="flex: 1; padding-right: 10px; display: flex; flex-direction: column; align-items: flex-start;">
-                        <label style="margin-bottom: 2px;">后台查看用户手机</label>
-                        <div class="settings-desc">
-                            <select id="char-view-myphone-bg-select" style="width: 100%; padding: 5px; margin-top: 5px; border-radius: 4px; border: 1px solid #ddd;">
-                                <option value="null">跟随全局</option>
-                                <option value="true">开启</option>
-                                <option value="false">关闭</option>
-                            </select>
-                        </div>
-                    </div>
+                    <label>后台查看用户手机</label>
+                    <select id="char-view-myphone-bg-select" style="width: auto; min-width: 100px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--secondary-bg); color: var(--text-color);">
+                        <option value="null">跟随全局</option>
+                        <option value="true">开启</option>
+                        <option value="false">关闭</option>
+                    </select>
                 </div>
                 
                 <!-- 查看概率 -->
@@ -4890,6 +4944,20 @@
                             启用后，语音播报只读取引号内的对话，不读取动作描写等旁白内容
                         </div>
                     </div>
+
+                    <!-- 旁白对话穿插模式 -->
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-weight: 500; font-size: 13px;">旁白与对话穿插</label>
+                            <label class="toggle-switch" style="transform: scale(0.9);">
+                                <input type="checkbox" id="video-interleaved-mode-switch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div style="font-size: 11px; color: #666; line-height: 1.5;">
+                            启用后，旁白和对话按自然顺序穿插显示，而非旁白合并在前、对话在后
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -5128,6 +5196,18 @@
             <div class="settings-item" id="time-perception-group">
                 <label>时间感知</label>
                 <label class="toggle-switch"> <input type="checkbox" id="time-perception-toggle"> <span class="slider"></span> </label>
+            </div>
+
+            <!-- 一起听时长感知 -->
+            <div class="settings-item" id="music-time-awareness-group" style="display: none;">
+                <div style="flex: 1; padding-right: 10px;">
+                    <label style="margin-bottom: 2px;">一起听时长感知</label>
+                    <div class="settings-desc">开启后角色可感知累计一起听歌的时长</div>
+                </div>
+                <label class="toggle-switch" style="margin: 0;">
+                    <input type="checkbox" id="music-time-awareness-toggle">
+                    <span class="slider"></span>
+                </label>
             </div>
             <div class="settings-item-block" id="time-zone-group" style="display: none;">
                 <label>时区设置</label>

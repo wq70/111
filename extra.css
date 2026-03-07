@@ -1,0 +1,196 @@
+/* ============================================
+   extra.css - 通用补丁 & 新板块样式
+   所有新增/修复的样式统一写在这里
+   ============================================ */
+
+/* ============================================
+   自定义心声提示词 - 美化样式
+   ============================================ */
+
+/* 父容器：强制纵向排列，覆盖 style.css 的 row !important */
+.settings-item.custom-thoughts-setting {
+    flex-direction: column !important;
+    align-items: stretch !important;
+}
+
+/* 头部：标题+描述 左侧，开关 右侧 */
+.custom-thoughts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.custom-thoughts-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.custom-thoughts-title {
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary, #000);
+    line-height: 1.4;
+}
+
+.custom-thoughts-desc {
+    font-size: 12px;
+    color: var(--text-secondary, #8e8e93);
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+#phone-screen.dark-mode .custom-thoughts-title {
+    color: #f5f5f7;
+}
+
+#phone-screen.dark-mode .custom-thoughts-desc {
+    color: #98989f;
+}
+
+/* 展开区域：输入框 + 按钮 */
+.custom-thoughts-body {
+    margin-top: 14px;
+    animation: thoughtsSlideIn 0.25s ease-out;
+}
+
+@keyframes thoughtsSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.custom-thoughts-textarea {
+    width: 100%;
+    min-height: 140px;
+    border: 1.5px solid var(--border-color, #e5e5ea);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    font-family: inherit;
+    background: var(--input-bg, #f9f9fb);
+    color: var(--text-primary, #333);
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+}
+
+.custom-thoughts-textarea:focus {
+    border-color: #34c759;
+    box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.15);
+}
+
+.custom-thoughts-textarea::placeholder {
+    color: #c7c7cc;
+}
+
+#phone-screen.dark-mode .custom-thoughts-textarea {
+    background: #2c2c2e;
+    border-color: #3a3a3c;
+    color: #f5f5f7;
+}
+
+#phone-screen.dark-mode .custom-thoughts-textarea:focus {
+    border-color: #30d158;
+    box-shadow: 0 0 0 3px rgba(48, 209, 88, 0.2);
+}
+
+#phone-screen.dark-mode .custom-thoughts-textarea::placeholder {
+    color: #636366;
+}
+
+/* 操作按钮区 */
+.custom-thoughts-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+.custom-thoughts-reset-btn {
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 1px solid var(--border-color, #e5e5ea);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary, #8e8e93);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.custom-thoughts-reset-btn:active {
+    background: rgba(0, 0, 0, 0.05);
+    transform: scale(0.96);
+}
+
+#phone-screen.dark-mode .custom-thoughts-reset-btn {
+    border-color: #3a3a3c;
+    color: #98989f;
+}
+
+#phone-screen.dark-mode .custom-thoughts-reset-btn:active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================
+   自定义结构化总结提示词 - 变量提示样式
+   ============================================ */
+
+.custom-summary-hint code {
+    background: rgba(52, 199, 89, 0.1);
+    color: #34c759;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: monospace;
+    white-space: nowrap;
+}
+
+#phone-screen.dark-mode .custom-summary-hint code {
+    background: rgba(48, 209, 88, 0.15);
+    color: #30d158;
+}
+
+#phone-screen.dark-mode .custom-summary-hint {
+    color: #98989f !important;
+}
+
+/* ============================================
+   导入导出按钮样式
+   ============================================ */
+
+.custom-thoughts-io-btn {
+    font-size: 13px;
+    padding: 6px 14px;
+    border: 1px solid var(--border-color, #e5e5ea);
+    border-radius: 8px;
+    background: transparent;
+    color: #34c759;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 6px;
+}
+
+.custom-thoughts-io-btn:active {
+    background: rgba(52, 199, 89, 0.1);
+    transform: scale(0.96);
+}
+
+#phone-screen.dark-mode .custom-thoughts-io-btn {
+    border-color: #3a3a3c;
+    color: #30d158;
+}
+
+#phone-screen.dark-mode .custom-thoughts-io-btn:active {
+    background: rgba(48, 209, 88, 0.15);
+}
+
+.custom-thoughts-actions {
+    gap: 0 !important;
+}

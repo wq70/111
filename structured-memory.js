@@ -308,108 +308,126 @@ class StructuredMemoryManager {
   // ==================== 生成总结 Prompt ====================
 
   buildSummaryPrompt(chat, formattedHistory, timeRangeStr) {
-    const userNickname = chat.settings.myNickname || (window.state && window.state.qzoneSettings ? window.state.qzoneSettings.nickname : '用户') || '用户';
+      const userNickname = chat.settings.myNickname || (window.state && window.state.qzoneSettings ? window.state.qzoneSettings.nickname : '用户') || '用户';
 
-    let summarySettingContext = '';
-    if (window.state && window.state.worldBooks) {
-      const summaryWorldBook = window.state.worldBooks.find(wb => wb.name === '总结设定');
-      if (summaryWorldBook) {
-        const enabledEntries = summaryWorldBook.content
-          .filter(e => e.enabled !== false).map(e => e.content).join('\n');
-        if (enabledEntries) summarySettingContext = `\n# 【总结规则 (最高优先级)】\n${enabledEntries}\n`;
+      let summarySettingContext = '';
+      if (window.state && window.state.worldBooks) {
+        const summaryWorldBook = window.state.worldBooks.find(wb => wb.name === '总结设定');
+        if (summaryWorldBook) {
+          const enabledEntries = summaryWorldBook.content
+            .filter(e => e.enabled !== false).map(e => e.content).join('\n');
+          if (enabledEntries) summarySettingContext = `\n# 【总结规则 (最高优先级)】\n${enabledEntries}\n`;
+        }
       }
-    }
 
-    const existingMemory = this.serializeForPrompt(chat);
-    const categories = this.getCategories(chat);
+      const existingMemory = this.serializeForPrompt(chat);
+      const categories = this.getCategories(chat);
 
-    // 构建分类说明（包含自定义分类）
-    let categoryDocs = `分类标签说明：
-- F = 偏好/事实（格式：[YYMMDD]F:key=value，同一类信息用同一个key）
-  例：[260105]F:用户口味=草莓+抹茶
-- E = 事件（发生了什么）
-  例：[260105]E:一起去公园散步,吃了草莓蛋糕
-- D = 重要决定
-  例：[260105]D:决定每周五一起看电影
-- P = 计划/待办（未来要做的事）
-  例：[260105]P:下周六一起去京都旅行
-- R = 关系变化（关系状态的转折点）
-  例：[260105]R:${userNickname}第一次叫我宝贝
-- M = 情绪节点（重要的情感时刻）
-  例：[260105]M:因为忘记约定吵架了,后来道歉和好`;
+      // 构建分类说明（包含自定义分类）
+      let categoryDocs = `分类标签说明：
+  - F = 偏好/事实（格式：[YYMMDD]F:key=value，同一类信息用同一个key）
+    例：[260105]F:用户口味=草莓+抹茶
+  - E = 事件（发生了什么）
+    例：[260105]E:一起去公园散步,吃了草莓蛋糕
+  - D = 重要决定
+    例：[260105]D:决定每周五一起看电影
+  - P = 计划/待办（未来要做的事）
+    例：[260105]P:下周六一起去京都旅行
+  - R = 关系变化（关系状态的转折点）
+    例：[260105]R:${userNickname}第一次叫我宝贝
+  - M = 情绪节点（重要的情感时刻）
+    例：[260105]M:因为忘记约定吵架了,后来道歉和好`;
 
-    // 添加自定义分类说明
-    const customCats = Object.entries(categories).filter(([_, c]) => c.isCustom);
-    if (customCats.length > 0) {
-      categoryDocs += '\n\n# 自定义分类（也请积极使用）';
-      for (const [code, cat] of customCats) {
-        categoryDocs += `\n- ${code} = ${cat.name}（格式：[YYMMDD]${code}:内容）`;
+      // 添加自定义分类说明
+      const customCats = Object.entries(categories).filter(([_, c]) => c.isCustom);
+      if (customCats.length > 0) {
+        categoryDocs += '\n\n# 自定义分类（也请积极使用）';
+        for (const [code, cat] of customCats) {
+          categoryDocs += `\n- ${code} = ${cat.name}（格式：[YYMMDD]${code}:内容）`;
+        }
       }
+
+      // 检查是否有用户自定义的结构化总结提示词
+      if (window.state && window.state.globalSettings &&
+          window.state.globalSettings.customSummaryPromptEnabled &&
+          window.state.globalSettings.customSummaryPrompt &&
+          window.state.globalSettings.customSummaryPrompt.trim()) {
+        // 使用用户自定义提示词，替换占位符变量
+        return window.state.globalSettings.customSummaryPrompt
+          .replace(/\{\{角色名\}\}/g, chat.originalName)
+          .replace(/\{\{用户昵称\}\}/g, userNickname)
+          .replace(/\{\{用户人设\}\}/g, chat.settings.myPersona || '未设置')
+          .replace(/\{\{角色人设\}\}/g, chat.settings.aiPersona)
+          .replace(/\{\{现有记忆\}\}/g, existingMemory)
+          .replace(/\{\{时间范围\}\}/g, timeRangeStr)
+          .replace(/\{\{分类说明\}\}/g, categoryDocs)
+          .replace(/\{\{对话记录\}\}/g, formattedHistory)
+          .replace(/\{\{总结设定\}\}/g, summarySettingContext);
+      }
+
+      return `${summarySettingContext}
+  # 你的任务
+  你是"${chat.originalName}"。请阅读下面的对话记录，提取【值得长期记忆】的信息，输出为【结构化记忆条目】。
+
+  # 现有记忆档案（供参考，避免重复提取）
+  ${existingMemory}
+
+  # 对话时间范围
+  ${timeRangeStr}
+
+  # 输出格式（严格遵守）
+  每行一条，格式为：[YYMMDD]分类标签:内容
+
+  ${categoryDocs}
+
+  # 提取规则（重要性优先）
+  ## 1. 什么值得记录？（必须满足以下至少一条）
+  - 【用户偏好/习惯】：喜欢/讨厌的东西、生活习惯、性格特点、重要个人信息（生日、职业等）
+  - 【重要事件】：第一次做某事、特殊场合、转折点、有纪念意义的时刻
+  - 【明确的决定】：做出的重要选择、改变的想法
+  - 【具体的计划】：约定要做的事、未来的安排
+  - 【关系里程碑】：称呼变化、关系进展、重要的承诺
+  - 【强烈情绪时刻】：吵架、和好、感动、失落等情感转折
+  - 【未来会引用的信息】：如果一个月后忘记会影响对话质量的内容
+
+  ## 2. 什么不需要记录？（直接跳过）
+  - 日常问候、寒暄（"早安"、"晚安"、"在吗"）
+  - 临时性闲聊话题（天气、今天吃什么、随口聊的话题）
+  - 一次性的询问和回答（"这个词什么意思"、"帮我算个数"）
+  - 没有后续影响的琐碎细节（"我去上个厕所"、"手机快没电了"）
+  - 重复的日常对话（每天都说的话不需要每次都记）
+
+  ## 3. 判断标准（提取前问自己）
+  - ❓ 这个信息在未来对话中会被引用吗？
+  - ❓ 这个信息能帮助我更了解${userNickname}吗？
+  - ❓ 这是我们关系发展的重要节点吗？
+  - ❓ 如果一个月后忘记这个，会让${userNickname}失望吗？
+  → 如果都是"否"，就不要提取
+
+  ## 4. 格式要求
+  - 【日期准确】：根据对话时间范围推算具体日期，格式YYMMDD
+  - 【F类用key=value】：同类信息归到同一个key下，多个值用+连接
+  - 【简短但完整】：每条尽量简短，但不能丢失关键信息
+  - 【第一人称】：从"${chat.originalName}"的视角记录
+  - 【不重复】：参考现有记忆档案，不要重复提取已有的信息
+  - 【善用自定义分类】：如果有自定义分类，优先将相关内容归入对应分类
+
+  ## 5. 质量控制
+  - 宁可少记，不要滥记
+  - 每条记忆都应该是"值得珍藏"的
+  - 如果犹豫要不要记，那就不记
+
+  # 你的角色设定
+  ${chat.settings.aiPersona}
+
+  # 你的聊天对象
+  ${userNickname}（人设：${chat.settings.myPersona || '未设置'}）
+
+  # 待提取的对话记录
+  ${formattedHistory}
+
+  请直接输出结构化记忆条目，每行一条，不要输出其他内容。只提取真正重要的信息，不要把闲聊内容也记录下来。`;
     }
-
-    return `${summarySettingContext}
-# 你的任务
-你是"${chat.originalName}"。请阅读下面的对话记录，提取【值得长期记忆】的信息，输出为【结构化记忆条目】。
-
-# 现有记忆档案（供参考，避免重复提取）
-${existingMemory}
-
-# 对话时间范围
-${timeRangeStr}
-
-# 输出格式（严格遵守）
-每行一条，格式为：[YYMMDD]分类标签:内容
-
-${categoryDocs}
-
-# 提取规则（重要性优先）
-## 1. 什么值得记录？（必须满足以下至少一条）
-- 【用户偏好/习惯】：喜欢/讨厌的东西、生活习惯、性格特点、重要个人信息（生日、职业等）
-- 【重要事件】：第一次做某事、特殊场合、转折点、有纪念意义的时刻
-- 【明确的决定】：做出的重要选择、改变的想法
-- 【具体的计划】：约定要做的事、未来的安排
-- 【关系里程碑】：称呼变化、关系进展、重要的承诺
-- 【强烈情绪时刻】：吵架、和好、感动、失落等情感转折
-- 【未来会引用的信息】：如果一个月后忘记会影响对话质量的内容
-
-## 2. 什么不需要记录？（直接跳过）
-- 日常问候、寒暄（"早安"、"晚安"、"在吗"）
-- 临时性闲聊话题（天气、今天吃什么、随口聊的话题）
-- 一次性的询问和回答（"这个词什么意思"、"帮我算个数"）
-- 没有后续影响的琐碎细节（"我去上个厕所"、"手机快没电了"）
-- 重复的日常对话（每天都说的话不需要每次都记）
-
-## 3. 判断标准（提取前问自己）
-- ❓ 这个信息在未来对话中会被引用吗？
-- ❓ 这个信息能帮助我更了解${userNickname}吗？
-- ❓ 这是我们关系发展的重要节点吗？
-- ❓ 如果一个月后忘记这个，会让${userNickname}失望吗？
-→ 如果都是"否"，就不要提取
-
-## 4. 格式要求
-- 【日期准确】：根据对话时间范围推算具体日期，格式YYMMDD
-- 【F类用key=value】：同类信息归到同一个key下，多个值用+连接
-- 【简短但完整】：每条尽量简短，但不能丢失关键信息
-- 【第一人称】：从"${chat.originalName}"的视角记录
-- 【不重复】：参考现有记忆档案，不要重复提取已有的信息
-- 【善用自定义分类】：如果有自定义分类，优先将相关内容归入对应分类
-
-## 5. 质量控制
-- 宁可少记，不要滥记
-- 每条记忆都应该是"值得珍藏"的
-- 如果犹豫要不要记，那就不记
-
-# 你的角色设定
-${chat.settings.aiPersona}
-
-# 你的聊天对象
-${userNickname}（人设：${chat.settings.myPersona || '未设置'}）
-
-# 待提取的对话记录
-${formattedHistory}
-
-请直接输出结构化记忆条目，每行一条，不要输出其他内容。只提取真正重要的信息，不要把闲聊内容也记录下来。`;
-  }
 
   // ==================== UI 渲染 ====================
 
