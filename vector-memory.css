@@ -1,0 +1,617 @@
+/* ========================================
+   向量记忆系统 - 样式
+   ======================================== */
+
+/* 工具栏 */
+.vm-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.vm-toolbar-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--card-bg, #fff);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text-primary, #333);
+}
+.vm-toolbar-btn:active { opacity: 0.7; }
+.vm-toolbar-btn.vm-primary {
+  background: var(--accent-color, #007aff);
+  color: #fff;
+  border-color: var(--accent-color, #007aff);
+}
+
+/* 统计栏 */
+.vm-stats {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  padding: 12px 15px;
+  margin-bottom: 12px;
+}
+.vm-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+.vm-stats-row span {
+  background: var(--bg-secondary, #f5f5f5);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+/* 分类区块 */
+.vm-section {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.vm-core-section { border: 1px solid rgba(255, 59, 48, 0.3); }
+.vm-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color, #eee);
+}
+.vm-section-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #fff;
+  padding: 0 4px;
+}
+.vm-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  flex: 1;
+}
+.vm-section-count {
+  font-size: 12px;
+  color: var(--text-secondary, #999);
+  background: var(--bg-secondary, #f0f0f0);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 记忆条目 */
+.vm-section-list { padding: 0; }
+.vm-item-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  gap: 8px;
+}
+.vm-item-row:last-child { border-bottom: none; }
+.vm-item-main { flex: 1; min-width: 0; }
+.vm-item-content {
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  line-height: 1.4;
+  word-break: break-word;
+  display: block;
+}
+.vm-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.vm-meta-tag {
+  font-size: 10px;
+  color: var(--text-secondary, #999);
+  background: var(--bg-secondary, #f5f5f5);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.vm-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.vm-item-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color, #ddd);
+  background: var(--bg-secondary, #f5f5f5);
+  cursor: pointer;
+  font-size: 11px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #666);
+  white-space: nowrap;
+}
+.vm-item-btn:hover { background: var(--border-color, #e0e0e0); }
+
+/* 设置面板 */
+.vm-settings-panel { padding: 10px 0; }
+.vm-settings-group {
+  background: var(--card-bg, #fff);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+.vm-settings-group h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--text-primary, #333);
+}
+.vm-setting-item {
+  margin-bottom: 10px;
+}
+.vm-setting-item label {
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vm-setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  min-height: 30px;
+}
+.vm-setting-row span {
+  font-size: 13px;
+  color: var(--text-primary, #333);
+}
+.vm-input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg-secondary, #f5f5f5);
+  color: var(--text-primary, #333);
+}
+.vm-input-sm {
+  width: 60px;
+  padding: 4px 6px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg-secondary, #f5f5f5);
+  color: var(--text-primary, #333);
+}
+.vm-input-full {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg-secondary, #f5f5f5);
+  color: var(--text-primary, #333);
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+.vm-weights {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.vm-weights > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.vm-weights span {
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+.vm-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 8px;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: monospace;
+  resize: vertical;
+  background: var(--bg-secondary, #f5f5f5);
+  color: var(--text-primary, #333);
+  box-sizing: border-box;
+  margin-top: 6px;
+}
+.vm-btn-primary {
+  padding: 10px;
+  background: var(--accent-color, #007aff);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.vm-btn-primary:active { opacity: 0.8; }
+
+/* 记忆模式选择器 */
+.memory-mode-selector {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+.memory-mode-option {
+  flex: 1;
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 12px;
+  cursor: pointer;
+  background: var(--card-bg, #fff);
+  color: var(--text-secondary, #666);
+  border-right: 1px solid var(--border-color, #ddd);
+  transition: all 0.2s;
+}
+.memory-mode-option:last-child { border-right: none; }
+.memory-mode-option.active {
+  background: var(--accent-color, #007aff);
+  color: #fff;
+}
+.memory-mode-option .mode-label { font-weight: 500; }
+.memory-mode-option .mode-desc { font-size: 10px; opacity: 0.7; margin-top: 2px; }
+
+/* 全屏面板 */
+.vm-fullscreen-panel {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 9999;
+  background: var(--bg-primary, #f0f2f5);
+  display: flex;
+  flex-direction: column;
+}
+.vm-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  background: var(--card-bg, #fff);
+  border-bottom: 1px solid var(--border-color, #eee);
+  flex-shrink: 0;
+}
+.vm-panel-back {
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0 10px;
+  color: var(--text-primary, #333);
+  line-height: 1;
+}
+.vm-panel-title {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary, #333);
+}
+.vm-panel-tabs {
+  display: flex;
+  background: var(--card-bg, #fff);
+  border-bottom: 1px solid var(--border-color, #eee);
+  flex-shrink: 0;
+}
+.vm-panel-tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-secondary, #999);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.vm-panel-tab.active {
+  color: var(--accent-color, #007aff);
+  border-bottom-color: var(--accent-color, #007aff);
+  font-weight: 500;
+}
+.vm-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.vm-panel-content {
+  display: none;
+  padding: 15px;
+}
+.vm-panel-content.active {
+  display: block;
+}
+
+/* 教程样式 */
+.vm-guide { max-width: 600px; margin: 0 auto; }
+.vm-guide-section {
+  margin-bottom: 20px;
+}
+.vm-guide-section h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  margin: 0 0 8px 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color, #eee);
+}
+.vm-guide-section p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary, #555);
+  margin: 6px 0;
+}
+.vm-guide-card {
+  background: var(--card-bg, #fff);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 8px 0;
+  border: 1px solid var(--border-color, #eee);
+}
+.vm-guide-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  margin-bottom: 6px;
+}
+.vm-guide-card p {
+  font-size: 12px;
+  margin: 4px 0;
+}
+.vm-guide-tip {
+  font-size: 12px !important;
+  color: var(--accent-color, #007aff) !important;
+  background: rgba(0,122,255,0.06);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 6px !important;
+}
+.vm-guide-list {
+  margin: 8px 0;
+}
+.vm-guide-list > div {
+  font-size: 13px;
+  color: var(--text-primary, #555);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  line-height: 1.5;
+}
+.vm-guide-list > div:last-child { border-bottom: none; }
+.vm-guide-label {
+  display: inline-block;
+  min-width: 80px;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  margin-right: 8px;
+}
+.vm-guide-steps { margin: 8px 0; }
+.vm-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--text-primary, #555);
+  line-height: 1.5;
+}
+.vm-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  background: var(--accent-color, #007aff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 移动端适配 */
+@media (max-width: 480px) {
+  .vm-toolbar {
+    gap: 4px;
+  }
+  .vm-toolbar-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .vm-stats-row {
+    gap: 4px;
+    font-size: 11px;
+  }
+  .vm-stats-row span {
+    padding: 3px 6px;
+  }
+  .vm-section-header {
+    padding: 10px 12px;
+  }
+  .vm-item-row {
+    padding: 8px 12px;
+  }
+  .vm-item-content {
+    font-size: 12px;
+  }
+  .vm-meta-tag {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+  .vm-item-btn {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+  .vm-settings-group {
+    padding: 12px;
+  }
+  .vm-settings-group h4 {
+    font-size: 13px;
+  }
+  .vm-weights > div {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .vm-input-sm {
+    width: 50px;
+  }
+  .vm-textarea {
+    font-size: 11px;
+    min-height: 150px;
+  }
+  .vm-guide-section h4 {
+    font-size: 14px;
+  }
+  .vm-guide-section p,
+  .vm-guide-card p,
+  .vm-guide-list > div,
+  .vm-guide-step {
+    font-size: 12px;
+  }
+  .vm-guide-label {
+    min-width: 70px;
+    font-size: 12px;
+  }
+  .vm-panel-content {
+    padding: 12px;
+  }
+}
+
+/* ========================================
+   批量操作样式
+   ======================================== */
+
+/* 批量操作工具栏 */
+.vm-batch-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  background: var(--accent-color, #007aff);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  color: #fff;
+  flex-wrap: wrap;
+}
+
+.vm-batch-toolbar .vm-batch-count {
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.vm-batch-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #fff;
+  transition: background 0.2s;
+}
+
+.vm-batch-btn:active {
+  background: rgba(255,255,255,0.3);
+}
+
+.vm-batch-btn.vm-batch-danger {
+  background: rgba(255,59,48,0.8);
+  border-color: rgba(255,59,48,0.6);
+}
+
+.vm-batch-btn.vm-batch-danger:active {
+  background: rgba(255,59,48,1);
+}
+
+/* 复选框样式 */
+.vm-item-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color, #ccc);
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.vm-item-checkbox.checked {
+  background: var(--accent-color, #007aff);
+  border-color: var(--accent-color, #007aff);
+}
+
+.vm-item-checkbox.checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 全选复选框 */
+.vm-section-select-all {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color, #ccc);
+  background: var(--card-bg, #fff);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  margin-right: 4px;
+}
+
+.vm-section-select-all.checked {
+  background: var(--accent-color, #007aff);
+  border-color: var(--accent-color, #007aff);
+}
+
+.vm-section-select-all.checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 批量模式下条目行高亮 */
+.vm-item-row.selected {
+  background: rgba(0, 122, 255, 0.06);
+}
+
+/* 暗色模式 */
+.dark-mode .vm-batch-toolbar {
+  background: var(--accent-color, #0a84ff);
+}
+
+.dark-mode .vm-item-checkbox {
+  border-color: var(--border-color, #555);
+  background: var(--card-bg, #1c1c1e);
+}
+
+.dark-mode .vm-section-select-all {
+  border-color: var(--border-color, #555);
+  background: var(--card-bg, #1c1c1e);
+}
+
+.dark-mode .vm-item-row.selected {
+  background: rgba(10, 132, 255, 0.1);
+}

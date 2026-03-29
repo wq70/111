@@ -43,12 +43,11 @@ async function saveStickerVisionCache(stickerUrl, description) {
  * @returns {Promise<string>} - 识别结果
  */
 async function callVisionAPI(imageUrl) {
-  // 优先使用主API
-  const {
-    proxyUrl,
-    apiKey,
-    model
-  } = state.apiConfig;
+  // 优先使用识图API，未配置则回退到主API
+  const hasVisionApi = state.apiConfig.visionProxyUrl && state.apiConfig.visionApiKey && state.apiConfig.visionModel;
+  const proxyUrl = hasVisionApi ? state.apiConfig.visionProxyUrl : state.apiConfig.proxyUrl;
+  const apiKey = hasVisionApi ? state.apiConfig.visionApiKey : state.apiConfig.apiKey;
+  const model = hasVisionApi ? state.apiConfig.visionModel : state.apiConfig.model;
 
   if (!proxyUrl || !apiKey || !model) {
     throw new Error("API未配置或配置不完整");

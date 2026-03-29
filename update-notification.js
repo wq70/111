@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.28'; // 当前更新版本号
+    this.currentVersion = '0.0.29'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,13 +22,19 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1.新增语音TTS二次点击暂停，退出会话暂停</div>
-      <div class="update-item">2.修复绿江评论区CSS丢失问题</div>
-      <div class="update-item">3.新增一起听歌单，可以分享歌单给角色，可以开启一起听时长开关让角色感知目前已经听了多久了</div>
-      <div class="update-item">4.修复表情包匹配群聊没有持久话的问题</div>
-      <div class="update-item">5.可以自定义心声提示词</div>
-      <div class="update-item">6.可以自定义结构化总结提示词！</div>
-      <div class="update-item">7.修复歌单上传无效的BUG</div>
+      <div class="update-item important-note" style="font-size: 15px; font-weight: bold; color: #FF4757; border: 2px solid #FF4757; background: rgba(255,71,87,0.1);">⚠️ 拆分了文件，可能有BUG，请及时反馈！</div>
+      <div class="update-item">1. 尝试修复了内存泄露问题，应该可能不会出现卡着不动的问题</div>
+      <div class="update-item">2. 感觉现在聊天详情和API设置页面太拥挤了，整合了一下，然后搓了个变色版的API设置页面</div>
+      <div class="update-item">3. 修复清除冗余数据的时候会把渲染器没有启用的也删掉的BUG</div>
+      <div class="update-item">4. 新增识图优化，应该可以省下TOKEN</div>
+      <div class="update-item">5. 新增免费生图的KEY</div>
+      <div class="update-item">6. 新增情侣空间</div>
+      <div class="update-item">7. 新增变量总结</div>
+      <div class="update-item">8. 新增长期记忆和结构性表格可以批量选取，复制、删除和单独导入导出（感谢许愿）</div>
+      <div class="update-item">9. 新增自定义时间可以自然流逝</div>
+      <div class="update-item">10. 尝试修复动态没有字的BUG</div>
+      <div class="update-item">11. 新增专属识图API</div>
+      <div class="update-item">12. 新增兼容弹窗下拉框</div>
     `;
 
     return `
@@ -36,7 +42,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">3.2更新</div>
+            <div class="update-title">3.29更新</div>
           </div>
           
           <div class="update-notification-body">

@@ -1283,6 +1283,8 @@ class OnlineChatManager {
 
     scheduleReconnect() {
             if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
+            // ★ 清除旧的重连定时器
+            if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
             const delay = Math.min(3000 * Math.pow(1.5, this.reconnectAttempts), 60000);
             this.reconnectAttempts++;
             console.log(`[连接APP] ${delay / 1000}秒后重连 (第${this.reconnectAttempts}次)`);
@@ -1297,7 +1299,11 @@ class OnlineChatManager {
         }
 
     setupVisibilityListener() {
-            document.addEventListener('visibilitychange', () => {
+            // ★ 先移除旧的，防止叠加
+            if (this._onVisibilityChange) {
+                document.removeEventListener('visibilitychange', this._onVisibilityChange);
+            }
+            this._onVisibilityChange = () => {
                 if (!document.hidden && this.shouldAutoReconnect && !this.isConnected) {
                     const enableSwitch = document.getElementById('online-app-enable-switch');
                     if (enableSwitch && enableSwitch.checked) {
@@ -1309,7 +1315,8 @@ class OnlineChatManager {
                         }
                     }
                 }
-            });
+            };
+            document.addEventListener('visibilitychange', this._onVisibilityChange);
         }
 
     setupBeforeUnloadListener() {

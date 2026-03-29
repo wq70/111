@@ -481,6 +481,39 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #e68a9f; 
         }
+
+        /* 移动端深度适配 */
+        @media (max-width: 480px) {
+            body { padding: 6px; background-size: 15px 15px !important; }
+            .container { padding: 12px; border-radius: 14px !important; }
+            h1 { font-size: 18px !important; padding-bottom: 10px !important; margin-bottom: 16px !important; }
+            h2 { font-size: 16px !important; margin-top: 22px !important; padding-left: 10px !important; border-left-width: 4px !important; line-height: 1.6; }
+            h3 { font-size: 14px !important; margin-top: 16px !important; }
+            h4 { font-size: 13px !important; }
+            p { font-size: 13px; margin-bottom: 10px; }
+            .intro-box { padding: 12px !important; border-radius: 12px !important; }
+            .step { padding: 12px !important; margin-bottom: 14px !important; border-radius: 12px !important; }
+            .step-number { width: 24px; height: 24px; line-height: 24px; font-size: 12px; }
+            code { font-size: 12px; padding: 2px 5px; }
+            .code-block, .example { padding: 10px !important; font-size: 12px; border-radius: 10px !important; white-space: pre-wrap; word-break: break-all; }
+            .warning, .tips, .note, .success, .danger, .tips-railway { padding: 10px !important; border-radius: 10px !important; font-size: 12px; }
+            .comparison-table th, .comparison-table td { padding: 8px 6px !important; font-size: 11px; }
+            .comparison-table { min-width: 500px; }
+            .method-card { padding: 12px !important; border-radius: 12px !important; }
+            .qa { padding: 10px !important; margin: 10px 0 !important; }
+            .disclaimer-content { padding: 16px !important; border-radius: 16px !important; }
+            .disclaimer-title { font-size: 18px; margin-bottom: 16px !important; }
+            .disclaimer-text { font-size: 12px; }
+            .disclaimer-input-section { padding: 14px !important; }
+            img { max-width: 100%; height: auto; }
+        }
+        @media (min-width: 481px) and (max-width: 768px) {
+            .container { padding: 24px; }
+            h1 { font-size: 22px !important; }
+            h2 { font-size: 18px !important; }
+            .code-block, .example { font-size: 13px; }
+            .comparison-table { min-width: 550px; }
+        }
     </style>
 </head>
 <body>

@@ -18,12 +18,16 @@ class HelperAssistant {
 
   // 初始化
   init() {
-    // 监听页面切换
-    const observer = new MutationObserver(() => {
+    // 如果已有旧的 observer，先断开
+    if (this.observer) {
+      this.observer.disconnect();
+    }
+
+    this.observer = new MutationObserver(() => {
       this.checkAndShow();
     });
 
-    observer.observe(document.body, {
+    this.observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -157,22 +161,37 @@ class HelperAssistant {
     image.addEventListener('mousedown', (e) => this.dragStart(e));
     image.addEventListener('touchstart', (e) => this.dragStart(e), { passive: false });
 
-    document.addEventListener('mousemove', (e) => this.drag(e));
-    document.addEventListener('touchmove', (e) => this.drag(e), { passive: false });
+    // ★ 具名引用，存到 this 上，方便移除
+    this._onMouseMove = (e) => this.drag(e);
+    this._onTouchMove = (e) => this.drag(e);
+    this._onMouseUp = (e) => this.dragEnd(e);
+    this._onTouchEnd = (e) => this.dragEnd(e);
+    this._onDocClick = () => { if (this.menuVisible) this.hideMenu(); };
 
-    document.addEventListener('mouseup', (e) => this.dragEnd(e));
-    document.addEventListener('touchend', (e) => this.dragEnd(e));
-
-    // 点击页面其他地方关闭菜单
-    document.addEventListener('click', () => {
-      if (this.menuVisible) {
-        this.hideMenu();
-      }
-    });
+    document.addEventListener('mousemove', this._onMouseMove);
+    document.addEventListener('touchmove', this._onTouchMove, { passive: false });
+    document.addEventListener('mouseup', this._onMouseUp);
+    document.addEventListener('touchend', this._onTouchEnd);
+    document.addEventListener('click', this._onDocClick);
 
     menu.addEventListener('click', (e) => {
       e.stopPropagation();
     });
+  }
+
+  unbindEvents() {
+    if (this._onMouseMove) {
+      document.removeEventListener('mousemove', this._onMouseMove);
+      document.removeEventListener('touchmove', this._onTouchMove);
+      document.removeEventListener('mouseup', this._onMouseUp);
+      document.removeEventListener('touchend', this._onTouchEnd);
+      document.removeEventListener('click', this._onDocClick);
+      this._onMouseMove = null;
+      this._onTouchMove = null;
+      this._onMouseUp = null;
+      this._onTouchEnd = null;
+      this._onDocClick = null;
+    }
   }
 
   // 拖动开始
@@ -366,6 +385,13 @@ class HelperAssistant {
   // 隐藏助手
   hideAssistant() {
     localStorage.setItem(this.hiddenStorageKey, 'true');
+    // ★ 断开 MutationObserver
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = null;
+    }
+    // ★ 移除 document 级事件监听器
+    this.unbindEvents();
     const assistant = document.getElementById('helper-assistant');
     if (assistant) {
       assistant.remove();
@@ -381,6 +407,10 @@ class HelperAssistant {
       wakeBtn.remove();
     }
     this.createAssistant();
+    // ★ 重新启动观察
+    if (!this.observer) {
+      this.init();
+    }
   }
 
   // 创建唤起按钮

@@ -100,6 +100,30 @@
         strong {
             color: #007aff;
         }
+
+        /* 移动端适配 */
+        @media (max-width: 480px) {
+            body { padding: 8px; }
+            .container { padding: 14px; border-radius: 10px; }
+            h1 { font-size: 20px; margin-bottom: 14px; }
+            h2 { font-size: 17px; margin-top: 20px; margin-bottom: 10px; }
+            h3 { font-size: 15px; margin-top: 14px; }
+            p, li { font-size: 13px; line-height: 1.7; }
+            pre, code { font-size: 12px; word-break: break-all; }
+            pre { padding: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { font-size: 12px; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .code-block, .example { padding: 10px; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+            .step { padding: 12px; margin-bottom: 14px; }
+            .warning, .tips, .note, .success, .info-box { padding: 10px; font-size: 13px; }
+            img { max-width: 100%; height: auto; }
+        }
+        @media (min-width: 481px) and (max-width: 768px) {
+            body { padding: 12px; }
+            .container { padding: 20px; }
+            h1 { font-size: 24px; }
+            h2 { font-size: 19px; }
+            pre, code { font-size: 13px; }
+        }
     </style>
 </head>
 <body>
