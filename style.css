@@ -725,6 +725,12 @@
                display: flex;
            }
 
+           /* 导入弹窗需要高于 custom-modal-overlay(z-index:10200) */
+           #import-options-modal,
+           #selective-import-modal {
+               z-index: 10300;
+           }
+
            .modal-content {
                width: 90%;
                max-height: 90%;

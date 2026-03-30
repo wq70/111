@@ -903,7 +903,7 @@ class OnlineChatManager {
                     title: title,
                     options: {
                         body: body,
-                        icon: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
+                        icon: 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
                         tag: `online-${chatId}-${Date.now()}`,
                         requireInteraction: true,
                         renotify: true,

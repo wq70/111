@@ -35,6 +35,8 @@ class UpdateNotification {
       <div class="update-item">10. 尝试修复动态没有字的BUG</div>
       <div class="update-item">11. 新增专属识图API</div>
       <div class="update-item">12. 新增兼容弹窗下拉框</div>
+      <div class="update-item">13. 修复锁屏滑动、总结点不动，排除消息的按钮等BUG</div>
+      <div class="update-item">14. 新增情侣空间天数可以自定义，大部分地方可以编辑</div>
     `;
 
     return `
