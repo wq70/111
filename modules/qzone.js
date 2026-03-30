@@ -14,10 +14,11 @@
 (function () {
   // state 通过全局作用域访问（window.state，由 init-and-state.js 初始化）
 
-  let qzonePostsRenderCount = 0;
-  const QZONE_RENDER_WINDOW = 10;
+  // 暴露到 window，供 init-event-bindingsB.js / init-features.js 跨文件访问
+  window.qzonePostsRenderCount = window.qzonePostsRenderCount || 0;
+  window.qzonePostsCache = window.qzonePostsCache || [];
 
-  let qzonePostsCache = [];
+  const QZONE_RENDER_WINDOW = 10;
 
   // qzoneStickerPanelState 在 init-and-state.js 中赋值 panelEl/gridEl
   // 这里先确保 window 上有该对象，供本模块函数使用
@@ -31,7 +32,7 @@
   }
   const qzoneStickerPanelState = window.qzoneStickerPanelState;
 
-  let isLoadingMorePosts = false;
+  window.isLoadingMorePosts = window.isLoadingMorePosts || false;
 
   let repostTargetId = null;
 
@@ -341,9 +342,9 @@
     }
 
 
-    const cacheIndex = qzonePostsCache.findIndex(p => p.id === postId);
+    const cacheIndex = window.qzonePostsCache.findIndex(p => p.id === postId);
     if (cacheIndex > -1) {
-      qzonePostsCache[cacheIndex] = postData;
+      window.qzonePostsCache[cacheIndex] = postData;
     }
 
 
@@ -366,13 +367,13 @@
       db.qzonePosts.orderBy('timestamp').reverse().filter(post => !post.isDeleted).toArray(),
       db.favorites.where('type').equals('qzone_post').toArray()
     ]);
-    qzonePostsCache = postsFromDb;
+    window.qzonePostsCache = postsFromDb;
     state.favoritedPostIds = new Set(favorites.map(fav => fav.content.id));
 
     postsListEl.innerHTML = '';
-    qzonePostsRenderCount = 0;
+    window.qzonePostsRenderCount = 0;
 
-    if (qzonePostsCache.length === 0) {
+    if (window.qzonePostsCache.length === 0) {
       postsListEl.innerHTML = '<p style="text-align:center; color: var(--text-secondary); padding: 30px 0;">这里空空如也，快来发布第一条说说吧！</p>';
       return;
     }
@@ -385,12 +386,12 @@
 
 
   async function loadMoreQzonePosts() {
-    if (isLoadingMorePosts) return;
-    isLoadingMorePosts = true;
+    if (window.isLoadingMorePosts) return;
+    window.isLoadingMorePosts = true;
 
     const postsListEl = document.getElementById('qzone-posts-list');
     if (!postsListEl) {
-      isLoadingMorePosts = false;
+      window.isLoadingMorePosts = false;
       return;
     }
 
@@ -400,9 +401,9 @@
     setTimeout(async () => {
       hideLoader(postsListEl);
 
-      const nextSliceStart = qzonePostsRenderCount;
-      const nextSliceEnd = qzonePostsRenderCount + QZONE_RENDER_WINDOW;
-      const postsToAppend = qzonePostsCache.slice(nextSliceStart, nextSliceEnd);
+      const nextSliceStart = window.qzonePostsRenderCount;
+      const nextSliceEnd = window.qzonePostsRenderCount + QZONE_RENDER_WINDOW;
+      const postsToAppend = window.qzonePostsCache.slice(nextSliceStart, nextSliceEnd);
 
       const fragment = document.createDocumentFragment();
       for (const post of postsToAppend) {
@@ -411,9 +412,9 @@
       }
       postsListEl.appendChild(fragment);
 
-      qzonePostsRenderCount += postsToAppend.length;
+      window.qzonePostsRenderCount += postsToAppend.length;
 
-      isLoadingMorePosts = false;
+      window.isLoadingMorePosts = false;
     }, 500);
   }
 
@@ -1036,8 +1037,8 @@
         await db.qzonePosts.where('authorId').anyOf(targetIds).delete();
       }
 
-      qzonePostsCache = await db.qzonePosts.orderBy('timestamp').reverse().toArray();
-      qzonePostsRenderCount = 0;
+      window.qzonePostsCache = await db.qzonePosts.orderBy('timestamp').reverse().toArray();
+      window.qzonePostsRenderCount = 0;
       await renderQzonePosts();
 
       document.getElementById('clear-posts-modal').classList.remove('visible');
