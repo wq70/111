@@ -293,7 +293,7 @@
     const appName = state.globalSettings.systemNotification.appName || 'EPhone';
     const title = options.title || `${appName} - ${chat.name}`;
     const body = messageContent;
-    const icon = chat.settings.aiAvatar || chat.settings.groupAvatar || 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg';
+    const icon = chat.settings.aiAvatar || chat.settings.groupAvatar || 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png';
 
     // 每条消息使用唯一的 tag，确保每条都显示
     const uniqueTag = `chat-${chatId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -425,8 +425,8 @@
       // iOS友好的测试通知配置
       const testNotifyOptions = {
         body: '这是一条测试通知 🎉',
-        icon: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
-        badge: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
+        icon: 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
+        badge: 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
         tag: 'test-notification'
       };
 

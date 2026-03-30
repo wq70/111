@@ -721,6 +721,16 @@
   }
 
   // 导出到全局作用域，供 HTML onclick 和其他模块调用
+  window._modalOverlay = modalOverlay;
+  window._modalTitle = modalTitle;
+  window._modalBody = modalBody;
+  window._modalConfirmBtn = modalConfirmBtn;
+  window._modalCancelBtn = modalCancelBtn;
+  Object.defineProperty(window, '_modalResolve', {
+    get() { return modalResolve; },
+    set(v) { modalResolve = v; },
+    configurable: true
+  });
   window.showCustomModal = showCustomModal;
   window.hideCustomModal = hideCustomModal;
   window.showCustomConfirm = showCustomConfirm;

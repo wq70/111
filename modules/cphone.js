@@ -4827,6 +4827,7 @@ ${recentHistory}
   window.handleGenerateAmapHistory = handleGenerateAmapHistory;
   window.handleGenerateAppUsage = handleGenerateAppUsage;
   window.handleGenerateBrowserHistory = handleGenerateBrowserHistory;
+  window.handleGenerateMyPhoneQQ = handleGenerateMyPhoneQQ;
 
   // ========== 从 script.js 迁移：B类函数 ==========
 

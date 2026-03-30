@@ -824,10 +824,7 @@ function bindVectorMemoryEvents(chat, container) {
   const summaryBtn = container.querySelector('#vm-summary-btn');
   if (summaryBtn) {
     summaryBtn.addEventListener('click', async () => {
-      const confirmed = await showCustomConfirm('向量记忆总结', '将提取最近对话中的记忆片段并生成向量，会消耗API额度。继续？');
-      if (confirmed) {
-        await triggerVectorMemorySummary(state.activeChatId, true);
-      }
+      await openVectorSummaryMenu(chat);
     });
   }
 
@@ -1108,6 +1105,292 @@ async function openVectorMemorySettings(chat) {
 }
 
 // ==================== 向量记忆自动总结 ====================
+// ===== 向量记忆提取核心逻辑（公共函数） =====
+async function executeVectorExtraction(chat, messages, updateTimestamp = false) {
+  if (messages.length === 0) {
+    showToast('没有可总结的消息', 'info');
+    return;
+  }
+
+  const userNickname = chat.settings.myNickname || '用户';
+  const formattedHistory = messages.map(msg => {
+    const sender = msg.role === 'user' ? userNickname : (msg.senderName || chat.name || chat.originalName);
+    const time = new Date(msg.timestamp).toLocaleString('zh-CN');
+    let content = '';
+    if (msg.type === 'voice_message') content = `[语音] ${msg.content}`;
+    else if (msg.type === 'ai_image') content = `[图片: ${msg.content}]`;
+    else if (Array.isArray(msg.content)) content = '[图片]';
+    else content = String(msg.content || '');
+    return `(${time}) ${sender}: ${content}`;
+  }).join('\n');
+
+  const firstTime = new Date(messages[0].timestamp).toLocaleString('zh-CN');
+  const lastTime = new Date(messages[messages.length - 1].timestamp).toLocaleString('zh-CN');
+  const timeRangeStr = `${firstTime} ~ ${lastTime}`;
+
+  const prompt = window.vectorMemoryManager.buildExtractionPrompt(chat, formattedHistory, timeRangeStr);
+
+  showToast('正在提取向量记忆...', 'info');
+  const apiConfig = window.state.apiConfig;
+  const useSecondary = apiConfig.secondaryProxyUrl && apiConfig.secondaryApiKey && apiConfig.secondaryModel;
+  const proxyUrl = useSecondary ? apiConfig.secondaryProxyUrl : apiConfig.proxyUrl;
+  const apiKey = useSecondary ? apiConfig.secondaryApiKey : apiConfig.apiKey;
+  const model = useSecondary ? apiConfig.secondaryModel : apiConfig.model;
+
+  const isGemini = proxyUrl === window.GEMINI_API_URL;
+  let response;
+  if (isGemini && typeof toGeminiRequestData === 'function') {
+    const geminiConfig = toGeminiRequestData(model, apiKey, prompt, [{ role: 'user', content: '请开始提取。' }]);
+    response = await fetch(geminiConfig.url, geminiConfig.data);
+  } else {
+    response = await fetch(`${proxyUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model, messages: [{ role: 'system', content: prompt }, { role: 'user', content: '请开始提取。' }], temperature: 0.3 })
+    });
+  }
+
+  if (!response.ok) throw new Error(`API返回 ${response.status}`);
+  const data = await response.json();
+  const rawText = typeof getGeminiResponseText === 'function' ? getGeminiResponseText(data) : (data.choices?.[0]?.message?.content || '');
+
+  const extracted = window.vectorMemoryManager.parseExtractionResult(rawText);
+  if (extracted.length > 0) {
+    const newIds = await window.vectorMemoryManager.mergeExtractedMemories(chat, extracted);
+    if (updateTimestamp) {
+      const vm = window.vectorMemoryManager.getVectorMemory(chat);
+      vm.lastExtractionTimestamp = messages[messages.length - 1].timestamp;
+    }
+    await db.chats.put(chat);
+    showToast(`成功提取 ${newIds.length} 条向量记忆`, 'success');
+    if (document.getElementById('vector-memory-container')?.style.display !== 'none') {
+      renderVectorMemoryView();
+    }
+  } else {
+    showToast('未提取到新的记忆', 'info');
+  }
+}
+
+// ===== 向量记忆总结模式选择菜单 =====
+async function openVectorSummaryMenu(chat) {
+  const vm = window.vectorMemoryManager.getVectorMemory(chat);
+  const lastTimestamp = vm.lastExtractionTimestamp || 0;
+  const totalMessages = chat.history.length;
+  const newMessages = chat.history.filter(m => m.timestamp > lastTimestamp && (!m.isHidden || (m.role === 'system' && m.content && m.content.includes('内心独白'))));
+  const lastDateStr = lastTimestamp ? new Date(lastTimestamp).toLocaleString('zh-CN') : '从未更新';
+
+  return new Promise(resolve => {
+    window._modalResolve = (result) => { resolve(result); };
+    window._modalTitle.textContent = '选择总结模式';
+
+    const options = [
+      {
+        id: 'new-messages',
+        title: '新消息总结',
+        description: '总结上次之后的新消息',
+        info: `待处理消息：${newMessages.length} 条`
+      },
+      {
+        id: 'range',
+        title: '范围总结',
+        description: '指定消息范围进行总结',
+        info: `总消息数：${totalMessages} 条`
+      },
+      {
+        id: 'reset',
+        title: '重置时间戳',
+        description: '重置后下次对话重新总结',
+        info: `上次更新：${lastDateStr}`
+      }
+    ];
+
+    const optionsHtml = options.map(opt => `
+      <label class="summary-mode-option">
+        <input type="radio" name="summary-mode" value="${opt.id}">
+        <div class="option-content">
+          <div class="option-title">${opt.title}</div>
+          <div class="option-description">${opt.description}</div>
+          <div class="option-info">${opt.info}</div>
+        </div>
+      </label>
+    `).join('');
+
+    window._modalBody.innerHTML = `<div class="summary-mode-selector">${optionsHtml}</div>`;
+
+    const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
+    if (modalFooter) {
+      modalFooter.style.flexDirection = 'row';
+      modalFooter.style.justifyContent = 'flex-end';
+      modalFooter.innerHTML = `
+        <button id="custom-modal-cancel">取消</button>
+        <button id="custom-modal-confirm" class="confirm-btn">确定</button>
+      `;
+    }
+
+    const confirmBtn = document.getElementById('custom-modal-confirm');
+    const cancelBtn = document.getElementById('custom-modal-cancel');
+    cancelBtn.style.display = 'block';
+
+    confirmBtn.onclick = async () => {
+      const selectedMode = document.querySelector('input[name="summary-mode"]:checked');
+      if (selectedMode) {
+        hideCustomModal();
+        const mode = selectedMode.value;
+        switch (mode) {
+          case 'new-messages':
+            await handleVectorNewMessagesSummary(chat);
+            break;
+          case 'range':
+            await handleVectorRangeSummary(chat);
+            break;
+          case 'reset':
+            await handleVectorResetTimestamp(chat);
+            break;
+        }
+      } else {
+        showToast('请选择一个模式', 'info');
+      }
+    };
+
+    cancelBtn.onclick = () => { hideCustomModal(); };
+    showCustomModal();
+  });
+}
+
+// ===== 向量记忆 - 新消息总结 =====
+async function handleVectorNewMessagesSummary(chat) {
+  const vm = window.vectorMemoryManager.getVectorMemory(chat);
+  const lastTimestamp = vm.lastExtractionTimestamp || 0;
+  const newMessages = chat.history.filter(m => m.timestamp > lastTimestamp && (!m.isHidden || (m.role === 'system' && m.content && m.content.includes('内心独白'))));
+
+  if (newMessages.length === 0) {
+    showToast('暂无新消息需要总结', 'info');
+    return;
+  }
+
+  if (newMessages.length < 5) {
+    const confirmed = await showCustomConfirm(
+      '消息较少',
+      `只有 ${newMessages.length} 条新消息，建议至少5条以上才能进行有意义的总结。\n\n是否继续？`
+    );
+    if (!confirmed) return;
+  }
+
+  showToast(`正在总结 ${newMessages.length} 条新消息...`, 'info');
+  try {
+    await executeVectorExtraction(chat, newMessages, true);
+  } catch (error) {
+    console.error('[向量记忆-新消息总结] 错误:', error);
+    showToast('总结失败：' + error.message, 'error');
+  }
+}
+
+// ===== 向量记忆 - 范围总结 =====
+async function handleVectorRangeSummary(chat) {
+  const totalMessages = chat.history.length;
+
+  return new Promise(resolve => {
+    window._modalResolve = resolve;
+    window._modalTitle.textContent = '范围总结（向量记忆）';
+
+    window._modalBody.innerHTML = `
+      <div class="range-summary-form">
+        <p style="margin-bottom: 15px; color: var(--text-secondary, #666);">
+          当前共有 ${totalMessages} 条消息
+        </p>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; margin-bottom: 5px; font-size: 13px;">起始消息序号：</label>
+          <input type="number" id="range-start" min="1" max="${totalMessages}" value="1" 
+                 style="width: 100%; padding: 8px; border: 1px solid var(--border-color, #ddd); border-radius: 8px;">
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; margin-bottom: 5px; font-size: 13px;">结束消息序号：</label>
+          <input type="number" id="range-end" min="1" max="${totalMessages}" value="${totalMessages}" 
+                 style="width: 100%; padding: 8px; border: 1px solid var(--border-color, #ddd); border-radius: 8px;">
+        </div>
+        <div style="margin-top: 15px;">
+          <label style="display: flex; align-items: center; font-size: 13px; cursor: pointer;">
+            <input type="checkbox" id="update-timestamp" style="margin-right: 8px;">
+            <span>更新时间戳（勾选后将更新到结束消息的时间）</span>
+          </label>
+        </div>
+      </div>
+    `;
+
+    const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
+    if (modalFooter) {
+      modalFooter.style.flexDirection = 'row';
+      modalFooter.style.justifyContent = 'flex-end';
+      modalFooter.innerHTML = `
+        <button id="custom-modal-cancel">取消</button>
+        <button id="custom-modal-confirm" class="confirm-btn">开始总结</button>
+      `;
+    }
+
+    const confirmBtn = document.getElementById('custom-modal-confirm');
+    const cancelBtn = document.getElementById('custom-modal-cancel');
+    cancelBtn.style.display = 'block';
+
+    confirmBtn.onclick = async () => {
+      const start = parseInt(document.getElementById('range-start').value);
+      const end = parseInt(document.getElementById('range-end').value);
+      const updateTimestamp = document.getElementById('update-timestamp').checked;
+
+      if (isNaN(start) || isNaN(end) || start < 1 || end > totalMessages || start > end) {
+        showToast('无效的消息范围', 'error');
+        return;
+      }
+
+      hideCustomModal();
+
+      const rangeMessages = chat.history.slice(start - 1, end);
+      const validMessages = rangeMessages.filter(m => !m.isHidden || (m.role === 'system' && m.content && m.content.includes('内心独白')));
+
+      if (validMessages.length === 0) {
+        showToast('选定范围内没有有效消息', 'info');
+        return;
+      }
+
+      showToast(`正在总结第 ${start}-${end} 条消息...`, 'info');
+      try {
+        await executeVectorExtraction(chat, validMessages, updateTimestamp);
+      } catch (error) {
+        console.error('[向量记忆-范围总结] 错误:', error);
+        showToast('总结失败：' + error.message, 'error');
+      }
+    };
+
+    cancelBtn.onclick = () => { hideCustomModal(); };
+    showCustomModal();
+  });
+}
+
+// ===== 向量记忆 - 重置时间戳 =====
+async function handleVectorResetTimestamp(chat) {
+  const vm = window.vectorMemoryManager.getVectorMemory(chat);
+  const lastTimestamp = vm.lastExtractionTimestamp || 0;
+  const lastDateStr = lastTimestamp ? new Date(lastTimestamp).toLocaleString('zh-CN') : '从未更新';
+  const totalMessages = chat.history.length;
+  const newMessages = chat.history.filter(m => m.timestamp > lastTimestamp && (!m.isHidden || (m.role === 'system' && m.content && m.content.includes('内心独白'))));
+
+  const message = `当前状态：
+- 上次更新：${lastDateStr}
+- 总消息数：${totalMessages}
+- 待处理消息：${newMessages.length}
+
+重置后下次对话将重新提取所有未处理的消息。
+
+确定要重置吗？`;
+
+  const confirmed = await showCustomConfirm('确认重置', message);
+  if (confirmed) {
+    vm.lastExtractionTimestamp = 0;
+    await db.chats.put(chat);
+    showToast('已重置，下次对话将重新提取记忆', 'success');
+  }
+}
+
+// ===== 兼容旧的自动总结调用 =====
 async function triggerVectorMemorySummary(chatId, force = false) {
   const chat = state.chats[chatId];
   if (!chat || !window.vectorMemoryManager) return;
@@ -1127,60 +1410,8 @@ async function triggerVectorMemorySummary(chatId, force = false) {
     return;
   }
 
-  const userNickname = chat.settings.myNickname || '用户';
-  const formattedHistory = messagesToProcess.map(msg => {
-    const sender = msg.role === 'user' ? userNickname : (msg.senderName || chat.name || chat.originalName);
-    const time = new Date(msg.timestamp).toLocaleString('zh-CN');
-    let content = '';
-    if (msg.type === 'voice_message') content = `[语音] ${msg.content}`;
-    else if (msg.type === 'ai_image') content = `[图片: ${msg.content}]`;
-    else if (Array.isArray(msg.content)) content = '[图片]';
-    else content = String(msg.content || '');
-    return `(${time}) ${sender}: ${content}`;
-  }).join('\n');
-
-  const firstTime = new Date(messagesToProcess[0].timestamp).toLocaleString('zh-CN');
-  const lastTime = new Date(messagesToProcess[messagesToProcess.length - 1].timestamp).toLocaleString('zh-CN');
-  const timeRangeStr = `${firstTime} ~ ${lastTime}`;
-
-  const prompt = window.vectorMemoryManager.buildExtractionPrompt(chat, formattedHistory, timeRangeStr);
-
   try {
-    showToast('正在提取向量记忆...', 'info');
-    const apiConfig = window.state.apiConfig;
-    const useSecondary = apiConfig.secondaryProxyUrl && apiConfig.secondaryApiKey && apiConfig.secondaryModel;
-    const proxyUrl = useSecondary ? apiConfig.secondaryProxyUrl : apiConfig.proxyUrl;
-    const apiKey = useSecondary ? apiConfig.secondaryApiKey : apiConfig.apiKey;
-    const model = useSecondary ? apiConfig.secondaryModel : apiConfig.model;
-
-    const isGemini = proxyUrl === window.GEMINI_API_URL;
-    let response;
-    if (isGemini && typeof toGeminiRequestData === 'function') {
-      const geminiConfig = toGeminiRequestData(model, apiKey, prompt, [{ role: 'user', content: '请开始提取。' }]);
-      response = await fetch(geminiConfig.url, geminiConfig.data);
-    } else {
-      response = await fetch(`${proxyUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model, messages: [{ role: 'system', content: prompt }, { role: 'user', content: '请开始提取。' }], temperature: 0.3 })
-      });
-    }
-
-    if (!response.ok) throw new Error(`API返回 ${response.status}`);
-    const data = await response.json();
-    const rawText = typeof getGeminiResponseText === 'function' ? getGeminiResponseText(data) : (data.choices?.[0]?.message?.content || '');
-
-    const extracted = window.vectorMemoryManager.parseExtractionResult(rawText);
-    if (extracted.length > 0) {
-      const newIds = await window.vectorMemoryManager.mergeExtractedMemories(chat, extracted);
-      await db.chats.put(chat);
-      showToast(`成功提取 ${newIds.length} 条向量记忆`, 'success');
-      if (document.getElementById('vector-memory-container')?.style.display !== 'none') {
-        renderVectorMemoryView();
-      }
-    } else {
-      showToast('未提取到新的记忆', 'info');
-    }
+    await executeVectorExtraction(chat, messagesToProcess, !force);
   } catch (e) {
     console.error('[向量记忆] 总结失败:', e);
     showToast('向量记忆总结失败: ' + e.message, 'error');
@@ -1688,11 +1919,11 @@ async function openStructuredSummaryMenu(chat) {
   const debugInfo = window.structuredMemoryManager.getDebugInfo(chat);
   
   return new Promise(resolve => {
-    modalResolve = (result) => {
+    window._modalResolve = (result) => {
       resolve(result);
     };
     
-    modalTitle.textContent = '选择总结模式';
+    window._modalTitle.textContent = '选择总结模式';
     
     const options = [
       {
@@ -1726,7 +1957,7 @@ async function openStructuredSummaryMenu(chat) {
       </label>
     `).join('');
 
-    modalBody.innerHTML = `<div class="summary-mode-selector">${optionsHtml}</div>`;
+    window._modalBody.innerHTML = `<div class="summary-mode-selector">${optionsHtml}</div>`;
 
     // 重建footer
     const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
@@ -1809,10 +2040,10 @@ async function handleRangeSummary(chat) {
   const totalMessages = chat.history.length;
   
   return new Promise(resolve => {
-    modalResolve = resolve;
-    modalTitle.textContent = '范围总结';
+    window._modalResolve = resolve;
+    window._modalTitle.textContent = '范围总结';
     
-    modalBody.innerHTML = `
+    window._modalBody.innerHTML = `
       <div class="range-summary-form">
         <p style="margin-bottom: 15px; color: var(--text-secondary, #666);">
           当前共有 ${totalMessages} 条消息

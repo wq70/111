@@ -2432,13 +2432,13 @@ window.initEventBindingsB = function(state, db) {
     document.getElementById('batch-exclude-select-all').addEventListener('click', () => {
       document.querySelectorAll('#batch-exclude-list .batch-exclude-item').forEach(item => {
         const ts = parseInt(item.dataset.timestamp);
-        batchExcludeChecked.add(ts);
+        window.batchExcludeChecked.add(ts);
         item.classList.add('checked');
       });
-      document.getElementById('batch-exclude-selected-count').textContent = `已选 ${batchExcludeChecked.size} 条`;
+      document.getElementById('batch-exclude-selected-count').textContent = `已选 ${window.batchExcludeChecked.size} 条`;
     });
     document.getElementById('batch-exclude-deselect-all').addEventListener('click', () => {
-      batchExcludeChecked.clear();
+      window.batchExcludeChecked.clear();
       document.querySelectorAll('#batch-exclude-list .batch-exclude-item').forEach(item => item.classList.remove('checked'));
       document.getElementById('batch-exclude-selected-count').textContent = '已选 0 条';
     });
@@ -2452,11 +2452,11 @@ window.initEventBindingsB = function(state, db) {
       const items = document.querySelectorAll('#batch-exclude-list .batch-exclude-item');
       items.forEach((item, i) => {
         if (i >= start && i < end) {
-          batchExcludeChecked.add(parseInt(item.dataset.timestamp));
+          window.batchExcludeChecked.add(parseInt(item.dataset.timestamp));
           item.classList.add('checked');
         }
       });
-      document.getElementById('batch-exclude-selected-count').textContent = `已选 ${batchExcludeChecked.size} 条`;
+      document.getElementById('batch-exclude-selected-count').textContent = `已选 ${window.batchExcludeChecked.size} 条`;
     });
 
 

@@ -560,7 +560,7 @@ const DEFAULT_APP_ICONS = {
     'char-phone': 'https://i.postimg.cc/pXj9h20L/IMG-7275.jpg',
     'douban': 'https://i.postimg.cc/Pq2xJN1g/IMG-7301.jpg',
 
-    'preset': 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
+    'preset': 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
 
     'tutorial': 'https://i.postimg.cc/d10GjC4g/IMG-7302.jpg',
     'werewolf': 'https://i.postimg.cc/k401K5g7/IMG-7304.jpg',

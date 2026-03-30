@@ -67,6 +67,7 @@
     const chat = state.chats[state.activeChatId];
     if (!chat) return;
     batchExcludeChecked = new Set();
+    window.batchExcludeChecked = batchExcludeChecked;
     const listEl = document.getElementById('batch-exclude-list');
     // 只显示非系统隐藏的消息（用户可见的消息）
     const visibleMsgs = chat.history.filter(m => !m.isHidden);
@@ -112,6 +113,7 @@
   function closeBatchExcludeManager() {
     document.getElementById('batch-exclude-modal').classList.remove('visible');
     batchExcludeChecked = new Set();
+    window.batchExcludeChecked = batchExcludeChecked;
   }
 
   function openExcludedDetailView() {
@@ -1855,6 +1857,7 @@
   window.closeBatchExcludeManager = closeBatchExcludeManager;
   window.openExcludedDetailView = openExcludedDetailView;
   window.closeExcludedDetailView = closeExcludedDetailView;
+  window.batchExcludeChecked = batchExcludeChecked;
   window.batchExcludeAction = batchExcludeAction;
   window.translateMessageContent = translateMessageContent;
   window.openMessageEditor = openMessageEditor;

@@ -1180,7 +1180,7 @@
             <span id="char-signature" class="sig" onclick="editSignature('char')">点击编辑签名</span>
           </div>
         </div>
-        <div class="days-card">
+        <div class="days-card" onclick="editDays()" style="cursor:pointer">
           <div class="blur-1"></div>
           <div class="blur-2"></div>
           <div class="inner">
@@ -1279,9 +1279,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">日记详情</span>
-      <button class="icon-btn" onclick="showDiaryDeleteConfirm()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentDiary()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="showDiaryDeleteConfirm()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="diary-detail-scroll" id="diary-detail-scroll"></div>
     <div class="diary-comment-bar">
@@ -1313,9 +1318,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">照片详情</span>
-      <button class="icon-btn" onclick="showAlbumDeleteConfirm()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentAlbumPhoto()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="showAlbumDeleteConfirm()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="album-detail-scroll" id="album-detail-scroll"></div>
     <div class="diary-comment-bar">
@@ -1398,9 +1408,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">留言详情</span>
-      <button class="icon-btn" id="msg-detail-delete-btn" onclick="deleteMsgFromDetail()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentMsg()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" id="msg-detail-delete-btn" onclick="deleteMsgFromDetail()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="msg-detail-scroll" id="msg-detail-scroll"></div>
     <div class="msg-comment-bar">
@@ -1418,9 +1433,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">时光详情</span>
-      <button class="icon-btn" onclick="showTlDeleteConfirm()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentTl()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="showTlDeleteConfirm()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="tl-detail-scroll" id="tl-detail-scroll"></div>
     <div class="tl-comment-bar">
@@ -1465,9 +1485,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">账目详情</span>
-      <button class="icon-btn" onclick="deleteFinFromDetail()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentFin()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteFinFromDetail()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="fin-detail-scroll" id="fin-detail-scroll"></div>
     <div class="fin-detail-comment-bar">
@@ -1504,9 +1529,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">心情详情</span>
-      <button class="icon-btn" onclick="deleteMoodFromDetail()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentMood()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteMoodFromDetail()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="mood-detail-scroll" id="mood-detail-scroll"></div>
     <div class="mood-detail-comment-bar">
@@ -1536,9 +1566,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">信件详情</span>
-      <button class="icon-btn" onclick="deleteLetterFromDetail()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentLetter()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteLetterFromDetail()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="letter-detail-scroll" id="letter-detail-scroll"></div>
     <div class="letter-comment-bar">
@@ -1591,9 +1626,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">定位详情</span>
-      <button class="icon-btn" onclick="deleteLocFromDetail()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentLoc()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteLocFromDetail()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="loc-detail-scroll" id="loc-detail-scroll"></div>
     <div class="loc-comment-bar">
@@ -1630,9 +1670,14 @@
         <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <span style="font-weight:600;color:#1c1917;letter-spacing:0.1em;font-size:16px;">睡眠详情</span>
-      <button class="icon-btn" onclick="deleteSleepFromDetail()">
-        <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>
+      <div style="display:flex;gap:8px">
+        <button class="icon-btn" onclick="editCurrentSleep()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn" onclick="deleteSleepFromDetail()">
+          <svg class="icon-md" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
     </header>
     <div class="sleep-detail-scroll" id="sleep-detail-scroll"></div>
     <div class="sleep-detail-comment-bar">
@@ -2024,6 +2069,7 @@ function editDistance() {
 }
 
 // ===== Days calc =====
+var csCreatedAt = null;
 function calcDays(createdAt) {
   var start = new Date(createdAt); start.setHours(0,0,0,0);
   var now = new Date(); now.setHours(0,0,0,0);
@@ -2032,6 +2078,49 @@ function calcDays(createdAt) {
 function formatDate(ts) {
   var d = new Date(ts);
   return d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+}
+function updateDaysDisplay() {
+  if (!csCreatedAt) return;
+  var ov = getCustomOverrides();
+  var realDays = calcDays(csCreatedAt);
+  if (ov.customDays !== undefined && ov.customDays !== null) {
+    document.getElementById('days-count').textContent = Math.max(ov.customDays, realDays);
+  } else {
+    document.getElementById('days-count').textContent = realDays;
+  }
+}
+function editDays() {
+  if (!currentCharId || !csCreatedAt) return;
+  var ov = getCustomOverrides();
+  var realDays = calcDays(csCreatedAt);
+  var currentDisplay = ov.customDays !== undefined && ov.customDays !== null ? Math.max(ov.customDays, realDays) : realDays;
+  var overlay = document.createElement('div');
+  overlay.className = 'sig-overlay animate-fade-in';
+  overlay.innerHTML = '<div class="sig-modal animate-slide-up"><h3>自定义天数</h3>' +
+    '<input id="days-input" type="number" min="1" value="' + currentDisplay + '" placeholder="输入天数..." />' +
+    '<p style="font-size:11px;color:#a8a29e;margin-top:8px">仅修改显示天数，重置后恢复真实天数（' + realDays + '天）</p>' +
+    '<div class="sig-btns"><button class="sig-cancel" id="days-cancel">取消</button><button class="sig-reset" id="days-reset">重置</button><button class="sig-confirm" id="days-confirm">确定</button></div></div>';
+  document.getElementById('app').appendChild(overlay);
+  var input = overlay.querySelector('#days-input'); input.focus(); input.select();
+  overlay.querySelector('#days-cancel').onclick = function() { overlay.remove(); };
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#days-reset').onclick = function() {
+    var ov2 = getCustomOverrides();
+    delete ov2.customDays;
+    saveCustomOverrides(ov2);
+    updateDaysDisplay();
+    overlay.remove();
+  };
+  overlay.querySelector('#days-confirm').onclick = function() {
+    var val = parseInt(input.value, 10);
+    if (!val || val < 1) return;
+    var ov2 = getCustomOverrides();
+    ov2.customDays = val;
+    saveCustomOverrides(ov2);
+    updateDaysDisplay();
+    overlay.remove();
+  };
+  input.addEventListener('keydown', function(e) { if (e.key === 'Enter') overlay.querySelector('#days-confirm').click(); });
 }
 
 // ===== Init from parent =====
@@ -2052,8 +2141,9 @@ window.addEventListener('message', function(e) {
       if (d.charAvatar) { el.style.backgroundImage = 'url(' + d.charAvatar + ')'; el.style.backgroundSize = 'cover'; }
     });
     if (d.createdAt) {
-      document.getElementById('days-count').textContent = calcDays(d.createdAt);
+      csCreatedAt = d.createdAt;
       document.getElementById('start-date').textContent = '始于 ' + formatDate(d.createdAt);
+      updateDaysDisplay();
     }
     loadSignatures();
     applyCustomOverrides();
@@ -2353,12 +2443,23 @@ function closeDiaryFab() {
 
 // --- Write Diary ---
 let editingDiaryMood = '';
-function openDiaryWrite() {
+let editingDiaryId = null;
+function openDiaryWrite(existingId) {
   closeDiaryFab();
+  editingDiaryId = existingId || null;
   editingDiaryMood = '';
   document.getElementById('diary-write-title').value = '';
   document.getElementById('diary-write-content').value = '';
-  document.getElementById('diary-write-title-label').textContent = '写日记';
+  document.getElementById('diary-write-title-label').textContent = existingId ? '编辑日记' : '写日记';
+  if (existingId) {
+    var diaries = getDiaries();
+    var d = diaries.find(function(x){ return x.id === existingId; });
+    if (d) {
+      document.getElementById('diary-write-title').value = d.title || '';
+      document.getElementById('diary-write-content').value = d.content || '';
+      editingDiaryMood = d.mood || '';
+    }
+  }
   // Render mood chips
   var row = document.getElementById('diary-mood-row');
   row.innerHTML = '';
@@ -2464,20 +2565,42 @@ function saveDiary() {
   var content = document.getElementById('diary-write-content').value.trim();
   if (!title || !content) return;
   var diaries = getDiaries();
-  diaries.push({
-    id: genId(),
-    author: 'user',
-    title: title,
-    content: content,
-    mood: editingDiaryMood || '',
-    timestamp: Date.now(),
-    comments: []
-  });
-  saveDiaries(diaries);
-  closeDiaryWrite();
-  renderDiaryList();
-  // Notify AI to potentially comment on this diary
-  requestAiComment(diaries[diaries.length - 1]);
+  if (editingDiaryId) {
+    var idx = diaries.findIndex(function(x){ return x.id === editingDiaryId; });
+    if (idx >= 0) {
+      diaries[idx].title = title;
+      diaries[idx].content = content;
+      diaries[idx].mood = editingDiaryMood || '';
+    }
+    saveDiaries(diaries);
+    closeDiaryWrite();
+    renderDiaryList();
+    if (currentViewingDiaryId === editingDiaryId) renderDiaryDetail();
+    editingDiaryId = null;
+  } else {
+    diaries.push({
+      id: genId(),
+      author: 'user',
+      title: title,
+      content: content,
+      mood: editingDiaryMood || '',
+      timestamp: Date.now(),
+      comments: []
+    });
+    saveDiaries(diaries);
+    closeDiaryWrite();
+    renderDiaryList();
+    // Notify AI to potentially comment on this diary
+    requestAiComment(diaries[diaries.length - 1]);
+  }
+}
+function editCurrentDiary() {
+  if (!currentViewingDiaryId) return;
+  var diaries = getDiaries();
+  var d = diaries.find(function(x){ return x.id === currentViewingDiaryId; });
+  if (!d || d.author !== 'user') return;
+  closeDiaryDetail();
+  openDiaryWrite(currentViewingDiaryId);
 }
 
 // --- Diary Detail ---
@@ -3367,6 +3490,34 @@ function deleteAlbumPhoto() {
   closeAlbumDetail();
   renderAlbumList();
   showAlbumToast('已删除');
+}
+
+function editCurrentAlbumPhoto() {
+  if (!currentAlbumPhotoId) return;
+  var photos = getAlbumPhotos();
+  var photo = photos.find(function(p){ return p.id === currentAlbumPhotoId; });
+  if (!photo || photo.author !== 'user') return;
+  var overlay = document.createElement('div');
+  overlay.className = 'sig-overlay animate-fade-in';
+  overlay.innerHTML = '<div class="sig-modal animate-slide-up"><h3>编辑照片描述</h3>' +
+    '<textarea id="album-edit-desc" style="width:100%;background:#fafaf9;border:1px solid #e7e5e4;border-radius:0.75rem;padding:12px 16px;font-size:14px;color:#44403c;outline:none;resize:none;min-height:80px;line-height:1.5;font-family:inherit">' + escHtml(photo.description || '') + '</textarea>' +
+    '<div class="sig-btns"><button class="sig-cancel" id="album-edit-cancel">取消</button><button class="sig-confirm" id="album-edit-confirm">保存</button></div></div>';
+  document.getElementById('app').appendChild(overlay);
+  var textarea = overlay.querySelector('#album-edit-desc'); textarea.focus();
+  overlay.querySelector('#album-edit-cancel').onclick = function() { overlay.remove(); };
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#album-edit-confirm').onclick = function() {
+    var val = textarea.value.trim();
+    var photos2 = getAlbumPhotos();
+    var idx = photos2.findIndex(function(p){ return p.id === currentAlbumPhotoId; });
+    if (idx >= 0) {
+      photos2[idx].description = val;
+      saveAlbumPhotos(photos2);
+      renderAlbumDetail();
+      renderAlbumList();
+    }
+    overlay.remove();
+  };
 }
 
 // --- Request char to post ---
@@ -5450,10 +5601,20 @@ function requestAiMsg() {
 }
 
 // --- Write Message ---
-function openMsgWrite() {
+var editingMsgId = null;
+function openMsgWrite(existingId) {
   closeMsgFab();
+  editingMsgId = existingId || null;
   editingMsgCategory = 'none';
   document.getElementById('msg-write-content').value = '';
+  if (existingId) {
+    var msgs = getMessages();
+    var m = msgs.find(function(x){ return x.id === existingId; });
+    if (m) {
+      document.getElementById('msg-write-content').value = m.content || '';
+      editingMsgCategory = m.sticker || m.category || 'none';
+    }
+  }
   renderMsgStickerRow();
   document.getElementById('msg-write-page').classList.add('active');
   document.getElementById('feature-wrapper').classList.remove('active');
@@ -5541,36 +5702,59 @@ function saveMsgItem() {
   var content = document.getElementById('msg-write-content').value.trim();
   if (!content) return;
   var msgs = getMessages();
-  msgs.push({
-    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    content: content,
-    sticker: editingMsgCategory,
-    category: editingMsgCategory,
-    author: 'user',
-    createdAt: Date.now(),
-    hearts: { user: true },
-    comments: []
-  });
-  saveMessages(msgs);
-  closeMsgWrite();
-  renderMsgList();
-  notifyMsgChanged();
-  // Ask AI to reply
-  var settings = getMsgSettings();
-  window.parent.postMessage({
-    type: 'coupleSpaceMessageReplyRequest',
-    charId: currentCharId,
-    msgId: msgs[msgs.length - 1].id,
-    msgContent: content,
-    msgDate: new Date().toLocaleString('zh-CN')
-  }, '*');
-  // Ask AI to heart
-  window.parent.postMessage({
-    type: 'coupleSpaceMessageHeartRequest',
-    charId: currentCharId,
-    msgId: msgs[msgs.length - 1].id,
-    msgContent: content
-  }, '*');
+  if (editingMsgId) {
+    var idx = msgs.findIndex(function(x){ return x.id === editingMsgId; });
+    if (idx >= 0) {
+      msgs[idx].content = content;
+      msgs[idx].sticker = editingMsgCategory;
+      msgs[idx].category = editingMsgCategory;
+    }
+    saveMessages(msgs);
+    closeMsgWrite();
+    renderMsgList();
+    notifyMsgChanged();
+    editingMsgId = null;
+  } else {
+    msgs.push({
+      id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      content: content,
+      sticker: editingMsgCategory,
+      category: editingMsgCategory,
+      author: 'user',
+      createdAt: Date.now(),
+      hearts: { user: true },
+      comments: []
+    });
+    saveMessages(msgs);
+    closeMsgWrite();
+    renderMsgList();
+    notifyMsgChanged();
+    // Ask AI to reply
+    var settings = getMsgSettings();
+    window.parent.postMessage({
+      type: 'coupleSpaceMessageReplyRequest',
+      charId: currentCharId,
+      msgId: msgs[msgs.length - 1].id,
+      msgContent: content,
+      msgDate: new Date().toLocaleString('zh-CN')
+    }, '*');
+    // Ask AI to heart
+    window.parent.postMessage({
+      type: 'coupleSpaceMessageHeartRequest',
+      charId: currentCharId,
+      msgId: msgs[msgs.length - 1].id,
+      msgContent: content
+    }, '*');
+  }
+}
+function editCurrentMsg() {
+  if (!currentViewingMsgId) return;
+  var msgs = getMessages();
+  var m = msgs.find(function(x){ return x.id === currentViewingMsgId; });
+  if (!m || m.author !== 'user') return;
+  var idToEdit = currentViewingMsgId;
+  closeMsgDetail();
+  openMsgWrite(idToEdit);
 }
 
 // --- Detail ---
@@ -6023,11 +6207,22 @@ function requestAiTl() {
 }
 
 // --- Write ---
-function openTlWrite() {
+var editingTlId = null;
+function openTlWrite(existingId) {
   closeTlFab();
+  editingTlId = existingId || null;
   editingTlCategory = 'moment';
   document.getElementById('tl-write-title').value = '';
   document.getElementById('tl-write-content').value = '';
+  if (existingId) {
+    var items = getTlItems();
+    var item = items.find(function(x){ return x.id === existingId; });
+    if (item) {
+      document.getElementById('tl-write-title').value = item.title || '';
+      document.getElementById('tl-write-content').value = item.content || '';
+      editingTlCategory = item.category || 'moment';
+    }
+  }
   renderTlCatRow();
   document.getElementById('tl-write-page').classList.add('active');
   document.getElementById('feature-wrapper').classList.remove('active');
@@ -6116,38 +6311,61 @@ function saveTlItem() {
   var content = document.getElementById('tl-write-content').value.trim();
   if (!title || !content) return;
   var items = getTlItems();
-  var newItem = {
-    id: 'tl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    title: title,
-    content: content,
-    category: editingTlCategory,
-    author: 'user',
-    createdAt: Date.now(),
-    hearts: { user: true },
-    comments: []
-  };
-  items.push(newItem);
-  saveTlItems(items);
-  closeTlWrite();
-  renderTlList();
-  notifyTlChanged();
-  // Ask AI to comment
-  window.parent.postMessage({
-    type: 'coupleSpaceTimelineCommentRequest',
-    charId: currentCharId,
-    itemId: newItem.id,
-    itemTitle: title,
-    itemContent: content,
-    itemCategory: editingTlCategory,
-    itemAuthor: 'user'
-  }, '*');
-  // Ask AI to heart
-  window.parent.postMessage({
-    type: 'coupleSpaceTimelineHeartRequest',
-    charId: currentCharId,
-    itemId: newItem.id,
-    itemContent: title + ': ' + content
-  }, '*');
+  if (editingTlId) {
+    var idx = items.findIndex(function(x){ return x.id === editingTlId; });
+    if (idx >= 0) {
+      items[idx].title = title;
+      items[idx].content = content;
+      items[idx].category = editingTlCategory;
+    }
+    saveTlItems(items);
+    closeTlWrite();
+    renderTlList();
+    notifyTlChanged();
+    editingTlId = null;
+  } else {
+    var newItem = {
+      id: 'tl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      title: title,
+      content: content,
+      category: editingTlCategory,
+      author: 'user',
+      createdAt: Date.now(),
+      hearts: { user: true },
+      comments: []
+    };
+    items.push(newItem);
+    saveTlItems(items);
+    closeTlWrite();
+    renderTlList();
+    notifyTlChanged();
+    // Ask AI to comment
+    window.parent.postMessage({
+      type: 'coupleSpaceTimelineCommentRequest',
+      charId: currentCharId,
+      itemId: newItem.id,
+      itemTitle: title,
+      itemContent: content,
+      itemCategory: editingTlCategory,
+      itemAuthor: 'user'
+    }, '*');
+    // Ask AI to heart
+    window.parent.postMessage({
+      type: 'coupleSpaceTimelineHeartRequest',
+      charId: currentCharId,
+      itemId: newItem.id,
+      itemContent: title + ': ' + content
+    }, '*');
+  }
+}
+function editCurrentTl() {
+  if (!currentViewingTlId) return;
+  var items = getTlItems();
+  var item = items.find(function(x){ return x.id === currentViewingTlId; });
+  if (!item || item.author !== 'user') return;
+  var idToEdit = currentViewingTlId;
+  closeTlDetail();
+  openTlWrite(idToEdit);
 }
 
 // --- Detail ---
@@ -6665,10 +6883,20 @@ function requestAiMood() {
 }
 
 // --- Write Mood ---
-function openMoodWrite() {
+var editingMoodId = null;
+function openMoodWrite(existingId) {
   closeMoodFab();
+  editingMoodId = existingId || null;
   editingMoodType = '';
   document.getElementById('mood-write-content').value = '';
+  if (existingId) {
+    var moods = getMoods();
+    var m = moods.find(function(x){ return x.id === existingId; });
+    if (m) {
+      document.getElementById('mood-write-content').value = m.content || '';
+      editingMoodType = m.moodType || '';
+    }
+  }
   renderMoodTypeRow();
   updateMoodSaveBtn();
   document.getElementById('mood-write-page').classList.add('active');
@@ -6772,36 +7000,58 @@ function saveMoodItem() {
   if (!editingMoodType) return;
   var content = document.getElementById('mood-write-content').value.trim();
   var moods = getMoods();
-  moods.push({
-    id: 'mood_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    moodType: editingMoodType,
-    content: content,
-    author: 'user',
-    createdAt: Date.now(),
-    hearts: { user: true },
-    comments: []
-  });
-  saveMoods(moods);
-  closeMoodWrite();
-  renderMoodList();
-  notifyMoodChanged();
-  // Ask AI to comment
-  var lastMood = moods[moods.length - 1];
-  window.parent.postMessage({
-    type: 'coupleSpaceMoodCommentRequest',
-    charId: currentCharId,
-    moodId: lastMood.id,
-    moodType: lastMood.moodType,
-    moodContent: lastMood.content
-  }, '*');
-  // Ask AI to heart
-  window.parent.postMessage({
-    type: 'coupleSpaceMoodHeartRequest',
-    charId: currentCharId,
-    moodId: lastMood.id,
-    moodType: lastMood.moodType,
-    moodContent: lastMood.content
-  }, '*');
+  if (editingMoodId) {
+    var idx = moods.findIndex(function(x){ return x.id === editingMoodId; });
+    if (idx >= 0) {
+      moods[idx].moodType = editingMoodType;
+      moods[idx].content = content;
+    }
+    saveMoods(moods);
+    closeMoodWrite();
+    renderMoodList();
+    notifyMoodChanged();
+    editingMoodId = null;
+  } else {
+    moods.push({
+      id: 'mood_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      moodType: editingMoodType,
+      content: content,
+      author: 'user',
+      createdAt: Date.now(),
+      hearts: { user: true },
+      comments: []
+    });
+    saveMoods(moods);
+    closeMoodWrite();
+    renderMoodList();
+    notifyMoodChanged();
+    // Ask AI to comment
+    var lastMood = moods[moods.length - 1];
+    window.parent.postMessage({
+      type: 'coupleSpaceMoodCommentRequest',
+      charId: currentCharId,
+      moodId: lastMood.id,
+      moodType: lastMood.moodType,
+      moodContent: lastMood.content
+    }, '*');
+    // Ask AI to heart
+    window.parent.postMessage({
+      type: 'coupleSpaceMoodHeartRequest',
+      charId: currentCharId,
+      moodId: lastMood.id,
+      moodType: lastMood.moodType,
+      moodContent: lastMood.content
+    }, '*');
+  }
+}
+function editCurrentMood() {
+  if (!currentViewingMoodId) return;
+  var moods = getMoods();
+  var m = moods.find(function(x){ return x.id === currentViewingMoodId; });
+  if (!m || m.author !== 'user') return;
+  var idToEdit = currentViewingMoodId;
+  closeMoodDetail();
+  openMoodWrite(idToEdit);
 }
 
 // --- Detail ---
@@ -7216,13 +7466,24 @@ function requestAiLetter() {
 }
 
 // --- Write Letter ---
-function openLetterWrite(replyId) {
+var editingLetterId = null;
+function openLetterWrite(replyId, existingId) {
   closeLetterFab();
+  editingLetterId = existingId || null;
   replyToLetterId = replyId || null;
   editingLetterEnvelope = 'none';
   document.getElementById('letter-write-title').value = '';
   document.getElementById('letter-write-content').value = '';
-  document.getElementById('letter-write-title-label').textContent = replyId ? '回信' : '写信';
+  document.getElementById('letter-write-title-label').textContent = existingId ? '编辑信件' : (replyId ? '回信' : '写信');
+  if (existingId) {
+    var letters = getLetters();
+    var l = letters.find(function(x){ return x.id === existingId; });
+    if (l) {
+      document.getElementById('letter-write-title').value = l.title || '';
+      document.getElementById('letter-write-content').value = l.content || '';
+      editingLetterEnvelope = l.envelope || 'none';
+    }
+  }
   renderLetterEnvelopeRow();
   updateLetterSaveBtn();
   document.getElementById('letter-write-page').classList.add('active');
@@ -7256,41 +7517,64 @@ function saveLetterItem() {
   var content = document.getElementById('letter-write-content').value.trim();
   if (!title || !content) return;
   var letters = getLetters();
-  var newLetter = {
-    id: 'letter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    title: title,
-    content: content,
-    envelope: editingLetterEnvelope,
-    author: 'user',
-    replyTo: replyToLetterId || null,
-    read: true,
-    readAt: Date.now(),
-    createdAt: Date.now(),
-    hearts: { user: true },
-    comments: []
-  };
-  letters.push(newLetter);
-  saveLetters(letters);
-  closeLetterWrite();
-  renderLetterList();
-  notifyLetterChanged();
-  // Ask AI to reply
-  window.parent.postMessage({
-    type: 'coupleSpaceLetterReplyRequest',
-    charId: currentCharId,
-    letterId: newLetter.id,
-    letterTitle: title,
-    letterContent: content,
-    letterDate: new Date().toLocaleString('zh-CN')
-  }, '*');
-  // Ask AI to heart
-  window.parent.postMessage({
-    type: 'coupleSpaceLetterHeartRequest',
-    charId: currentCharId,
-    letterId: newLetter.id,
-    letterTitle: title,
-    letterContent: content
-  }, '*');
+  if (editingLetterId) {
+    var idx = letters.findIndex(function(x){ return x.id === editingLetterId; });
+    if (idx >= 0) {
+      letters[idx].title = title;
+      letters[idx].content = content;
+      letters[idx].envelope = editingLetterEnvelope;
+    }
+    saveLetters(letters);
+    closeLetterWrite();
+    renderLetterList();
+    notifyLetterChanged();
+    editingLetterId = null;
+  } else {
+    var newLetter = {
+      id: 'letter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      title: title,
+      content: content,
+      envelope: editingLetterEnvelope,
+      author: 'user',
+      replyTo: replyToLetterId || null,
+      read: true,
+      readAt: Date.now(),
+      createdAt: Date.now(),
+      hearts: { user: true },
+      comments: []
+    };
+    letters.push(newLetter);
+    saveLetters(letters);
+    closeLetterWrite();
+    renderLetterList();
+    notifyLetterChanged();
+    // Ask AI to reply
+    window.parent.postMessage({
+      type: 'coupleSpaceLetterReplyRequest',
+      charId: currentCharId,
+      letterId: newLetter.id,
+      letterTitle: title,
+      letterContent: content,
+      letterDate: new Date().toLocaleString('zh-CN')
+    }, '*');
+    // Ask AI to heart
+    window.parent.postMessage({
+      type: 'coupleSpaceLetterHeartRequest',
+      charId: currentCharId,
+      letterId: newLetter.id,
+      letterTitle: title,
+      letterContent: content
+    }, '*');
+  }
+}
+function editCurrentLetter() {
+  if (!currentViewingLetterId) return;
+  var letters = getLetters();
+  var l = letters.find(function(x){ return x.id === currentViewingLetterId; });
+  if (!l || l.author !== 'user') return;
+  var idToEdit = currentViewingLetterId;
+  closeLetterDetail();
+  openLetterWrite(null, idToEdit);
 }
 
 // --- Detail ---
@@ -9259,14 +9543,26 @@ function hideLocEditError() { var el = document.getElementById('loc-edit-error')
 
 // --- Location write page ---
 var locWriteCat = 'date';
-function openLocWrite() {
+var editingLocId = null;
+function openLocWrite(existingId) {
   locFabOpen = false;
+  editingLocId = existingId || null;
   locWriteCat = 'date';
   document.getElementById('loc-write-page').classList.add('active');
   document.getElementById('feature-wrapper').classList.remove('active');
   document.getElementById('loc-write-name').value = '';
   document.getElementById('loc-write-addr').value = '';
   document.getElementById('loc-write-desc').value = '';
+  if (existingId) {
+    var items = getLocItems();
+    var item = items.find(function(x){ return x.id === existingId; });
+    if (item) {
+      document.getElementById('loc-write-name').value = item.name || '';
+      document.getElementById('loc-write-addr').value = item.address || '';
+      document.getElementById('loc-write-desc').value = item.description || '';
+      locWriteCat = item.category || 'date';
+    }
+  }
   renderLocCatRow();
 }
 function closeLocWrite() {
@@ -9286,16 +9582,39 @@ function saveLocItem() {
   var addr = (document.getElementById('loc-write-addr').value || '').trim();
   var desc = (document.getElementById('loc-write-desc').value || '').trim();
   var items = getLocItems();
-  items.push({
-    id: 'loc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    name: name, address: addr, description: desc,
-    category: locWriteCat, lat: null, lng: null,
-    author: 'user', createdAt: Date.now(),
-    hearts: { user: true }, comments: []
-  });
-  saveLocItems(items);
-  closeLocWrite();
-  renderLocPage();
+  if (editingLocId) {
+    var idx = items.findIndex(function(x){ return x.id === editingLocId; });
+    if (idx >= 0) {
+      items[idx].name = name;
+      items[idx].address = addr;
+      items[idx].description = desc;
+      items[idx].category = locWriteCat;
+    }
+    saveLocItems(items);
+    closeLocWrite();
+    renderLocPage();
+    editingLocId = null;
+  } else {
+    items.push({
+      id: 'loc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      name: name, address: addr, description: desc,
+      category: locWriteCat, lat: null, lng: null,
+      author: 'user', createdAt: Date.now(),
+      hearts: { user: true }, comments: []
+    });
+    saveLocItems(items);
+    closeLocWrite();
+    renderLocPage();
+  }
+}
+function editCurrentLoc() {
+  if (!currentViewingLocId) return;
+  var items = getLocItems();
+  var item = items.find(function(x){ return x.id === currentViewingLocId; });
+  if (!item || item.author !== 'user') return;
+  var idToEdit = currentViewingLocId;
+  closeLocDetail();
+  openLocWrite(idToEdit);
 }
 
 // --- Location detail page ---
@@ -10129,8 +10448,10 @@ function requestAiSleepWake() {
 }
 
 // --- Write Sleep ---
-function openSleepWrite(type) {
+var editingSleepId = null;
+function openSleepWrite(type, existingId) {
   closeSleepFab();
+  editingSleepId = existingId || null;
   sleepWriteType = type || 'sleep';
   sleepWriteMood = '';
   sleepWriteQuality = '';
@@ -10141,25 +10462,57 @@ function openSleepWrite(type) {
   var qualitySection = document.getElementById('sleep-write-quality-section');
   var noteInput = document.getElementById('sleep-write-note');
 
+  if (existingId) {
+    var sleeps = getSleeps();
+    var s = sleeps.find(function(x){ return x.id === existingId; });
+    if (s) {
+      if (s.status === 'completed' && s.wakeAt) {
+        sleepWriteType = 'wake';
+      } else {
+        sleepWriteType = 'sleep';
+      }
+      if (sleepWriteType === 'sleep') {
+        sleepWriteMood = s.sleepMood || '';
+        noteInput.value = s.sleepNote || '';
+        if (s.sleepAt) {
+          try { document.getElementById('sleep-write-time').value = s.sleepAt.split('T')[1].substring(0,5); } catch(e){}
+        }
+      } else {
+        sleepWriteMood = s.wakeMood || '';
+        sleepWriteQuality = s.quality || '';
+        noteInput.value = s.wakeNote || '';
+        if (s.wakeAt) {
+          try { document.getElementById('sleep-write-time').value = s.wakeAt.split('T')[1].substring(0,5); } catch(e){}
+        }
+      }
+    }
+    titleLabel.textContent = '编辑睡眠';
+  } else {
+    noteInput.value = '';
+  }
+
   if (sleepWriteType === 'sleep') {
-    titleLabel.textContent = '记录入睡';
+    if (!existingId) titleLabel.textContent = '记录入睡';
     noteLabel.textContent = '想说的话';
     timeLabel.textContent = '入睡时间';
     noteInput.placeholder = '晚安...';
     qualitySection.style.display = 'none';
-    var now = new Date();
-    document.getElementById('sleep-write-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if (!existingId) {
+      var now = new Date();
+      document.getElementById('sleep-write-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    }
   } else {
-    titleLabel.textContent = '记录起床';
+    if (!existingId) titleLabel.textContent = '记录起床';
     noteLabel.textContent = '起床感受';
     timeLabel.textContent = '起床时间';
     noteInput.placeholder = '早安...';
     qualitySection.style.display = '';
-    var now = new Date();
-    document.getElementById('sleep-write-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    if (!existingId) {
+      var now = new Date();
+      document.getElementById('sleep-write-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    }
   }
 
-  noteInput.value = '';
   renderSleepWriteTypeRow();
   renderSleepWriteMoodRow();
   renderSleepWriteQualityRow();
@@ -10286,6 +10639,36 @@ function saveSleepItem() {
   var noteVal = document.getElementById('sleep-write-note').value.trim();
   var sleeps = getSleeps();
 
+  if (editingSleepId) {
+    var idx = sleeps.findIndex(function(x){ return x.id === editingSleepId; });
+    if (idx >= 0) {
+      var s = sleeps[idx];
+      if (sleepWriteType === 'sleep') {
+        s.sleepAt = new Date().toISOString().split('T')[0] + 'T' + (timeVal || '23:00') + ':00';
+        s.sleepNote = noteVal;
+        s.sleepMood = sleepWriteMood || s.sleepMood || 'calm';
+      } else {
+        s.wakeAt = new Date().toISOString().split('T')[0] + 'T' + (timeVal || '07:00') + ':00';
+        s.wakeNote = noteVal;
+        s.wakeMood = sleepWriteMood || s.wakeMood || 'refreshed';
+        s.quality = sleepWriteQuality || s.quality || 'normal';
+        if (s.sleepAt && s.wakeAt) {
+          try {
+            var sleepMs = new Date(s.sleepAt).getTime();
+            var wakeMs = new Date(s.wakeAt).getTime();
+            if (wakeMs > sleepMs) s.duration = Math.round((wakeMs - sleepMs) / 60000);
+          } catch(e) {}
+        }
+      }
+    }
+    saveSleeps(sleeps);
+    closeSleepWrite();
+    renderSleepList();
+    notifySleepChanged();
+    editingSleepId = null;
+    return;
+  }
+
   if (sleepWriteType === 'sleep') {
     var newSleep = {
       id: 'sleep_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -10380,6 +10763,15 @@ function saveSleepItem() {
 
 <script>
 // --- Sleep Detail ---
+function editCurrentSleep() {
+  if (!currentViewingSleepId) return;
+  var sleeps = getSleeps();
+  var s = sleeps.find(function(x){ return x.id === currentViewingSleepId; });
+  if (!s || s.author !== 'user') return;
+  var idToEdit = currentViewingSleepId;
+  closeSleepDetail();
+  openSleepWrite(null, idToEdit);
+}
 function openSleepDetail(id) {
   currentViewingSleepId = id;
   var sleeps = getSleeps();
@@ -10890,8 +11282,10 @@ function requestAiFin() {
 }
 
 // --- Write ---
-function openFinWrite() {
+var editingFinId = null;
+function openFinWrite(existingId) {
   closeFinFab();
+  editingFinId = existingId || null;
   editingFinType = 'expense';
   editingFinCat = '';
   document.getElementById('fin-write-amount').value = '';
@@ -10900,6 +11294,20 @@ function openFinWrite() {
   document.getElementById('fin-write-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('fin-type-expense').className = 'fin-write-type-btn expense active';
   document.getElementById('fin-type-income').className = 'fin-write-type-btn income';
+  if (existingId) {
+    var items = getFinItems();
+    var item = items.find(function(x){ return x.id === existingId; });
+    if (item) {
+      editingFinType = item.type || 'expense';
+      editingFinCat = item.category || '';
+      document.getElementById('fin-write-amount').value = item.amount || '';
+      document.getElementById('fin-write-title').value = item.title || '';
+      document.getElementById('fin-write-note').value = item.note || '';
+      document.getElementById('fin-write-date').value = item.date || new Date().toISOString().split('T')[0];
+      document.getElementById('fin-type-expense').className = 'fin-write-type-btn expense' + (editingFinType === 'expense' ? ' active' : '');
+      document.getElementById('fin-type-income').className = 'fin-write-type-btn income' + (editingFinType === 'income' ? ' active' : '');
+    }
+  }
   renderFinCatRow();
   updateFinSaveBtn();
   document.getElementById('fin-write-page').classList.add('active');
@@ -10995,44 +11403,70 @@ function saveFinItem() {
   var note = document.getElementById('fin-write-note').value.trim();
   var date = document.getElementById('fin-write-date').value || new Date().toISOString().split('T')[0];
   var items = getFinItems();
-  var newItem = {
-    id: 'fin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-    type: editingFinType,
-    amount: amt,
-    category: editingFinCat,
-    title: title,
-    note: note,
-    date: date,
-    author: 'user',
-    createdAt: Date.now(),
-    hearts: { user: true },
-    comments: []
-  };
-  items.push(newItem);
-  saveFinItems(items);
-  closeFinWrite();
-  renderFinList();
-  notifyFinChanged();
-  // Ask AI to comment
-  window.parent.postMessage({
-    type: 'coupleSpaceFinanceCommentRequest',
-    charId: currentCharId,
-    itemId: newItem.id,
-    itemType: newItem.type,
-    itemAmount: newItem.amount,
-    itemCategory: newItem.category,
-    itemTitle: newItem.title,
-    itemNote: newItem.note
-  }, '*');
-  // Ask AI to heart
-  window.parent.postMessage({
-    type: 'coupleSpaceFinanceHeartRequest',
-    charId: currentCharId,
-    itemId: newItem.id,
-    itemType: newItem.type,
-    itemAmount: newItem.amount,
-    itemTitle: newItem.title
-  }, '*');
+  if (editingFinId) {
+    var idx = items.findIndex(function(x){ return x.id === editingFinId; });
+    if (idx >= 0) {
+      items[idx].type = editingFinType;
+      items[idx].amount = amt;
+      items[idx].category = editingFinCat;
+      items[idx].title = title;
+      items[idx].note = note;
+      items[idx].date = date;
+    }
+    saveFinItems(items);
+    closeFinWrite();
+    renderFinList();
+    notifyFinChanged();
+    editingFinId = null;
+  } else {
+    var newItem = {
+      id: 'fin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      type: editingFinType,
+      amount: amt,
+      category: editingFinCat,
+      title: title,
+      note: note,
+      date: date,
+      author: 'user',
+      createdAt: Date.now(),
+      hearts: { user: true },
+      comments: []
+    };
+    items.push(newItem);
+    saveFinItems(items);
+    closeFinWrite();
+    renderFinList();
+    notifyFinChanged();
+    // Ask AI to comment
+    window.parent.postMessage({
+      type: 'coupleSpaceFinanceCommentRequest',
+      charId: currentCharId,
+      itemId: newItem.id,
+      itemType: newItem.type,
+      itemAmount: newItem.amount,
+      itemCategory: newItem.category,
+      itemTitle: newItem.title,
+      itemNote: newItem.note
+    }, '*');
+    // Ask AI to heart
+    window.parent.postMessage({
+      type: 'coupleSpaceFinanceHeartRequest',
+      charId: currentCharId,
+      itemId: newItem.id,
+      itemType: newItem.type,
+      itemAmount: newItem.amount,
+      itemTitle: newItem.title
+    }, '*');
+  }
+}
+function editCurrentFin() {
+  if (!currentViewingFinId) return;
+  var items = getFinItems();
+  var item = items.find(function(x){ return x.id === currentViewingFinId; });
+  if (!item || item.author !== 'user') return;
+  var idToEdit = currentViewingFinId;
+  closeFinDetail();
+  openFinWrite(idToEdit);
 }
 
 // --- Detail ---
