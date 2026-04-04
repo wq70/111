@@ -1,0 +1,1238 @@
+﻿10: function qqUndefinedFilter(content) {
+64: function getCurrencyForChat(chat) {
+72: function getMemoryContextForPrompt(chat, options = {}) {
+107: function convertToCNY(amount, currency) {
+115: function escapeHTML(str) {
+127: function generateRandomPacketAmounts(totalAmount, count) {
+163: function getDeviceId() {
+635: function setLanguage(lang) {
+666: function initLanguage() {
+686: function downloadImage(imageSrc, filename) {
+713: function showDownloadToast(message = '📥 图片下载中...', type = 'success') {
+752: function generateFilename(imgElement) {
+777: function addVisualFeedback(imgElement) {
+927: function findBestStickerMatch(meaning, availableStickers) {
+973: function getRandomValue(str) {
+987: function isImage(content) {
+1010: function getGeminiResponseText(data) {
+1207: async function generatePin(deviceId, salt) {
+1220: function requirePinActivation() {
+1315: function updateLockedFeatureUI() {
+1346: function toGeminiRequestData(model, apiKey, systemInstruction, messagesForDecision) {
+2553: async function uploadImageToImgBB(base64String) {
+2600: async function uploadFileToCatbox(fileObject) {
+2658: async function silentlyUpdateDbUrl(table, recordId, pathString, base64ToFind, nameToMatch = null) {
+2688: function getNestedParent(obj, path) {
+2854: function saveShoppingCart() {
+2864: function loadShoppingCart() {
+3010: function showCustomModal() {
+3014: function hideCustomModal() {
+3020: function applyLyricsBarPosition(chat) {
+3062: async function handleLocalGroupAvatarUpload(event) {
+3131: async function handleLocalAvatarUpload(event) {
+3199: async function getAvatarDescriptionFromApi(base64Url) {
+3291: async function syncCharacterNameInGroups(characterChat) {
+3344: async function syncCharacterAvatarInGroups(characterChat) {
+3376: function getDisplayNameInGroup(groupChat, originalName) {
+3402: function switchRuleCategory(categoryId) {
+3418: function getDisplayNameByOriginalName(nameIdentifier) {
+3452: function processMentions(text, chat = null) {
+3481: function showCustomConfirm(title, message, options = {}) {
+3528: function showDownloadToast(message = '📥 图片下载中...', type = 'success') {
+3564: function generateFilenameForNai(prompt) {
+3579: function downloadNaiImage(imageSrc, prompt) {
+3601: function showToast(message, type = 'info', duration = 3000) {
+3648: function showCustomAlert(title, message) {
+3693: function showRecoveryAlertWithBackup(title, message) {
+3738: async function copyTextToClipboard(textToCopy, successMessage = '内容已复制到剪贴板！') {
+3754: function showCustomPrompt(title, message, initialValue = '', type = 'text', extraHtml = '') {
+3843: function showSpectatorMemorySelectionModal(members, initialSelectedIds) {
+3922: function showChoiceModal(title, options) {
+4031: function showCategoryPickerModal(chat) {
+4212: async function getLrcContent() {
+4368: async function requestStoragePersistence() {
+4723: function wrapDatabaseOperations() {
+4776: function triggerAutoSave() {
+4990: function showScreen(screenId) {
+5087: function switchToChatListView(viewId) {
+5151: function renderXSocialScreen() {
+5157: function renderQzoneScreen() {
+5167: async function saveQzoneSettings() {
+5173: function formatPostTimestamp(timestamp) {
+5212: async function createOrUpdatePostElement(post) {
+5259: function renderOriginalPostContent(targetPost) {
+5434: async function updateSinglePostInDOM(postId) {
+5462: async function renderQzonePosts() {
+5488: async function loadMoreQzonePosts() {
+5523: function openQzoneStickerPanel(postId, buttonElement) {
+5578: function closeQzoneStickerPanel() {
+5595: async function sendQzoneStickerComment(postId, sticker) {
+5651: function openRepostModal(postId) {
+5658: function hideRepostModal() {
+5664: async function handleConfirmRepost() {
+5694: function displayFilteredFavorites(items) {
+5907: async function renderFavoritesScreen() {
+5923: function resetCreatePostModal() {
+5934: async function cleanupRedundantData() {
+6093: async function exportBackup() {
+6267: async function cleanupTableData(tableName, statElem) {
+6299: async function viewDataDistribution() {
+6309: async function renderDistributionData(container) {
+6515: async function importStreamedBackup(backupData) {
+6542: async function handleSmartImport(file) {
+6584: function openImportOptionsModal(backupDataContent) {
+6667: async function handleFullImport(backupInfo) {
+6731: function openSelectiveImportModal(backupDataContent) {
+6835: async function handleSelectiveImport(backupInfo) {
+6911: async function importLegacyBackup(backupData) {
+6987: function applyCustomFont(fontUrl, isPreviewOnly = false) {
+7038: async function resetFontByScope() {
+7149: async function resetToDefaultFont() {
+7175: async function loadAllDataFromDB() {
+7588: async function saveGlobalPlaylist() {
+7597: function formatTimestamp(timestamp, chatId = null) {
+7623: function formatTimeAgo(timestamp) {
+7645: function formatTimestampForAI(timestamp) {
+7684: async function loadNaiPresetsDropdown() {
+7708: function updateNaiPresetButtons(hasSelection) {
+7730: function gatherNaiUiSettings() {
+7749: function applyNaiUiSettings(settings) {
+7765: async function handleSaveNaiPreset(isUpdate = false) {
+7786: async function handleDeleteNaiPreset() {
+7807: async function handleNaiPresetChange(e) {
+7825: async function openNaiBindingModal() {
+7866: async function saveNaiBinding() {
+7903: function loadNovelAISettings() {
+7925: function saveNovelAISettings() {
+7955: function resetNovelAISettings() {
+7962: function getGoogleImagenSettings() {
+7977: function saveGoogleImagenSettings() {
+7992: async function generateGoogleImagenFromPrompt(aiPrompt) {
+8105: async function testGoogleImagenGeneration() {
+8142: async function fetchGoogleImagenModels() {
+8225: function getNovelAISettings() {
+8256: async function generateNaiImageFromPrompt(aiPrompt, chatId) {
+8510: function getCharacterNAIPrompts(chatId) {
+8552: async function generateNovelAIImage() {
+8891: function showNotification(chatId, messageContent) {
+8947: function triggerSystemNotificationInChatPage(chatId, messageContent) {
+8960: function updateClock() {
+8979: function parseAiResponse(content) {
+9062: function getTimeOfDayGreeting(date = new Date()) {
+9080: async function loadApiPresetsDropdown(forceSelectedId = null) {
+9125: async function handlePresetSelectionChange() {
+9213: async function saveApiPreset() {
+9254: async function deleteApiPreset() {
+9276: function renderApiSettings(forcePresetId = null) {
+9623: async function renderNpcListScreen() {
+9662: async function openNpcEditor(npcId = null) {
+9732: async function saveNpc() {
+9786: async function openNpcGroupManager() {
+9792: async function renderNpcGroupsInManager() {
+9811: async function addNewNpcGroup() {
+9831: async function deleteNpcGroup(groupId) {
+9849: async function deleteNpc(npcId) {
+9867: function createChatGroupContainer(group) {
+9883: function loadMoreChats(sortedItems) {
+9932: async function renderChatList() {
+10020: function createChatGroupContainer(group) {
+10033: function appendLoadMoreChatsButton(container, sortedItems) {
+10048: function loadMoreChats() {
+10120: function createChatListItem(chat) {
+10276: async function renderChatInterface(chatId) {
+10477: async function loadMoreMessages() {
+10562: async function migrateSoundPresetsToDb() {
+10593: async function loadSoundPresetsDropdown(forceSelectedId = null) {
+10639: async function handleSoundPresetSelectionChange() {
+10665: async function saveSoundPreset() {
+10708: async function deleteSoundPreset() {
+10736: async function renderSoundPresets() {
+10747: async function renderWallpaperScreen(forcePresetId = null) {
+10850: function applyGlobalWallpaper() {
+10866: function switchWorldBookCategory(categoryId) {
+10878: async function renderWorldBookScreen() {
+10993: function createWorldBookGroup(groupName, books) {
+11052: async function openWorldBookEditor(bookId) {
+11115: async function renderStickerPanel(rerenderTabs = true) {
+11207: function togglePlaylistManagementMode() {
+11241: function handlePlaylistSelection(index) {
+11261: function updatePlaylistActionBar() {
+11271: function handleSelectAllPlaylistItems() {
+11291: async function executeDeleteSelectedSongs() {
+11345: async function executeMoveToPlaylist() {
+11365: async function executeBatchUploadToCatbox() {
+11477: function toggleStickerManagementMode() {
+11501: function handleSelectAllStickers() {
+11536: function updateDeleteStickerButton() {
+11546: async function executeBatchMoveStickers() {
+11589: function handleStickerSelection(item) {
+11606: async function executeBatchDeleteStickers() {
+11633: async function executeBatchExportStickers() {
+11709: async function openBatchStickerImportModal() {
+11745: async function handleBatchStickerImport(text) {
+11842: function handleStickerFileImport() {
+11878: async function processStickerFile(file) {
+11949: function handleCharacterFileImport() {
+12130: async function processCharacterFile(file) {
+12189: async function handleZipFileImport(zipFile) {
+12391: function showZipFileSelectionModal(fileEntries, zipFileName) {
+12533: function showContentConfirmModal(content) {
+12587: function showMultiFileContentConfirmModal(content, fileName, currentIndex, totalCount) {
+12670: function scrollToOriginalMessage(originalTimestamp) {
+12692: async function createMessageElement(msg, chat) {
+13503: async function prependMessage(msg, chat) {
+13520: async function appendMessage(msg, chat, isInitialLoad = false) {
+13600: async function openChat(chatId) {
+13686: function setAvatarActingState(chatId, isActing) {
+13711: async function triggerSpectatorGroupAiAction() {
+14027: async function triggerAiResponse() {
+19174: async function sendSticker(sticker) {
+19191: async function sendUserTransfer() {
+19316: async function sendWaimaiOrderForAI() {
+19379: async function sendLocationShare() {
+19411: function enterSelectionMode(initialMsgTimestamp) {
+19418: function exitSelectionMode() {
+19431: function toggleMessageSelection(timestamp) {
+19455: function addLongPressListener(element, callback) {
+19473: async function handleListenTogetherClick() {
+19496: async function startListenTogetherSession(chatId) {
+19519: async function endListenTogetherSession(saveState = true) {
+19540: function returnToChat() {
+19544: function updateListenTogetherIcon(chatId, forceReset = false) {
+19559: function updatePlayerUI() {
+19576: function updateElapsedTimeDisplay() {
+19581: function updatePlaylistUI() {
+19645: function getActivePlaylistIndices() {
+19655: function renderPlaylistTabs() {
+19691: async function showSharePlaylistMenu(playlistId) {
+19715: async function sharePlaylistToCharacter(playlistId) {
+19750: async function showPlaylistPicker(title = '选择歌单') {
+19760: async function openPlaylistManager() {
+19810: async function togglePlayPause() {
+19824: function playNext(isAutomatic = false) {
+19848: function playPrev() {
+19861: function changePlayMode() {
+19872: async function addSongFromURL() {
+19901: async function playSong(index, isAutomatic = false) {
+20037: async function handleChangeBackground(trackIndex) {
+20075: async function handleChangeAlbumArt(trackIndex) {
+20116: async function addSongFromLocal(event) {
+20191: async function deleteTrack(index) {
+20218: function openPersonaLibrary() {
+20223: function closePersonaLibrary() {
+20227: function renderPersonaLibrary() {
+20257: function togglePresetSelection(presetId) {
+20266: function enterManageMode() {
+20277: function exitManageMode() {
+20288: function selectAllPresets() {
+20297: async function deleteSelectedPresets() {
+20319: function showPresetActions(presetId) {
+20324: function hidePresetActions() {
+20331: function showPersonaActionModal(presetId) {
+20338: function hidePersonaActionModal() {
+20345: function applyPersonaPresetDirect() {
+20357: function editPersonaThenApply() {
+20375: function applyPersonaPreset(presetId) {
+20384: function openPersonaEditorForCreate() {
+20392: function openPersonaEditorForEdit() {
+20402: async function deletePersonaPreset() {
+20414: function closePersonaEditor() {
+20419: async function savePersonaPreset() {
+20509: async function importTavernPersonas() {
+20514: async function handleTavernPersonaImport(event) {
+20568: function showTavernPersonaSelector() {
+20596: function closeTavernPersonaSelector() {
+20601: async function confirmTavernImport() {
+20615: async function importSelectedTavernPersonas(personas) {
+20638: function showBatteryAlert(imageUrl, text) {
+20651: function updateBatteryDisplay(battery) {
+20665: function handleBatteryChange(battery) {
+20688: async function initBatteryManager() {
+20711: async function renderAlbumList() {
+20762: async function openAlbum(albumId) {
+20768: async function renderAlbumPhotosScreen() {
+20797: async function openPhotoViewer(clickedPhotoUrl) {
+20815: function renderPhotoViewer() {
+20839: function showNextPhoto() {
+20847: function showPrevPhoto() {
+20855: function closePhotoViewer() {
+20866: function updateUnreadIndicator(count) {
+20899: async function checkPendingCartNotifications() {
+20932: async function checkAndClearShoppingCart(chatId) {
+21043: function startBackgroundSimulation() {
+21051: function stopBackgroundSimulation() {
+21062: async function runBackgroundSimulationTick() {
+21223: async function generateNpcActions(npc, tasks) {
+21385: async function triggerInactiveAiAction(chatId) {
+22443: async function triggerGroupAiAction(chatId) {
+23259: function applyScopedCss(cssString, scopeId, styleTagId) {
+23278: async function updateSettingsPreview() {
+23369: async function openGroupManager() {
+23374: async function renderGroupList() {
+23393: async function addNewGroup() {
+23417: async function deleteGroup(groupId) {
+23435: function showMessageActions(timestamp) {
+23446: function hideMessageActions() {
+23452: async function toggleExcludeMessage() {
+23468: async function toggleExcludeSelectedMessages() {
+23490: function openBatchExcludeManager() {
+23536: function closeBatchExcludeManager() {
+23541: function openExcludedDetailView() {
+23569: function getMsgPreview(msg) {
+23580: function getSender(msg) {
+23583: function fmtTime(ts) {
+23640: function closeExcludedDetailView() {
+23795: async function batchExcludeAction(exclude) {
+23814: async function translateMessageContent() {
+23847: function detectLanguage(text) {
+23912: async function openMessageEditor() {
+23998: async function copyMessageContent() {
+24023: async function copyMessageTimestamp() {
+24038: function createMessageEditorBlock(initialContent = '') {
+24134: async function openAdvancedMessageEditor() {
+24248: async function copyMessageContent() {
+24281: function parseEditedContent(text) {
+24316: async function saveEditedMessage(timestamp, simpleContent = null) {
+24579: function showPostActions(postId) {
+24585: function hidePostActions() {
+24591: async function openPostEditor() {
+24670: async function saveEditedPost(postId, newRawContent) {
+24703: async function copyPostContent() {
+24723: async function openContactPickerForGroupCreate() {
+24762: async function openSpectatorGroupCreator() {
+24779: async function openSpectatorPrivateCreator() {
+24792: async function renderSpectatorContactPicker() {
+24837: async function handleCreateSpectatorGroup() {
+24929: async function renderContactPicker() {
+24972: function updateContactPickerConfirmButton() {
+24986: async function handleCreateGroup() {
+25063: function openMemberManagementScreen() {
+25069: function renderMemberManagementList() {
+25091: async function removeMemberFromGroup(memberId) {
+25120: async function openContactPickerForAddMember() {
+25136: async function renderUnifiedContactPicker() {
+25191: async function handleAddMembersToGroup() {
+25245: function createNewMemberInGroup() {
+25254: function startWaimaiCountdown(element, endTime) {
+25276: function cleanupWaimaiTimers() {
+25286: async function showWaimaiDetails(timestamp) {
+25360: async function handleWaimaiResponse(originalTimestamp, choice) {
+25433: async function handleInitiateCall() {
+25471: function startVideoCall() {
+25508: function minimizeVideoCall() {
+25522: function restoreVideoCall() {
+25532: async function endVideoCall() {
+25645: function updateParticipantAvatars() {
+25688: function handleUserJoinCall() {
+25704: function updateCallTimer() {
+25713: function showIncomingCallModal(callType = 'video', chat = null) {
+25744: function hideIncomingCallModal() {
+25749: async function triggerAiInCallAction(userInput = null) {
+26082: function toggleCallButtons(isGroup) {
+26091: async function handleInitiateVoiceCall() {
+26125: function startVoiceCall() {
+26155: function minimizeVoiceCall() {
+26162: function restoreVoiceCall() {
+26169: async function endVoiceCall() {
+26263: function updateVoiceParticipantAvatars() {
+26301: function handleUserJoinVoiceCall() {
+26313: function updateVoiceCallTimer() {
+26321: async function triggerAiInVoiceCallAction(userInput = null) {
+26572: async function handleUserPat(chatId, characterOriginalName) {
+26641: async function handleUserPatSelf(chatId) {
+26702: function showCallMessageActions(timestamp) {
+26708: function hideCallMessageActions() {
+26714: async function openCallMessageEditor() {
+26750: async function saveEditedCallMessage(timestamp, newContent, isVideoCall = true) {
+26779: async function deleteCallMessage() {
+26814: async function handleUserTransferResponse(choice) {
+26917: function clearQzoneReplyContext(postContainer) {
+26930: async function renderMemoriesScreen() {
+26970: function createMemoryCard(memory) {
+27020: function createCountdownCard(countdown) {
+27055: function startAllCountdownTimers() {
+27096: async function triggerAiFriendApplication(chatId) {
+27247: function handlePaymentButtonClick() {
+27259: function openRedPacketModal() {
+27292: async function sendGroupRedPacket() {
+27340: async function sendDirectRedPacket() {
+27383: async function handlePacketClick(timestamp) {
+27447: async function handleOpenRedPacket(packet) {
+27552: async function showRedPacketDetails(packet) {
+27643: function openCreatePollModal() {
+27657: function addPollOptionInput() {
+27679: async function sendPoll() {
+27722: async function handleUserVote(timestamp, choice) {
+27781: async function endPoll(timestamp) {
+27810: function showPollResults(timestamp) {
+27844: function openAiAvatarLibraryModal() {
+27852: function renderAiAvatarLibrary() {
+27898: async function addAvatarToLibraryFromURL() {
+27923: function closeAiAvatarLibraryModal() {
+27932: function openMyAvatarLibraryModal() {
+27941: function renderMyAvatarLibrary() {
+27985: async function addAvatarToMyLibraryFromURL() {
+28009: async function handleLocalMyAvatarUpload(event) {
+28056: async function handleBatchImportForMyAvatar(text) {
+28108: function closeMyAvatarLibraryModal() {
+28116: function openGroupAvatarLibraryModal() {
+28125: function renderGroupAvatarLibrary() {
+28169: async function addAvatarToGroupLibraryFromUR() {
+28193: function closeGroupAvatarLibraryModal() {
+28199: async function openBatchImportModal(type) {
+28218: async function handleBatchImport(type, text) {
+28295: async function addAvatarToGroupLibraryFromURL() {
+28318: function showChatListActions(chat) {
+28357: function applyCPhoneWallpaper() {
+28369: function applyMyPhoneWallpaper() {
+28382: function applyCPhoneAppIcons() {
+28401: function applyMyPhoneAppIconsGlobal() {
+28421: function renderCPhoneIconSettings() {
+28458: function renderMyPhoneIconSettings() {
+28497: function applyAppIcons() {
+28517: function renderIconSettings() {
+28575: function openBrowser(timestamp) {
+28611: function closeBrowser() {
+28620: function openShareLinkModal() {
+28634: async function sendUserLinkShare() {
+28677: function filterVisiblePostsForAI(allPosts, viewerChat) {
+28720: function applyPhoneFrame(isEnabled) {
+28752: function applyDetachStatusBarMode(isEnabled) {
+28756: function applyMinimalChatUI(isEnabled) {
+28760: function applyTrueFullscreen(isEnabled) {
+28786: function applyTheme(theme) {
+28803: function toggleTheme() {
+28811: function openLongTermMemoryScreen() {
+28829: function switchMemoryTab(tabName) {
+28848: function renderStructuredMemoryView() {
+29007: function renderLongTermMemoryList() {
+29054: function loadMoreMemories() {
+29133: async function handleAddManualMemory() {
+29165: async function handleEditMemory(authorChatId, memoryTimestamp) {
+29179: async function handleDeleteMemory(authorChatId, memoryTimestamp) {
+29194: async function handleManualSummary() {
+29209: async function convertLongTermMemoryToStructured(chatId) {
+29384: async function triggerStructuredMemorySummary(chatId, forceUpdate = false) {
+29496: async function openStructuredSummaryMenu(chat) {
+29587: async function handleNewMessagesSummary(chat) {
+29617: async function handleRangeSummary(chat) {
+29710: async function handleResetTimestamp(chat) {
+29732: async function executeStructuredSummary(chat, messages, updateTimestamp = false) {
+29823: function openManualSummaryModal() {
+29851: async function handleDiaryModeSummary() {
+29876: function closeManualSummaryModal() {
+29882: async function executeManualSummary() {
+29916: async function checkAndTriggerAutoSummary(chatId) {
+29935: async function summarizeCallTranscript(chatId, transcriptText) {
+30158: function analyzeTextForSummary(text) {
+30195: function generateSummaryForTimeframe(chat, duration, unit) {
+30248: function robustJsonParse(rawContent) {
+30291: async function summarizeExistingLongTermMemory(chatId) {
+30632: async function triggerAutoSummary(chatId, force = false, customRange = null) {
+30934: function startReplyToMessage() {
+30984: function cancelReplyMode() {
+30996: function showTransferActionModal(timestamp) {
+31009: function hideTransferActionModal() {
+31020: async function renderCallHistoryScreen() {
+31066: function createCallRecordCard(record) {
+31105: async function showCallTranscript(recordId) {
+31207: async function handleEditStatusClick() {
+31239: async function openShareTargetPicker() {
+31262: async function openForwardTargetPicker() {
+31283: function closeMusicPlayerWithAnimation(callback) {
+31296: function parseLRC(lrcContent) {
+31320: function renderLyrics() {
+31337: function updateIslandScrollAnimation() {
+31341: function checkLyricScroll() {
+31369: function updateActiveLyric(currentTime) {
+31468: function updateLyricsUI(isFullscreen = false) {
+31493: function formatMusicTime(seconds) {
+31503: function updateMusicProgressBar() {
+31508: function step() {
+31537: function openAiResponseEditor() {
+31584: function createAiResponseEditorBlock(initialContent = '') {
+31678: async function saveEditedAiResponse() {
+32327: async function handleRecallClick() {
+32347: async function recallMessage(timestamp, isUserRecall) {
+32408: async function openCategoryManager() {
+32414: async function renderCategoryListInManager() {
+32434: async function addNewCategory() {
+32454: async function deleteCategory(categoryId) {
+32476: async function publishToAnnouncementBoard() {
+32532: async function showAnnouncementBoard() {
+32579: function showAnnouncementActions(annoId) {
+32593: async function handlePinAnnouncement() {
+32606: async function handleDeleteAnnouncement() {
+32632: function openFrameSelectorModal(type = 'chat') {
+32651: function populateFrameGrids(isForMember = false, memberAvatar = null, memberFrame = null) {
+32686: function createFrameItem(frame, type, previewAvatarSrc) {
+32704: async function saveSelectedFrames() {
+32752: function toggleFrameManagementMode() {
+32780: function updateDeleteFrameButton() {
+32786: function handleSelectAllFrames() {
+32807: async function executeBatchDeleteFrames() {
+32832: function applyGlobalCss(cssString) {
+32842: async function addMusicActionSystemMessage(actionText) {
+32868: async function handleLongScreenshot() {
+32993: function parseMarkdown(text) {
+33018: async function migrateOldRedPacketData() {
+33054: async function showUserStatusModal(chatId) {
+33079: async function updateUserStatus(chatId, statusText, isBusy) {
+33118: async function openThoughtEditor() {
+33188: async function showCharacterProfileModal(chatId) {
+33223: async function showThoughtsHistory() { // <-- 1. 添加 async
+33230: function hideThoughtsHistory() {
+33239: async function renderThoughtsHistory() { // <-- 1. 添加 async
+33266: async function loadMoreThoughts() {
+33302: async function createThoughtCard(thought) { // <-- 1. 添加 async
+33342: function escapeHtml(text) {
+33352: async function handleCardImport(event) {
+33376: async function importSingleCard(file) {
+33460: async function showBatchImportPreview(files) {
+33544: function renderBatchImportPreview() {
+33617: function updateSelectAllCheckbox() {
+33629: async function confirmBatchImport() {
+33737: function cancelBatchImport() {
+33745: function parsePngForTavernData(arrayBuffer) {
+33808: function findWorldBookEntries(cardData) {
+33844: async function createChatFromCardData(cardData, avatarBase64 = null) {
+34004: async function handleSwitchGreeting() {
+34069: function createWorldBookEntryBlock(entry = {
+34115: async function toggleGomokuBoard() {
+34152: async function closeGomokuBoard() {
+34180: function initGomokuGame(chatId) {
+34209: function renderGomokuBoard(chatId) {
+34253: function drawStone(ctx, x, y, player, gameState) {
+34272: function handleBoardHover(e) {
+34297: function handleBoardClick(e) {
+34336: function handleAiGomokuMove(move, isForcedMove = false) {
+34373: function checkWin(x, y, player, gameState) {
+34413: function formatGomokuStateForAI(gameState) {
+34471: async function addGameEndSystemMessage(winner) {
+34509: async function renderShoppingProducts() {
+34585: function switchShoppingCategory(categoryId) {
+34591: function updateDeleteCategoryButtonVisibility() {
+34603: async function handleDeleteCurrentCategory() {
+34636: async function openShoppingScreen() {
+34644: async function renderShoppingProducts() {
+34721: async function addToCart(productId, quantity = 1, variation = null) {
+34744: function updateCartItemQuantity(productId, change) {
+34758: function updateCartCount() {
+34766: function openCartScreen() {
+34773: async function renderCartItems() {
+34821: async function updateCartTotal() {
+34845: async function openGiftRecipientPicker() {
+34878: async function handleCheckout() {
+35037: async function sendGiftMessage(itemsToSend, recipients = null) {
+35103: function showGiftReceipt(timestamp) {
+35118: async function openProductEditor(productId = null) {
+35166: async function saveProduct() {
+35225: async function openRenderingRulesScreen() {
+35233: async function renderRulesList() {
+35307: function createRuleItemElement(rule) {
+35353: function toggleRuleManagementMode() {
+35404: function toggleRuleSelection(ruleId) {
+35428: function updateRuleActionBar() {
+35440: function handleSelectAllRules() {
+35457: async function exportSelectedRules() {
+35496: async function handleRulesImport(event) {
+35546: async function deleteSelectedRules() {
+35565: async function openRuleEditor(ruleId = null) {
+35700: async function saveRenderingRule() {
+35747: async function deleteRenderingRule(ruleId) {
+35757: async function filterHistoryWithDoNotSendRules(history, chatId) {
+35820: async function applyRenderingRules(rawContent, chatId) {
+35878: function formatSystemTimestamp(timestamp) {
+35912: function createSystemTimestampElement(timestamp) {
+35928: async function handleSpectatorReroll() {
+35946: async function handleRegenerateNaiImage(timestamp, buttonElement) {
+36000: async function handleSilentUploadUserImage(timestamp, buttonElement) {
+36056: async function handleSilentUploadNaiImage(timestamp, buttonElement) {
+36108: async function handleRegenerateResponse() {
+36138: async function handleRegenerateCallResponse() {
+36182: async function handlePropelAction() {
+36475: function playNotificationSound() {
+36495: function getDefaultThoughtsPrompt() {
+36507: function getActiveThoughtsPrompt() {
+36517: function getDefaultSummaryPrompt() {
+36585: function getActiveSummaryPrompt() {
+36598: function processPromptWithSettings(originalPrompt, chatType = 'single') {
+36608: function initSystemNotification() {
+36625: async function updateNotificationPermissionStatus() {
+36657: async function requestNotificationPermission() {
+36731: function vibrateDevice() {
+36747: function playSystemNotificationSound() {
+36770: async function showSystemNotification(chatId, messageContent, options = {}) {
+36878: async function handleSystemNotification(chatId, messageContent) {
+36909: async function sendTestNotification() {
+36968: function bindSystemNotificationEvents() {
+37088: function loadSystemNotificationSettings() {
+37191: function createWatermarkLayer() {
+37275: function loadWatermarkSettings() {
+37315: function saveWatermarkSettings() {
+37320: function updateWatermarkDisplayValues() {
+37331: function bindWatermarkEvents() {
+37465: async function initializeBackgroundKeepAlive() {
+37474: async function startBackgroundKeepAlive() {
+37492: function stopBackgroundKeepAlive() {
+37533: async function handleVisibilityChange() {
+37552: function handleStorageChange(event) {}
+37553: function handlePageFreeze() {}
+37554: function handlePageResume() {}
+37557: function updateKeepAliveStatus(statusText) {
+37572: function bindBackgroundKeepAliveEvents() {
+37739: function loadBackgroundKeepAliveSettings() {
+37789: function applyWidgetData() {
+37818: function uploadImageLocally() {
+37862: async function handleEditText(element) {
+37877: async function handleEditImage(element) {
+38006: async function Http_Get(url) {
+38010: function checkAudioAvailability(url) {
+38024: async function searchNeteaseMusic(name, singer) {
+38066: async function fetchToubiec(endpoint, bodyData) {
+38084: async function searchToubiec(keyword) {
+38122: async function getToubiecPlaylist(playlistId) {
+38136: async function getToubiecAlbum(albumId) {
+38149: async function getToubiecDetail(id) {
+38158: async function getToubiecUrl(id, preferredLevel = 'exhigh') {
+38194: async function getToubiecLyric(id) {
+38206: async function searchTencentMusic(name) {
+38226: async function addSongFromSearch() {
+38358: async function getPlayableSongDetails(songData) {
+38434: async function getLyricsForSong(songId, source) {
+38448: async function handleManualLrcImport(trackIndex) {
+38505: async function toggleBackgroundBlur() {
+38526: function toggleMusicPlayerAvatars() {
+38536: function togglePlayerFullscreen() {
+38549: async function cleanupInvalidSongs() {
+38619: function showCleanedSongsModal(cleanedSongs) {
+38644: async function handleResearchSelectedSongs() {
+38668: async function processResearchSongsOneByOne(songs) {
+38771: function showSongSelectionModal(searchResults, songName, currentIndex, totalCount) {
+38866: function toggleReadingFullscreen() {
+38880: function applyStatusBarVisibility() {
+38887: async function openClearPostsSelectorModal() {
+38981: async function handleConfirmClearPosts() {
+39041: async function handleDeleteThought(timestamp) {
+39116: async function loadCssPresetsDropdown() {
+39130: async function handleCssPresetSelectionChange() {
+39144: async function saveCssPreset() {
+39176: async function deleteCssPreset() {
+39201: async function loadFontPresetsDropdown() {
+39215: async function handleFontPresetSelectionChange() {
+39229: async function saveFontPreset() {
+39265: async function deleteFontPreset() {
+39287: async function loadAppearancePresetsDropdown(forceSelectedId = null) {
+39340: async function handleAppearancePresetSelectionChange() {
+39397: async function saveAppearancePreset() {
+39444: async function deleteAppearancePreset() {
+39469: async function loadThemePresetsDropdown() {
+39483: async function handleThemePresetSelectionChange() {
+39512: async function saveThemePreset() {
+39559: async function deleteThemePreset() {
+39584: async function openStickerCategoryManager() {
+39590: async function renderStickerCategoriesInManager() {
+39609: async function addNewStickerCategory() {
+39629: async function deleteStickerCategory(categoryId) {
+39680: function switchStickerCategory(categoryId) {
+39704: async function embedDataInPng(pngBlob, key, value) {
+39757: function crc32(data) {
+39781: function parsePngForAllFormats(arrayBuffer) {
+39844: async function exportCharacterFull() {
+39953: async function avatarToPngBlob(src) {
+39976: async function importEPhoneCharacter(exportData, avatarBase64FromPng = null, silent = false) {
+40057: async function exportSingleChat() {
+40097: async function importSingleChat(file) {
+40148: function openCharacterSelector() {
+40170: function openMyphoneScreen() {
+40177: function renderMyPhoneCharacterSelector() {
+40200: async function switchToMyPhoneCharacter(characterId) {
+40218: function enterMyPhone(characterId) {
+40229: function renderMyPhoneHomeScreen() {
+40233: function switchToMyPhoneScreen(screenId) {
+40238: function switchToMyPhoneHomeScreen() {
+40242: function switchToCPhone() {
+40247: function openMyPhoneSettings() {
+40270: function showMyPhoneLockScreen(char) {
+40289: function updateMyPhoneLockScreenClock() {
+40300: function showMyPhonePasswordInput() {
+40310: function hideMyPhonePasswordInput() {
+40319: function updateMyPhoneLockDots() {
+40328: function checkMyPhoneLockPassword() {
+40367: function openMyPhoneViewRecords() {
+40372: function toggleMyPhoneDeleteMode(appType) {
+40382: function enterMyPhoneDeleteMode(appType) {
+40417: function exitMyPhoneDeleteMode() {
+40448: function selectAllMyPhoneItems() {
+40504: function toggleMyPhoneItemSelection(index) {
+40519: function updateMyPhoneCheckboxStates() {
+40527: async function confirmDeleteMyPhoneItems() {
+40614: function rerenderMyPhoneApp(appType) {
+40647: async function showMyPhoneAddContactDialog() {
+40655: async function manualCreateMyPhoneContact() {
+40714: async function showImportMainScreenCharacters() {
+40792: function updateImportSelectAllState() {
+40803: async function importSelectedCharacters() {
+40900: async function addMyPhoneContact(name, remark, avatar) {
+40930: function openMyPhoneContactSettings() {
+40952: function renderMyPhoneContactMessages(contact) {
+41012: async function saveMyPhoneContactSettings() {
+41040: async function changeMyPhoneContactAvatar() {
+41086: async function addMyPhoneMessage() {
+41183: function showMyPhoneTransferActionModal(timestamp) {
+41205: async function handleMyPhoneTransferResponse(choice) {
+41316: function applyMyPhoneAppIcons() {
+41335: async function openMyPhoneApp(appName) {
+41385: function renderCharacterSelector() {
+41411: async function switchToCharacterPhone(characterId) {
+41433: function switchToMyPhone() {
+41440: function renderCharHomeScreen() {
+41604: async function saveEdit() {
+41624: function closeModal() {
+41654: function switchToCharScreen(screenId) {
+41665: async function logSingleItemViewing(characterId, appName, itemData, itemType = '') {
+41747: async function openCharApp(appName) {
+41821: async function renderCharAlbum() {
+41883: async function viewPhotoDetail(photo) {
+41895: function renderCharBrowserHistory() {
+41963: function renderCharTaobao() {
+42009: function switchToCharHomeScreen() {
+42017: function setupCPhonePagination() {
+42123: function renderCharChatList() {
+42144: async function logAppUsage(characterId, appName) {
+42162: function renderCharAppUsage() {
+42195: async function sendCharLocationShare(locationName) {
+42221: async function viewMemo(memoId) {
+42252: function renderCharMemoList() {
+42296: async function openMemoEditor(memoId = null) {
+42315: async function saveMemo(memoData) {
+42330: async function saveMemo(content) {
+42354: async function handleGenerateSimulatedDiaries() {
+42526: async function handleWriteNewDiaryEntry() {
+42650: function renderCharDiaryList() {
+42695: async function viewDiary(diaryId) {
+42730: async function toggleDiaryFavorite() {
+42771: async function toggleMemoFavorite() {
+42812: async function deleteDiary(diaryId) {
+42824: function editDiary() {
+42893: async function renderCharSimulatedQQ() {
+43008: async function handleGenerateSimulatedQQ() {
+43192: async function handleContinueRealConversationFromCPhone() {
+43406: async function loadMoreMirroredMessages() {
+43474: async function loadMoreMyPhoneMessages() {
+43540: async function openCharSimulatedConversation(conversationIndex) {
+43701: function closeSimulatedTranscriptModal() {
+43707: async function handleGenerateSimulatedAlbum() {
+43867: async function renderCharAlbum() {
+43926: async function handleGenerateBrowserHistory() {
+44072: function renderCharBrowserHistory() {
+44100: async function openCharArticle(index) {
+44126: async function toggleBrowserArticleFavorite() {
+44162: function renderCharArticle(articleData) {
+44212: async function handleGenerateTaobaoHistory() {
+44356: function openCharWallet() {
+44362: async function renderCharWallet() {
+44480: async function handleGenerateSimulatedMemos() {
+44636: async function handleGenerateAmapHistory() {
+44788: function renderCharAmap() {
+44836: async function handleGenerateAppUsage() {
+44969: function renderCharAppUsage() {
+45011: async function handleGenerateSimulatedBilibili() {
+45197: function renderCharBilibiliScreen() {
+45234: async function handleGenerateSimulatedMusic() {
+45366: async function handleGenerateMyPhoneQQ() {
+45447: async function handleGenerateMyPhoneAlbum() {
+45522: async function handleGenerateMyPhoneBrowserHistory() {
+45598: async function handleGenerateMyPhoneTaobao() {
+45675: async function handleGenerateMyPhoneMemos() {
+45751: async function handleGenerateMyPhoneDiaries() {
+45827: async function handleGenerateMyPhoneAmap() {
+45903: async function handleGenerateMyPhoneAppUsage() {
+45941: async function handleGenerateMyPhoneMusic() {
+46016: function renderCharMusicScreen() {
+46059: function playCharSong(songIndex, playlist) {
+46105: function minimizeCharMusicPlayer() {
+46113: function restoreCharMusicPlayer() {
+46121: function closeCharMusicPlayer() {
+46138: function updateCharMusicProgress() {
+46153: function renderCharLyrics() {
+46181: function updateCharActiveLyric(currentTime) {
+46225: function playNextCharSong() {
+46244: function playPrevCharSong() {
+46250: function changeCharPlayMode() {
+46263: function setupCharPlayerControls() {
+46304: async function renderDoubanScreen() {
+46373: async function handleGenerateDoubanPosts() {
+46628: async function openDoubanPostDetail(postId) {
+46741: async function handleSendDoubanComment() {
+46773: async function handleDoubanWaitReply() {
+46955: async function openDoubanCastSelector() {
+46982: async function saveDoubanCastSelection() {
+47014: async function importAppearanceSettings(file) {
+47136: async function exportAppearanceSettings() {
+47205: async function simulateBackgroundActivity(minutesOffline) {
+47250: function openSearchHistoryScreen() {
+47264: async function handleSearchHistory() {
+47313: async function renderSearchResults(results) {
+47352: async function jumpToOriginalMessage(timestamp) {
+47390: async function clearSearchFilters() {
+47397: async function populateFrameGrids(isForMember = false, memberAvatar = null, memberFrame = null) {
+47439: function createFrameItem(frame, type, previewAvatarSrc) {
+47488: async function handleUploadFrame() {
+47539: async function handleBatchUploadFrames() {
+47573: async function handleDeleteCustomFrame(frameId) {
+47598: function setupHomeScreenPagination() {
+47709: async function openPresetScreen() {
+47715: async function renderPresetScreen() {
+47820: function switchPresetCategory(categoryId) {
+47830: async function openPresetEditor(presetId) {
+47887: function createPresetEntryBlock(entry = {
+47944: async function openPresetCategoryManager() {
+47961: async function renderPresetCategoriesInManager() {
+47976: async function addNewPresetCategory() {
+47989: async function deletePresetCategory(categoryId) {
+48009: async function handlePresetImport(event) {
+48034: async function importTavernPresetFile(tavernData, fileName) {
+48137: async function renderOfflinePresetSelector(chat) {
+48160: function renderButtonOrderEditor() {
+48185: function initializeButtonOrderEditor() {
+48249: function getDragAfterElement(container, x) {
+48274: async function saveButtonOrder() {
+48286: function applyButtonOrder() {
+48326: async function resetButtonOrder() {
+48349: function openDataClearWizard() {
+48365: function renderClearWizardStep1() {
+48406: function renderClearWizardStep2() {
+48499: function handleDataClearNext() {
+48515: function handleDataClearBack() {
+48527: async function handleConfirmDataClear() {
+48838: async function handleIconChange(iconId, phoneType, itemElement) {
+48980: async function compressAllLocalImages() {
+49067: function calculateTotalSizeRecursive(obj, parentKey = '') {
+49100: async function displayTotalImageSize() {
+49143: async function openClearStickersModal() {
+49169: async function calculateChatStickerStorageSize() {
+49209: async function renderClearStickersList() {
+49275: async function handleConfirmClearStickers() {
+49357: function openClearChatImagesModal() {
+49365: async function renderClearChatImagesList() {
+49439: async function handleConfirmClearChatImages() {
+49550: function isRawHtmlContent(content) {
+49556: function stripHtmlTags(html) {
+49562: function openClearChatHtmlModal() {
+49571: async function renderClearChatHtmlList() {
+49627: function updateHtmlClearSelection() {
+49633: async function handleConfirmClearChatHtml() {
+49731: function calculateSkippedStats(obj) {
+49758: async function traverseAndCompress(obj, stats, parentKey = '') {
+49821: async function compressImage(base64Str) {
+49882: function compareVersions(v1, v2) {
+49907: async function checkForUpdates() {
+49952: function showUpdateNotice(version, contentHtml) {
+50008: function openDoubanSettingsModal() {
+50020: async function saveDoubanSettings() {
+50055: async function openNpcAvatarsModal() {
+50061: async function renderNpcAvatarsList() {
+50096: function updateNpcAvatarDeleteButton() {
+50106: async function addNpcAvatarFromURL() {
+50120: async function addNpcAvatarFromLocal() {
+50125: async function handleNpcAvatarLocalUpload(event) {
+50173: async function deleteSelectedNpcAvatars() {
+50199: function toggleSelectAllNpcAvatars() {
+50214: function getNpcAvatarForCharacter(npcName) {
+50249: function resetDoubanAvatarAssignments() {
+50255: async function openCustomGroupsModal() {
+50261: async function renderCustomGroupsList() {
+50339: function openEditGroupModal(index = null) {
+50366: async function saveEditGroup() {
+50408: async function openDeleteDoubanPostsModal() {
+50461: async function handleConfirmDeleteDoubanPosts() {
+50503: async function openWerewolfLobby(mode) {
+50584: async function initializeWerewolfGame() {
+50674: function renderWerewolfScreen() {
+50741: function showMyRole(role) {
+50756: async function executeNightPhase() {
+50933: async function executeDayPhase() {
+50999: async function startDiscussionPhase() {
+51125: function buildWerewolfPrompt() {
+51393: function createWerewolfGameSummary(gameState) {
+51437: async function injectSummaryIntoMemories(summary) {
+51465: async function handleManualWerewolfSummary() {
+51486: async function endGame(winner) {
+51546: function addGameLog(content) {
+51556: function addDialogueLog(speaker, content) {
+51570: function openSelectionModal(type) {
+51619: function openWolfKillModal() {
+51668: function handleUserWerewolfSpeech() {
+51688: async function handleAiContinueDiscussion() {
+51768: async function handleWerewolfWaitReply() {
+51932: async function startVotingPhase() {
+51981: async function getAiVotes() {
+52079: function handleVotingResults() {
+52141: async function getAiWolfKillTarget() {
+52217: function openWitchActionModal(killedPlayer, witchPlayer) {
+52310: async function handleWerewolfRetry() {
+52338: function checkGameOver() {
+52376: async function checkAndFixData() {
+52451: function showLoader(container, position = 'top') {
+52466: function hideLoader(container) {
+52475: async function openWorldBookDeletionModal() {
+52503: async function handleConfirmWorldBookDeletion() {
+52560: function openReadingRoom() {
+52606: function initReadingSession(chatId) {
+52620: function closeReadingRoom() {
+52638: function renderReadingRoom(chatId) {
+52680: function showNextPage() {
+52692: async function showPrevPage() {
+52706: function importBook() {
+52711: async function decodeTextFile(arrayBuffer) {
+52752: async function handleBookFileUpload(event) {
+52782: async function handlePageJump() {
+52810: async function saveReadingProgress(bookId, pageNumber) {
+52822: async function showNextPage() {
+52839: async function openBookLibrary() {
+52848: async function renderBookLibrary(searchTerm = '') {
+52882: async function loadBookFromLibrary(bookId) {
+52958: async function addGreenRiverToShelf(storyId, btnElement) {
+53009: async function removeGreenRiverFromShelf(storyId, btnElement) {
+53043: function resetBtnToAddState(storyId, btn) {
+53054: async function deleteBookFromLibrary(bookId) {
+53067: function processImportedText(title, textContent) {
+53082: function makeDraggable(windowEl, headerEl) {
+53191: function minimizeReadingRoom() {
+53201: function restoreReadingRoom() {
+53214: function debounce(func, delay) {
+53225: function formatReadingStateForAI(chatId) {
+53266: function updateReadingContextOnScroll() {
+53313: function playSilentAudio() {
+53331: function stopSilentAudio() {
+53341: function hexToUint8Array(hexString) {
+53353: function stopTtsQueue() {
+53371: function stopChatMessageTtsOnly() {
+53393: function stopAllTtsPlayback() {
+53398: async function processNextTts() {
+53482: function playVideoCallPureTTS(text, voiceId) {
+53510: async function playRealAudio(bodyElement) {
+53554: async function playTtsAudio(bodyElement) {
+53750: function playAudioFromData(audioSrc, audioType, text, voiceId, bodyElement, messageKey, onEndedCallback) {
+53790: function toggleVoiceTranscript(bodyElement) {
+53841: function toggleBilingualTranslation(bubble, chat) {
+53925: function extractBilingualTranslation(content, bubble) {
+53978: async function openProductCategoryManager() {
+53984: async function renderProductCategoriesInManager() {
+54004: async function addNewProductCategory() {
+54019: async function deleteProductCategory(categoryId) {
+54033: function addProductVariationInput(variation = {}) {
+54078: async function openVariationSelector(productId) {
+54159: function openShoppingSettingsModal() {
+54170: async function saveShoppingSettings() {
+54194: async function handleGenerateShoppingItems() {
+54414: async function handleWidgetImageChange(imageId) {
+54517: function removeApiHistoryFromChats(chatsArray) {
+54530: async function exportDataAsSlicedZip() {
+54670: async function exportDataAsStream() {
+54735: async function exportDataAsBlob() {
+54825: async function showAdvancedExportImportModal() {
+55295: async function exportSelectedTables(tables, categoryNames, selectedChatIds = []) {
+55356: function filterDataByChatIds(tableName, tableData, selectedChatIds) {
+55411: async function handleAdvancedImport(file) {
+55436: async function showAdvancedImportConfirmModal(backupData) {
+55546: async function executeAdvancedImport(data) {
+55594: function updateBackButtonUnreadCount() {
+55641: async function openStickerCategoryBindingModal(categoryId) {
+55684: async function saveStickerCategoryBindings(categoryId) {
+55721: function getStickerContextForPrompt(chat) {
+55769: function getGroupStickerContextForPrompt(chat) {
+55823: function estimateTokens(text) {
+55830: async function calculateCurrentContextTokens() {
+55970: async function openNaiGallery() {
+56043: function switchNaiGalleryTab(tabId) {
+56080: function renderNaiGalleryGrid(images, gridEl) {
+56124: async function loadMoreNaiGalleryImages() {
+56159: function toggleNaiGalleryManagementMode() {
+56184: function updateNaiGalleryActionButtons() {
+56207: async function executeBatchExportNaiImages() {
+56274: function handleNaiGalleryGridClick(e) {
+56317: async function executeBatchDownloadNaiImages() {
+56449: async function executeBatchDeleteNaiImages(keysToDelete = null) {
+56610: async function executeBatchUploadNaiImagesToImgBB() {
+56781: function generateFilenameForNai(prompt) {
+56805: function openQuickReplyModal() {
+56819: async function renderQuickReplyList(rerenderTabs = true) {
+56950: function toggleQuickReplyManagementMode() {
+56976: function toggleQuickReplySelection(id) {
+56996: function updateQuickReplyActionBar() {
+57003: function handleSelectAllQuickReplies() {
+57027: async function executeBatchMoveQuickReplies() {
+57055: async function executeBatchDeleteQuickReplies() {
+57072: function switchQuickReplyCategory(categoryId) {
+57078: async function addNewQuickReply() {
+57108: async function openQuickReplyCategoryManager() {
+57114: async function renderQuickReplyCategoriesInManager() {
+57138: async function addNewQuickReplyCategory() {
+57157: async function deleteQuickReplyCategory(categoryId) {
+57191: function selectQuickReply(text) {
+57203: async function editQuickReply(id) {
+57227: async function deleteQuickReply(id) {
+57246: async function handleCharBilibiliSearch() {
+57371: function playCharBilibiliVideo(videoData) {
+57387: function closeCharBilibiliPlayer() {
+57407: async function renderMyPhoneSimulatedQQ() {
+57502: async function openMyPhoneConversation(index) {
+57585: async function renderMyPhoneAlbum() {
+57660: function renderMyPhoneBrowserHistory() {
+57726: async function openMyPhoneArticle(index) {
+57735: function renderMyPhoneArticle(articleData) {
+57742: function renderMyPhoneTaobao() {
+57822: function renderMyPhoneMemoList() {
+57889: function openMyPhoneMemo(index) {
+57902: function renderMyPhoneDiaryList() {
+57970: function openMyPhoneDiary(index) {
+57998: function renderMyPhoneAmap() {
+58064: function renderMyPhoneAppUsage() {
+58155: function renderMyPhoneMusicScreen() {
+58208: function playMyPhoneSong(songIndex, playlist) {
+58282: async function saveMyPhoneAlbum() {
+58315: async function saveMyPhoneBrowser() {
+58351: async function saveMyPhoneTaobao() {
+58399: async function saveMyPhoneDiary() {
+58448: async function saveMyPhoneMemo() {
+58483: async function saveMyPhoneAmap() {
+58524: async function saveMyPhoneUsage() {
+58566: function renderMyPhoneYiqitingSongList() {
+58612: function toggleMyPhoneMusicInputs() {
+58640: async function saveMyPhoneMusic() {
+58789: function initLockScreen() {
+58835: function updateLockScreenClock() {
+58846: function showPasswordInput() {
+58856: function hidePasswordInput() {
+58865: function updateDots() {
+58874: function handleKeypadInput(num) {
+58899: function deleteKeypadInput() {
+58916: function checkLockPassword() {
+58948: function handleUnlockTrigger() {
+59090: function utf8_to_b64(str) {
+59094: function b64_to_utf8(str) {
+59098: async function uploadToGitHub(isSilent = false) {
+59369: async function uploadToGitHubLargeData(isSilent = false) {
+59722: async function restoreFromGitHub() {
+59918: function startAutoBackupTimer(intervalMinutes) {
+59949: function stopAutoBackupTimer() {
+59965: function getWeatherDescription(code) {
+59980: async function searchCityGeo(cityName) {
+59995: async function fetchWeather(lat, lon) {
+60017: async function getWeatherContextForPrompt(chat) {
+60052: async function initUserWallet() {
+60109: async function processTransaction(amount, type, description) {
+60163: async function openAlipayScreen() {
+60249: async function renderTransactionList() {
+60259: async function initBillListUI() {
+60308: function bindBillEvents() {
+60344: async function loadBills(isReset = false) {
+60418: function renderBillItems(transactions, container, loaderEl) {
+60474: async function handleUserTopUp() {
+60496: async function openKinshipSelector() {
+60593: async function sendKinshipRequest(chatId, limit, type = 'grant') {
+60653: async function initFunds() {
+60675: function checkThemeStatus() {
+60713: async function simulateFundMarket() {
+60759: async function openFundScreen() {
+60772: async function renderFundScreen() {
+60811: function generateMiniChartSvg(dataPoints, isUp) {
+60839: function renderFundMarketList(funds) {
+60896: function renderFundMyList(funds, holdings) {
+60938: function switchFundTab(tab) {
+60949: async function openFundTradeModal(type, fund, holding = null) {
+61072: async function openAuctionScreen() {
+61087: async function generateNewAuctionItem() {
+61234: function startAuctionLoop() {
+61290: function npcBid() {
+61364: async function placeBid(multiplier) {
+61397: function addAuctionLog(type, text) {
+61415: function updateAuctionState(newPrice, bidder) {
+61469: async function endAuction() {
+61663: async function openAuctionGiftSelector(item, price) {
+61750: async function sendAuctionGiftToChat(chatId, item, price) {
+61811: async function openInventoryModal() {
+61867: function closeInventoryModal() {
+61872: async function handleGiftFromInventory(item) {
+61894: async function playSynthScore(btnElement, notesJson, instrumentType = 'piano') {
+62033: function getTodoDateString(date) {
+62038: async function openTodoList() {
+62049: function updateTodoDateDisplay() {
+62062: function changeTodoDate(days) {
+62069: async function renderTodoList() {
+62102: function loadMoreTodos() {
+62163: async function toggleTodoStatus(id) {
+62196: async function deleteTodo(id) {
+62206: function openTodoEditor(todo = null) {
+62227: async function saveTodo() {
+62307: async function initGreenRiverData() {
+62315: async function openGreenRiverScreen() {
+62323: async function renderBookList() {
+62394: async function openAuthorManager() {
+62429: async function openAuthorEditor(id = null) {
+62455: async function saveAuthor() {
+62478: async function deleteAuthor(id) {
+62488: function addAuthor() {
+62508: async function createNewStory() {
+62515: async function openStorySettings() {
+62528: async function loadStorySettingsUI(settings = {}, selectedAuthorId = null) {
+62731: async function saveStorySettings() {
+62832: function showReaderCommentsPopup(comments) {
+62850: async function openReader(storyId, chapterIndex = 0) {
+63019: function updateGenButtonBinding() {
+63028: function updateControlPanel(story) {
+63065: async function saveChapterSummary(storyId, chapterIndex, newSummary) {
+63074: async function handleGenerateStoryContent(isReroll = false) {
+63316: function openChapterList() {
+63336: function renderChapterList(story, listContainer, countEl) {
+63505: async function deleteSelectedChapters() {
+63559: function closeChapterList() {
+63571: function calculateNextUpdateTime(autoUpdate) {
+63649: async function checkAutoUpdate(story) {
+63732: async function autoGenerateChapter(storyId) {
+64104: async function checkAllStoriesForAutoUpdate() {
+64124: function startAutoUpdateTimer() {
+64140: function stopAutoUpdateTimer() {
+64177: async function openEmailApp() {
+64183: async function renderEmailList() {
+64241: function handleEmailSelection(element, id) {
+64252: function updateMailDeleteButton() {
+64258: async function executeBatchDeleteEmails() {
+64282: function handleSelectAllEmails() {
+64302: async function openEmailDetail(id) {
+64345: function closeEmailDetail() {
+64351: function toggleEmailEditMode() {
+64387: async function deleteEmail(id) {
+64394: async function deleteCurrentEmail() {
+64402: function saveMailConfig() {
+64420: function loadMailConfig() {
+64427: async function openEmailSettings() {
+64505: async function handleQuickReceiveMail() {
+64521: async function executeEmailGeneration(config) {
+64796: async function forwardEmailToChat(email) {
+64890: async function handleEmergencyAppearanceReset() {
+64967: async function handleFactoryReset() {
+65049: function openSimpleImageZoom(src) {
+65077: async function handleRedditSearch(query = '') {
+65105: async function openRedditDetail(post) {
+65310: function renderRedditList(posts) {
+65381: async function forwardRedditPost(postId, directData = null) {
+65514: async function handleGenerateSimulatedReddit() {
+65703: async function init() {
+65707: async function handleWorldBookImport(files) {
+65773: async function handleTxtWorldBookImport(txtFiles) {
+65825: function showTxtImportConfirmModal(fileContents) {
+65918: async function handleDocxWorldBookImport(docxFiles) {
+65992: function showDocxImportConfirmModal(fileContents) {
+66085: async function handleZipWorldBookImport(zipFiles) {
+66199: function showZipImportConfirmModal(fileContents) {
+66299: async function importTavernWorldBook(tavernData, fileName) {
+66343: async function exportWorldBooks() {
+66382: async function importWorldBooks(data) {
+66601: function showAnnouncementActions(annoId) {
+66615: async function handlePinAnnouncement() {
+66628: async function handleDeleteAnnouncement() {
+66823: function forceGlobalCleanup() {
+67218: function performSmartStickerMatch(inputText, chat) {
+67302: function sendSmartMatchedSticker(sticker, chat) {
+67624: async function fetchModels(urlInputId, keyInputId, selectId) {
+67737: function addLog(type, args) {
+67792: function renderConsole() {
+68290: function updateWorldBookSelectionDisplay() {
+68714: function updateLinkedMemorySelectionDisplay() {
+68814: function renderGroupMemberSettings(members) {
+68873: function openMemberEditor(memberId) {
+69254: function renderMemoryArchiveList() {
+69303: async function loadMemoryArchive(archiveId) {
+69390: async function deleteMemoryArchive(archiveId) {
+69674: function renderApiHistoryList() {
+69805: function showApiHistoryDetail(title, content, type) {
+70799: function resetAllSwipes(exceptThisOne = null) {
+70808: async function handlePostClick(e) {
+72434: async function openSharedHistoryViewer(timestamp) {
+75594: function updateTruthGameFloatIndicator() {
+75605: function getTruthGameEffectiveChat() {
+75614: function getTruthGameCurrentDisplayName() {
+75622: function pickTruthGameRoundMember(chat) {
+76036: function goToTruthGameNextRound() {
+76054: async function generateTruthGameSpectatorComments() {
+76258: function determineRPSWinner(user, ai) {
+76270: function addTruthGameMessage(role, content, opts) {
+76292: function renderTruthGameMessages() {
+76378: async function generateAITruthQuestion() {
+76467: async function generateAITruthAnswer(question) {
+76588: function buildTruthGamePrompt(chat, type, question = '') {
+76769: function showTruthGameMessageActions(timestamp) {
+76800: function closeTruthGameMessageActions() {
+76806: function restoreNormalMessageActions() {
+77334: function loadWatchTogetherVideo(file, skipSavePrompt = false) {
+77364: function loadWatchTogetherVideoFromUrl(url, skipSavePrompt = false) {
+77455: async function promptSaveVideoToPlaylist(defaultName) {
+77463: function openSaveVideoModal(defaultName) {
+77471: async function saveVideoToPlaylist() {
+77508: async function openPlaylist() {
+77514: async function renderPlaylist() {
+77571: function startWatchTogetherMonitoring() {
+77598: function startWhisperRecording(stream) {
+77643: async function transcribeWithWhisper(audioBlob) {
+77670: function startCaptureTimer() {
+77681: function captureVideoFrame() {
+77715: function formatVideoTime(seconds) {
+77728: function addWatchTogetherSystemMessage(text) {
+77738: function addWatchTogetherContextMessage(type, content, imageData = null) {
+77783: function sendWatchTogetherUserMessage() {
+77812: async function callWatchTogetherAPI() {
+78179: function renderWatchTogetherMessages() {
+78216: function showWatchTogetherMessageActions(timestamp) {
+78239: function closeWatchTogetherMessageActions() {
+78245: function restoreNormalMessageActionsFromWatchTogether() {
+78263: function loadWatchTogetherSettings() {
+78281: async function saveWatchTogetherSettings() {
+78315: function stopMonitoring() {
+78340: function stopWatchTogether() {
+78402: async function searchMovies(keyword) {
+78482: function renderSearchResults(movies) {
+78541: function showPlaySources(movie) {
+78623: function playMovieUrl(url, title) {
+78637: function addWatchTogetherSystemMessage(text) {
+78766: function openDrawAndGuess() {
+78954: async function setupDrawAndGuessSession(characterId) {
+78987: function sendDrawGuessMessage() {
+79011: function appendDrawGuessMessage(msg) {
+79028: function handleDrawGuessInput() {
+79041: async function handleDrawGuessResay() {
+79068: async function playAiDrawingAnimation(paths) {
+79104: async function decideAiDrawing(retryCount = 0) {
+79177: async function handleAiTurnToDraw() {
+79219: async function handleGetTopicFromAi() {
+79335: async function triggerDrawAndGuessAiResponse(isInitial = false, imageBase64 = null) {
+79563: async function submitDrawingToAi() {
+79593: function openDrawGuessMessageManager(mode) {
+79626: async function handleMessageManagerConfirm() {
+79664: function initDrawAndGuessListeners() {
+80341: async function handleUserPatSelf(chatId) {
+80399: function extractDialogueOnly(text) {
+80464: function initVideoOptimization() {
+80621: function swapVideoPosition() {
+80777: async function startCamera(useFacingMode) {
+80807: function stopCamera() {
+80827: function updateCameraStatus(isActive, message) {
+80840: function captureCameraFrame() {
+80859: function startCameraCapture(intervalSeconds) {
+80900: function initVoiceRecording() {
+80916: async function toggleRecording() {
+80925: async function startRecording() {
+81027: function startSpeechRecognition() {
+81095: function stopRecording() {
+81105: function updateRecordButtonUI(recording) {
+81121: function showVoiceTextConfirmDialog(recognizedText, audioBlob) {
+81183: async function handleRecordedAudio(audioBlob) {
+81260: function initPromptManagerUI() {
+81397: function renderPromptScenes() {
+81542: function openPromptEditor(sceneId, sceneName) {
+81562: function closePromptEditor() {
+81569: async function savePromptEdit() {
+81620: function hasCustomPrompt(scenePath) {
+81634: function getCustomPromptIfExists(scenePath) {

@@ -1,0 +1,48 @@
+/* ========== 情侣空间邀请卡片 ========== */
+.couple-invite-card {
+  width: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--secondary-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.couple-invite-header {
+  padding: 14px 16px 0;
+}
+
+.couple-invite-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+}
+
+.couple-invite-body {
+  padding: 10px 16px 12px;
+}
+
+.couple-invite-desc {
+  font-size: 13px;
+  color: var(--text-secondary, #888);
+  line-height: 1.4;
+}
+
+.couple-invite-status {
+  padding: 10px 16px;
+  font-size: 12px;
+  text-align: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary, #999);
+}
+
+.couple-invite-status[data-status="pending"] {
+  color: var(--accent-color, #1890ff);
+}
+
+.couple-invite-status[data-status="accepted"] {
+  color: #52c41a;
+}
+
+.couple-invite-status[data-status="rejected"] {
+  color: #999;
+}

@@ -1,0 +1,102 @@
+/* ========== 整洁API设置 Tab 分页布局 ========== */
+
+#clean-api-settings-screen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 999;
+  background: var(--primary-bg, #fff);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#clean-api-settings-screen .cas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #eee);
+  background: var(--primary-bg, #fff);
+  flex-shrink: 0;
+}
+
+#clean-api-settings-screen .cas-header .cas-back {
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-color, #333);
+  line-height: 1;
+  padding: 0 8px 0 0;
+}
+
+#clean-api-settings-screen .cas-header .cas-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+}
+
+#clean-api-settings-screen .cas-header .cas-save {
+  font-size: 15px;
+  color: var(--accent-color, #007AFF);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Tab 栏 */
+#clean-api-settings-screen .cas-tabs {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--border-color, #eee);
+  background: var(--primary-bg, #fff);
+  flex-shrink: 0;
+  scrollbar-width: none;
+  gap: 0;
+}
+
+#clean-api-settings-screen .cas-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#clean-api-settings-screen .cas-tab {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  text-align: center;
+}
+
+#clean-api-settings-screen .cas-tab.active {
+  color: var(--accent-color, #007AFF);
+  border-bottom-color: var(--accent-color, #007AFF);
+  font-weight: 600;
+}
+
+/* 内容区域 */
+#clean-api-settings-screen .cas-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+#clean-api-settings-screen .cas-panel {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+  display: none;
+}
+
+#clean-api-settings-screen .cas-panel.active {
+  display: block;
+}
+
+/* 复用原有的 settings-section / settings-item 样式 */
+#clean-api-settings-screen .settings-container {
+  padding-bottom: 40px;
+}

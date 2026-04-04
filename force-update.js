@@ -123,8 +123,11 @@ const ForceUpdater = (() => {
   }
 
   function _closeOverlay(el) {
+    if (!el || !el.parentNode) return; // ★ 防重复调用
     el.classList.remove('show');
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => {
+      if (el.parentNode) el.remove(); // ★ 检查是否还在 DOM 里
+    }, 300);
   }
 
   // 核心：执行强制更新

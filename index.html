@@ -4,19 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>EPhone</title>
-  <link rel="stylesheet" href="style.css?v=0.0.36">
+  <!-- 从 style.css 拆分出的模块（共13块） -->
+  <link rel="stylesheet" href="css/base.css?v=0.0.36">
+  <link rel="stylesheet" href="css/chat-ui.css?v=0.0.36">
+  <link rel="stylesheet" href="css/image-nai.css?v=0.0.36">
+  <link rel="stylesheet" href="css/memory.css?v=0.0.36">
+  <link rel="stylesheet" href="css/music-player.css?v=0.0.36">
+  <link rel="stylesheet" href="css/video-voice-call.css?v=0.0.36">
+  <link rel="stylesheet" href="css/settings-font.css?v=0.0.36">
+  <link rel="stylesheet" href="css/main-ui.css?v=0.0.36">
+  <link rel="stylesheet" href="css/voice-recording.css?v=0.0.36">
+  <link rel="stylesheet" href="css/features-1.css?v=0.0.36">
+  <link rel="stylesheet" href="css/features-2.css?v=0.0.36">
+  <link rel="stylesheet" href="css/features-3.css?v=0.0.36">
+  <link rel="stylesheet" href="css/features-4.css?v=0.0.36">
   <link rel="stylesheet" href="update-notification.css?v=0.0.36">
   <link rel="stylesheet" href="structured-memory.css?v=0.0.36">
+  <link rel="stylesheet" href="vector-memory.css?v=0.0.36">
   <link rel="stylesheet" href="online-app.css?v=0.0.36">
   <link rel="stylesheet" href="period-tracker.css?v=0.0.36">
   <link rel="stylesheet" href="focus-timer.css?v=0.0.36">
-  <link rel="apple-touch-icon" href="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg">
+  <link rel="stylesheet" href="extra.css?v=0.0.36">
+  <link rel="apple-touch-icon" href="https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png">
   <link rel="manifest" href="manifest.json?v=0.0.36">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="EPhone">
   <meta name="mobile-web-app-capable" content="yes">
-  <link rel="icon" type="image/png" href="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1756312261242_qdqqd_g0eriz.jpeg">
+  <link rel="icon" type="image/png" href="https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -37,371 +52,94 @@
   <script src="notification-manager.js?v=0.0.36" defer></script>
   <script src="character-generator.js?v=0.0.36" defer></script>
   <script src="structured-memory.js?v=0.0.36" defer></script>
+  <script src="vector-memory.js?v=0.0.36" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <script src="script.js?v=0.0.36" defer="defer"></script>
+  <!-- 拆分后的模块（按依赖顺序加载） -->
+  <!-- 第一层：全局工具函数（DOMContentLoaded 之前） -->
+  <script src="modules/utils.js?v=0.0.36" defer></script>
+  <script src="modules/translations.js?v=0.0.36" defer></script>
+  <!-- 第二层：UI 通用组件 -->
+  <script src="modules/ui-modals.js?v=0.0.36" defer></script>
+  <script src="modules/ui-loaders.js?v=0.0.36" defer></script>
+  <!-- 第三层：核心聊天功能 -->
+  <script src="modules/chat-list.js?v=0.0.36" defer></script>
+  <script src="modules/chat-interface.js?v=0.0.36" defer></script>
+  <script src="modules/chat-input.js?v=0.0.36" defer></script>
+  <!-- 第四层：AI 核心 -->
+  <script src="modules/ai-response.js?v=0.0.36" defer></script>
+  <script src="modules/ai-group.js?v=0.0.36" defer></script>
+  <!-- 第五层：功能模块 -->
+  <script src="modules/music-player.js?v=0.0.36" defer></script>
+  <script src="modules/qzone.js?v=0.0.36" defer></script>
+  <script src="modules/sticker-manager.js?v=0.0.36" defer></script>
+  <script src="modules/memory-summary.js?v=0.0.36" defer></script>
+  <script src="modules/video-voice-call.js?v=0.0.36" defer></script>
+  <script src="modules/message-actions.js?v=0.0.36" defer></script>
+  <script src="modules/nai-imagen.js?v=0.0.36" defer></script>
+  <script src="modules/backup-import-export.js?v=0.0.36" defer></script>
+  <script src="modules/settings-presets.js?v=0.0.36" defer></script>
+  <script src="modules/shopping.js?v=0.0.36" defer></script>
+  <script src="modules/rendering-rules.js?v=0.0.36" defer></script>
+  <script src="modules/red-packet-poll.js?v=0.0.36" defer></script>
+  <script src="modules/persona-library.js?v=0.0.36" defer></script>
+  <script src="modules/avatar-library.js?v=0.0.36" defer></script>
+  <script src="modules/gomoku.js?v=0.0.36" defer></script>
+  <!-- 第六层：大型独立功能 -->
+  <script src="modules/alipay.js?v=0.0.36" defer></script>
+  <script src="modules/auction.js?v=0.0.36" defer></script>
+  <script src="modules/green-river.js?v=0.0.36" defer></script>
+  <script src="modules/cphone.js?v=0.0.36" defer></script>
+  <script src="modules/myphone.js?v=0.0.36" defer></script>
+  <script src="modules/werewolf.js?v=0.0.36" defer></script>
+  <script src="modules/reading-room.js?v=0.0.36" defer></script>
+  <script src="modules/douban.js?v=0.0.36" defer></script>
+  <!-- 第七层：其余功能 -->
+  <script src="modules/tts-audio.js?v=0.0.36" defer></script>
+  <script src="modules/appearance-theme.js?v=0.0.36" defer></script>
+  <script src="modules/notification-battery.js?v=0.0.36" defer></script>
+  <script src="modules/background-activity.js?v=0.0.36" defer></script>
+  <script src="modules/card-import.js?v=0.0.36" defer></script>
+  <script src="modules/character-export.js?v=0.0.36" defer></script>
+  <script src="modules/data-management.js?v=0.0.36" defer></script>
+  <script src="modules/misc-features.js?v=0.0.36" defer></script>
+  <!-- 第八层：初始化（必须在所有模块之后） -->
+  <!-- 数据定义（无依赖） -->
+  <script src="modules/init-avatar-frames.js?v=0.0.36" defer></script>
+  <script src="modules/init-db-schema.js?v=0.0.36" defer></script>
+  <!-- 数据保护（依赖 db） -->
+  <script src="modules/init-data-protection.js?v=0.0.36" defer></script>
+  <!-- 崩溃恢复（依赖 data-protection） -->
+  <script src="modules/init-crash-recovery.js?v=0.0.36" defer></script>
+  <!-- PIN/城市（依赖 DOM） -->
+  <script src="modules/init-pin-city.js?v=0.0.36" defer></script>
+  <!-- 事件绑定和功能（依赖 state, db） -->
+  <script src="modules/init-event-bindingsA.js?v=0.0.36" defer></script>
+  <script src="modules/init-event-bindingsB.js?v=0.0.36" defer></script>
+  <script src="modules/init-features.js?v=0.0.36" defer></script>
+  <!-- 主入口（最后加载，调用 init） -->
+  <script src="modules/init-and-state.js?v=0.0.36" defer></script>
+  <!-- 第九层：DOMContentLoaded 外部的独立模块 -->
+  <script src="modules/video-optimization.js?v=0.0.36" defer></script>
+  <script src="modules/clean-chat-detail.js?v=0.0.36" defer></script>
+  <script src="modules/clean-api-settings.js?v=0.0.36" defer></script>
+  <script src="modules/api-style-beautify.js?v=0.0.36" defer></script>
+  <script src="modules/voice-recording.js?v=0.0.36" defer></script>
+  <script src="modules/prompt-manager-ui.js?v=0.0.36" defer></script>
   <script src="period-tracker.js?v=0.0.36" defer></script>
   <script src="focus-timer.js?v=0.0.36" defer></script>
+  <!-- 情侣空间（从内联 script 拆分） -->
+  <script src="couple-space.js?v=0.0.36"></script>
   <script src="helper-assistant.js?v=0.0.36" defer></script>
   <script src="force-update.js?v=0.0.36" defer></script>
   
-  <style>
-    /* 守护甜心风格验证界面 */
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap');
-
-    #ephone-auth-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      /* 淡粉色梦幻渐变背景 */
-      background: linear-gradient(135deg, #fff0f5 0%, #ffdbde 50%, #f8cdda 100%);
-      /* 叠加一个格纹纹理 */
-      background-image: 
-        linear-gradient(135deg, #fff0f5 0%, #ffdbde 50%, #f8cdda 100%),
-        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.4) 0px, rgba(255, 255, 255, 0.4) 20px, transparent 20px, transparent 40px),
-        repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.4) 0px, rgba(255, 255, 255, 0.4) 20px, transparent 20px, transparent 40px);
-      background-blend-mode: overlay;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 99999;
-      animation: fadeIn 0.5s ease-in-out;
-      font-family: 'Quicksand', sans-serif;
-    }
-
-    #ephone-auth-screen.hidden {
-      display: none;
-    }
-
-    .ephone-auth-container {
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 30px;
-      padding: 40px 30px;
-      /* 粉色光晕阴影 */
-      box-shadow: 0 10px 40px rgba(255, 183, 197, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.8);
-      text-align: center;
-      max-width: 320px;
-      width: 85%;
-      backdrop-filter: blur(5px);
-      border: 4px solid #fff;
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* 顶部装饰条 - 模仿皇冠或花边 */
-    .ephone-auth-container::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 10px;
-      background: repeating-linear-gradient(90deg, #ffb7c5, #ffb7c5 10px, #ffffff 10px, #ffffff 20px);
-    }
-
-    /* 四角的扑克牌花色装饰 */
-    .shugo-chara-decoration {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      opacity: 0.6;
-      user-select: none;
-      animation: float 3s ease-in-out infinite;
-    }
-    .deco-heart { top: 20px; left: 20px; color: #ff6b81; animation-delay: 0s; }
-    .deco-spade { top: 20px; right: 20px; color: #70a1ff; animation-delay: 1s; }
-    .deco-clover { bottom: 20px; left: 20px; color: #7bed9f; animation-delay: 2s; }
-    .deco-diamond { bottom: 20px; right: 20px; color: #ffd32a; animation-delay: 3s; }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-5px) rotate(10deg); }
-    }
-
-    .ephone-auth-logo {
-      width: 70px;
-      height: 70px;
-      margin: 0 auto 15px auto;
-      color: #ff6b81;
-      animation: heartbeat 2s ease-in-out infinite;
-      filter: drop-shadow(0 2px 5px rgba(255, 107, 129, 0.3));
-    }
-
-    @keyframes heartbeat {
-      0% { transform: scale(1); }
-      14% { transform: scale(1.1); }
-      28% { transform: scale(1); }
-      42% { transform: scale(1.1); }
-      70% { transform: scale(1); }
-    }
-
-    .ephone-auth-title {
-      font-family: 'Fredoka One', cursive; /* 可爱的圆体字 */
-      font-size: 26px;
-      color: #ff6b81; /* 守护甜心标志性的粉红色 */
-      margin: 5px 0 15px 0;
-      text-shadow: 2px 2px 0px #fff, 3px 3px 0px rgba(255, 183, 197, 0.5);
-      letter-spacing: 1px;
-    }
-
-    .ephone-auth-subtitle {
-      font-size: 13px;
-      color: #ff9ca8;
-      margin-bottom: 25px;
-      background: #fff0f5;
-      display: inline-block;
-      padding: 5px 15px;
-      border-radius: 15px;
-    }
-
-    .ephone-auth-form {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-    }
-
-    .ephone-auth-form input {
-      padding: 12px 15px;
-      border: 2px solid #ffe0e6;
-      border-radius: 20px;
-      font-size: 15px;
-      transition: all 0.3s ease;
-      outline: none;
-      background: rgba(255, 255, 255, 0.8);
-      color: #ff6b81;
-      text-align: center;
-    }
-
-    .ephone-auth-form input::placeholder {
-      color: #ffc2cd;
-    }
-
-    .ephone-auth-form input:focus {
-      border-color: #ff6b81;
-      background: #fff;
-      box-shadow: 0 0 0 4px rgba(255, 107, 129, 0.1);
-      transform: scale(1.02);
-    }
-
-    .ephone-auth-form button {
-      padding: 12px;
-      /* 经典的守护甜心粉红渐变 */
-      background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); 
-      color: white;
-      border: none;
-      border-radius: 20px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-top: 10px;
-      box-shadow: 0 5px 15px rgba(255, 154, 158, 0.4);
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* 按钮上的闪光特效 */
-    .ephone-auth-form button::after {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
-      transform: rotate(45deg);
-      animation: shimmer 3s infinite;
-    }
-
-    @keyframes shimmer {
-      0% { transform: translateX(-100%) rotate(45deg); }
-      100% { transform: translateX(100%) rotate(45deg); }
-    }
-
-    .ephone-auth-form button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(255, 154, 158, 0.6);
-    }
-
-    .ephone-auth-form button:active {
-      transform: translateY(0);
-    }
-    
-    .ephone-auth-form button:disabled {
-        background: #e0e0e0;
-        box-shadow: none;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .ephone-auth-error {
-      color: #ff6b81;
-      font-size: 13px;
-      margin-top: 15px;
-      min-height: 20px;
-      font-weight: bold;
-    }
-
-    .ephone-auth-help {
-      margin-top: 20px;
-      padding: 12px 15px;
-      background: rgba(255, 240, 245, 0.5);
-      border-radius: 12px;
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    .ephone-auth-help p {
-      margin: 0;
-      color: #ff9ca8;
-    }
-
-    .ephone-auth-help a {
-      color: #ff6b81;
-      text-decoration: none;
-      font-weight: bold;
-      border-bottom: 1px dashed #ff6b81;
-      transition: all 0.3s ease;
-    }
-
-    .ephone-auth-help a:hover {
-      color: #ff4757;
-      border-bottom-style: solid;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    @keyframes fadeOut {
-      from { opacity: 1; transform: scale(1); }
-      to { opacity: 0; transform: scale(1.05); }
-    }
-
-    #ephone-auth-screen.fade-out {
-      animation: fadeOut 0.5s ease-in-out forwards;
-    }
-
-    /* 开场动画界面 */
-    #intro-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      /* 白里透粉：中心纯白 -> 中间极淡粉白 -> 边缘淡粉 */
-      background: radial-gradient(circle at center, #ffffff 0%, #fffbfd 45%, #fff0f5 100%);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 100000;
-      cursor: pointer;
-      transition: opacity 0.5s ease-in-out;
-    }
-
-    #intro-screen.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .intro-egg-container {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: floatEgg 3s ease-in-out infinite;
-      /* 整体发光带一点点粉色光晕 */
-      filter: drop-shadow(0 0 25px rgba(255, 240, 245, 0.9));
-    }
-
-    .intro-egg {
-      width: 120px;
-      height: 160px;
-      /* 蛋身白里透粉 */
-      background: radial-gradient(circle at 35% 35%, #ffffff, #fff5f7);
-      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-      box-shadow: 
-        inset -5px -5px 15px rgba(255, 192, 203, 0.1), /* 极淡的粉色内阴影 */
-        0 0 25px rgba(255, 255, 255, 1), /* 纯白外发光 */
-        0 15px 35px rgba(255, 182, 193, 0.15); /* 落地投影带粉 */
-      position: relative;
-      z-index: 2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .egg-pattern {
-      opacity: 0.3; /* 图案更淡一点，融入白色 */
-    }
-
-    .intro-wing {
-      width: 90px;
-      height: 90px;
-      position: absolute;
-      top: 35px;
-      z-index: 1;
-      /* 翅膀阴影极淡，像羽毛一样轻盈 */
-      filter: drop-shadow(0 2px 8px rgba(255, 192, 203, 0.1));
-    }
-
-    .left-wing {
-      left: -65px;
-      transform-origin: right center;
-      animation: flapLeft 2s ease-in-out infinite;
-    }
-
-    .right-wing {
-      right: -65px;
-      transform-origin: left center;
-      animation: flapRight 2s ease-in-out infinite;
-    }
-    
-    .intro-wing svg {
-        fill: #ffffff;
-        /* 极细的粉白描边 */
-        stroke: #ffeef2;
-        stroke-width: 1.5px;
-    }
-
-    .intro-text {
-      margin-top: 60px;
-      font-family: 'Quicksand', sans-serif;
-      /* 文字改为粉灰色，温柔一点 */
-      color: #d8c0c6; 
-      font-size: 16px;
-      letter-spacing: 4px;
-      font-weight: 500;
-      animation: pulseText 2s infinite;
-      text-transform: uppercase;
-      text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
-    }
-
-    @keyframes floatEgg {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-15px); }
-    }
-
-    @keyframes flapLeft {
-      0%, 100% { transform: rotate(0deg); }
-      50% { transform: rotate(15deg); }
-    }
-
-    @keyframes flapRight {
-      0%, 100% { transform: rotate(0deg); }
-      50% { transform: rotate(-15deg); }
-    }
-
-    @keyframes pulseText {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-  </style>
+  <!-- 保活音频播放器样式（从内联 style 拆分） -->
+  <link rel="stylesheet" href="css/keep-alive-player.css?v=0.0.36">
+  <!-- 验证界面 + 开场动画样式（从内联 style 拆分） -->
+  <link rel="stylesheet" href="css/auth-intro.css?v=0.0.36">
+  <link rel="stylesheet" href="css/clean-chat-detail.css?v=0.0.36">
+  <link rel="stylesheet" href="css/clean-api-settings.css?v=0.0.36">
+  <link rel="stylesheet" href="css/couple-invite.css?v=0.0.36">
 </head>
 <body>
   <div id="intro-screen">
@@ -614,7 +352,7 @@
     <div class="app-subgrid">
         <div class="small-widget" onclick="openPresetScreen()">
             <div class="small-widget-icon-wrapper"> 
-                <img class="small-widget-img" id="icon-img-preset" src="https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg" alt="预设"> 
+                <img class="small-widget-img" id="icon-img-preset" src="https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png" alt="预设"> 
             </div> 
             <span class="small-widget-label" data-lang-key="homeAppPreset">预设</span>
         </div>
@@ -757,9 +495,9 @@
                   </div>
                   <span class="label">联机</span>
                 </div>
-                <!-- 第二行 - 占位 -->
-                <div class="desktop-app-icon p3-placeholder-app">
-                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
+                <!-- 第二行 -->
+                <div class="desktop-app-icon">
+                  <div class="icon-bg-desktop"><img id="icon-img-forum" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="论坛"></div>
                   <span class="label">论坛</span>
                 </div>
                 <div class="desktop-app-icon" onclick="openPeriodTracker()">
@@ -770,9 +508,9 @@
                   <div class="icon-bg-desktop"><img id="icon-img-focus-timer" src="https://i.postimg.cc/Kz8d9YJy/tomato-timer.png" alt="番茄钟"></div>
                   <span class="label">番茄钟</span>
                 </div>
-                <div class="desktop-app-icon p3-placeholder-app">
-                  <div class="icon-bg-desktop"><div class="p3-placeholder-icon">?</div></div>
-                  <span class="label">新世界</span>
+                <div class="desktop-app-icon" onclick="openCoupleSpace()">
+                  <div class="icon-bg-desktop"><img id="icon-img-new-world" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="情侣空间"></div>
+                  <span class="label">情侣空间</span>
                 </div>
               </div>
             </div>
@@ -967,6 +705,21 @@
         <span style="width: 30px;"></span>
       </div>
       <div id="focus-timer-content" class="list-container"></div>
+    </div>
+
+    <!-- 情侣空间屏幕 -->
+    <div id="couple-space-screen" class="screen" style="padding:0;overflow:hidden;">
+      <iframe id="couple-space-iframe" src="" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;"></iframe>
+    </div>
+
+    <!-- 情侣空间 - 角色选择/空间列表 -->
+    <div id="couple-space-select-screen" class="screen">
+      <div class="header">
+        <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
+        <span>情侣空间</span>
+        <span style="width: 30px;"></span>
+      </div>
+      <div id="couple-space-select-content" class="list-container"></div>
     </div>
 
     <div id="character-selection-screen" class="screen">
@@ -2086,6 +1839,41 @@
             </div>
         </div>
 
+        <!-- 识图 API 设置 -->
+        <div class="settings-header" data-lang-key="apiVisionSettings">识图 API 设置</div>
+        <div class="settings-section">
+            <div class="settings-tip-wrapper">
+                <div class="settings-tip-content">
+                    提示: 识图API用于识别聊天中用户发送的图片、表情包等。留空则使用主API。建议配置支持视觉能力的模型。
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiVisionProxyUrlLabel">反代地址</label>
+                <div class="settings-right">
+                    <input type="text" id="vision-proxy-url" placeholder="留空使用主API">
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiVisionKeyLabel">API Key</label>
+                <div class="settings-right">
+                    <input type="password" id="vision-api-key" placeholder="可选">
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiVisionModelLabel">模型（手写）</label>
+                <div class="settings-right">
+                    <input type="text" id="vision-model-input" placeholder="可手写模型名称或从下方拉取自动填入" style="flex-grow: 1;">
+                </div>
+            </div>
+            <div class="settings-item">
+                <label data-lang-key="apiFetchVisionModelsBtn">拉取模型</label>
+                <div class="settings-right">
+                    <select id="vision-model-select" class="settings-select" style="flex-grow: 1; width: auto;"></select>
+                    <button id="fetch-vision-models-btn" class="settings-mini-btn">拉取</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 参数设置 -->
         <div class="settings-header">参数设置</div>
         <div class="settings-section">
@@ -2094,6 +1882,21 @@
                 <div class="settings-right" style="width: 50%;">
                     <input type="range" id="api-temperature-slider" min="0" max="2" step="0.1" value="0.8">
                 </div>
+            </div>
+        </div>
+
+        <!-- 识图Token优化 -->
+        <div class="settings-header">识图优化</div>
+        <div class="settings-section">
+            <div class="settings-item">
+                <label>识图Token优化</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="image-token-optimize-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-desc">
+                开启后，AI首次识别图片后，后续对话将用文字描述代替原图发送，大幅减少Token消耗。图片在聊天界面中仍正常显示。
             </div>
         </div>
 
@@ -2181,6 +1984,32 @@
                     <input type="checkbox" id="enable-ai-drawing-switch">
                     <span class="slider"></span>
                 </label>
+            </div>
+            <!-- Pollinations 详情 (JS控制显示/隐藏) -->
+            <div id="pollinations-details" style="display:none; background-color: #f9f9f9; border-top: 0.5px solid #ebedf0;">
+                <div class="settings-item">
+                    <label>API Key</label>
+                    <div class="settings-right">
+                        <div style="position:relative; width:100%;">
+                             <input type="password" id="pollinations-api-key" placeholder="pk_ 或 sk_ 开头的密钥">
+                             <span id="pollinations-key-toggle" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); cursor: pointer;">🧐</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label>模型</label>
+                    <div class="settings-right">
+                         <select id="pollinations-model" class="settings-select">
+                            <option value="flux">Flux Schnell (快速)</option>
+                            <option value="gptimage">GPT Image 1 Mini</option>
+                            <option value="zimage">Z-Image Turbo (2x放大)</option>
+                            <option value="klein">FLUX.2 Klein 4B</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-item" style="font-size:11px; color:#888; padding: 8px 15px;">
+                    💡 前往 <a href="https://enter.pollinations.ai/" target="_blank" style="color:#4a90d9;">enter.pollinations.ai</a> 获取免费 API Key
+                </div>
             </div>
             
             <!-- NovelAI -->
@@ -2450,6 +2279,53 @@
                     <span class="slider"></span>
                 </label>
             </div>
+
+            <div class="settings-item custom-thoughts-setting" style="flex-direction: column; align-items: stretch;">
+                <div class="custom-thoughts-header">
+                    <div class="custom-thoughts-info">
+                        <div class="custom-thoughts-title">自定义心声提示词</div>
+                        <div class="custom-thoughts-desc">开启后可自定义发送给AI的心声指令内容</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="custom-thoughts-prompt-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="custom-thoughts-prompt-container" class="custom-thoughts-body" style="display: none;">
+                    <textarea id="custom-thoughts-prompt-textarea" class="custom-thoughts-textarea" placeholder="在此输入自定义的心声提示词..."></textarea>
+                    <div class="custom-thoughts-actions">
+                        <button id="export-thoughts-prompt-btn" class="custom-thoughts-io-btn">📤 导出</button>
+                        <button id="import-thoughts-prompt-btn" class="custom-thoughts-io-btn">📥 导入</button>
+                        <input type="file" id="import-thoughts-prompt-file" accept=".json,.txt" style="display:none;">
+                        <button id="reset-thoughts-prompt-btn" class="custom-thoughts-reset-btn">恢复默认</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-item custom-thoughts-setting" style="flex-direction: column; align-items: stretch;">
+                <div class="custom-thoughts-header">
+                    <div class="custom-thoughts-info">
+                        <div class="custom-thoughts-title">自定义结构化总结提示词</div>
+                        <div class="custom-thoughts-desc">开启后可自定义结构化记忆总结时发送给AI的提示词</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="custom-summary-prompt-switch">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="custom-summary-prompt-container" class="custom-thoughts-body" style="display: none;">
+                    <div class="custom-summary-hint" style="font-size: 12px; color: var(--text-secondary, #8e8e93); margin-bottom: 8px; line-height: 1.5;">
+                        可用变量：<code>{{角色名}}</code> <code>{{用户昵称}}</code> <code>{{用户人设}}</code> <code>{{角色人设}}</code> <code>{{现有记忆}}</code> <code>{{时间范围}}</code> <code>{{分类说明}}</code> <code>{{对话记录}}</code> <code>{{总结设定}}</code>
+                    </div>
+                    <textarea id="custom-summary-prompt-textarea" class="custom-thoughts-textarea" style="min-height: 220px;" placeholder="在此输入自定义的结构化总结提示词..."></textarea>
+                    <div class="custom-thoughts-actions">
+                        <button id="export-summary-prompt-btn" class="custom-thoughts-io-btn">📤 导出</button>
+                        <button id="import-summary-prompt-btn" class="custom-thoughts-io-btn">📥 导入</button>
+                        <input type="file" id="import-summary-prompt-file" accept=".json,.txt" style="display:none;">
+                        <button id="reset-summary-prompt-btn" class="custom-thoughts-reset-btn">恢复默认</button>
+                    </div>
+                </div>
+            </div>
             
             <div class="settings-item">
                 <div>
@@ -2610,147 +2486,6 @@
             
             <!-- 保活音频播放器面板（守护甜心/游戏机风格） -->
             <div id="keep-alive-audio-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 240, 245, 0.4); backdrop-filter: blur(5px); z-index: 10000; justify-content: center; align-items: center;">
-                <style>
-                    .sc-player-device {
-                        width: 320px;
-                        background: linear-gradient(135deg, #fff0f5 0%, #ffe4e1 100%);
-                        border-radius: 40px;
-                        border: 6px solid #fff;
-                        box-shadow: 
-                            0 0 0 4px #ffb7c5,
-                            0 20px 50px rgba(255, 182, 193, 0.6),
-                            inset 0 -10px 20px rgba(255,105,180, 0.1);
-                        padding: 20px;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                        position: relative;
-                        overflow: hidden;
-                        animation: sc-float 6s ease-in-out infinite;
-                    }
-                    @keyframes sc-float {
-                        0%, 100% { transform: translateY(0); }
-                        50% { transform: translateY(-6px); }
-                    }
-                    .sc-pattern {
-                        position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-                        background-image: 
-                            linear-gradient(45deg, #ffdee9 25%, transparent 25%, transparent 75%, #ffdee9 75%, #ffdee9),
-                            linear-gradient(45deg, #ffdee9 25%, transparent 25%, transparent 75%, #ffdee9 75%, #ffdee9);
-                        background-position: 0 0, 10px 10px;
-                        background-size: 20px 20px;
-                        opacity: 0.3;
-                        pointer-events: none;
-                        z-index: 0;
-                    }
-                    .sc-content { position: relative; z-index: 1; }
-                    .sc-header {
-                        display: flex; justify-content: space-between; align-items: center;
-                        margin-bottom: 15px;
-                    }
-                    .sc-title-badge {
-                        background: #ff69b4; color: white;
-                        padding: 4px 12px; border-radius: 20px;
-                        font-size: 12px; font-weight: bold;
-                        letter-spacing: 1px;
-                        box-shadow: 0 4px 10px rgba(255,105,180, 0.4);
-                        border: 2px solid white;
-                    }
-                    .sc-win-actions { display: flex; gap: 8px; }
-                    .sc-win-btn {
-                        width: 28px; height: 28px; border-radius: 50%; border: 2px solid white;
-                        display: flex; align-items: center; justify-content: center;
-                        cursor: pointer; color: white; transition: transform 0.2s;
-                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-                    }
-                    .sc-btn-min { background: #ffd700; }
-                    .sc-btn-close { background: #ff6b6b; }
-                    .sc-win-btn:hover { transform: scale(1.1); }
-                    .sc-screen {
-                        background: #fff;
-                        border-radius: 20px;
-                        padding: 15px;
-                        box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
-                        border: 3px solid #fff;
-                        margin-bottom: 20px;
-                        position: relative;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                    }
-                    .sc-screen-label {
-                        align-self: flex-start;
-                        font-size: 10px; color: #ffb7c5; font-weight: bold; margin-bottom: 5px;
-                    }
-                    .sc-audio-wrapper { width: 100%; }
-                    .sc-audio-wrapper audio {
-                        width: 100%;
-                        height: 36px;
-                        border-radius: 18px;
-                        outline: none;
-                    }
-                    .sc-audio-wrapper audio::-webkit-media-controls-enclosure {
-                        background-color: #f0f7ff;
-                        border-radius: 18px;
-                    }
-                    .sc-control-panel {
-                        background: rgba(255,255,255,0.6);
-                        border-radius: 20px;
-                        padding: 15px;
-                        border: 2px solid white;
-                    }
-                    .sc-input-row { margin-bottom: 12px; }
-                    .sc-file-label {
-                        display: flex; align-items: center; justify-content: center; width: 100%; padding: 10px;
-                        background: white; border-radius: 12px;
-                        text-align: center; color: #ff69b4; font-size: 13px; font-weight: bold;
-                        border: 2px dashed #ffb7c5; cursor: pointer;
-                        transition: all 0.3s;
-                        box-sizing: border-box;
-                    }
-                    .sc-file-label:hover { background: #fff0f5; border-color: #ff69b4; }
-                    .sc-url-group { display: flex; gap: 8px; }
-                    .sc-url-input {
-                        flex: 1; padding: 8px 12px; border-radius: 12px;
-                        border: 2px solid #ffdeeb; background: white;
-                        color: #666; font-size: 12px; outline: none;
-                        transition: border-color 0.3s;
-                    }
-                    .sc-url-input:focus { border-color: #ff69b4; }
-                    .sc-load-btn {
-                        background: #87ceeb; color: white; border: 2px solid white;
-                        border-radius: 12px; padding: 0 15px; font-weight: bold; font-size: 12px;
-                        cursor: pointer; box-shadow: 0 4px 0 #5fb8d9;
-                        transition: transform 0.1s, box-shadow 0.1s;
-                        height: 36px;
-                    }
-                    .sc-load-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #5fb8d9; }
-                    .sc-hint {
-                        margin-top: 15px; font-size: 11px; color: #ff8da1;
-                        text-align: center;
-                        display: flex; align-items: center; justify-content: center; gap: 6px;
-                        font-weight: 500;
-                    }
-                    .sc-hint-icon {
-                        width: 16px; height: 16px; background: #ffd700; border-radius: 50%;
-                        color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; font-size: 11px;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                    }
-                    .sc-visualizer-mock {
-                        display: flex; gap: 4px; justify-content: center; margin-bottom: 8px; height: 20px; align-items: flex-end;
-                    }
-                    .sc-bar {
-                        width: 6px; background: #ffb7c5; border-radius: 3px;
-                        animation: sc-equalizer 1s infinite ease-in-out;
-                    }
-                    .sc-bar:nth-child(2) { animation-delay: 0.1s; height: 60%; }
-                    .sc-bar:nth-child(3) { animation-delay: 0.2s; height: 80%; }
-                    .sc-bar:nth-child(4) { animation-delay: 0.3s; height: 50%; }
-                    .sc-bar:nth-child(5) { animation-delay: 0.1s; height: 70%; }
-                    @keyframes sc-equalizer {
-                        0%, 100% { height: 30%; }
-                        50% { height: 100%; }
-                    }
-                </style>
-
                 <div class="sc-player-device">
                     <div class="sc-pattern"></div>
                     <div class="sc-content">
@@ -3031,6 +2766,28 @@
                 <label>检查并更新到最新版本</label>
                 <div class="settings-right">
                     <button id="check-update-btn" class="settings-mini-btn" onclick="ForceUpdater.checkUpdate()">检查更新</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 许愿/反馈 -->
+        <div class="settings-header">许愿 / 反馈</div>
+        <div class="settings-section">
+            <div class="settings-tip-wrapper">
+                <div class="settings-tip-content">
+                    <strong>注意：</strong>匿名反馈作者无法回复你，你也收不到回复通知。如需作者回复，请使用下方「公开反馈」。
+                </div>
+            </div>
+            <div class="settings-item">
+                <label>匿名许愿 / 反馈</label>
+                <div class="settings-right">
+                    <a href="https://betweenus.today/creator/yuanyuan" target="_blank" class="settings-mini-btn" style="text-decoration: none; color: inherit;">前往</a>
+                </div>
+            </div>
+            <div class="settings-item">
+                <label>公开反馈（可收到回复）</label>
+                <div class="settings-right">
+                    <a href="https://www.kdocs.cn/l/csKWtfIfdwDy" target="_blank" class="settings-mini-btn" style="text-decoration: none; color: inherit;">前往</a>
                 </div>
             </div>
         </div>
@@ -3631,9 +3388,9 @@
           <span data-lang-key="playlistTitle">播放列表</span>
           
           <div>
+            <span class="panel-btn" id="playlist-manager-btn">歌单</span>
             <span class="panel-btn" id="cleanup-songs-btn">清理</span> 
-            <span class="panel-btn" id="add-song-local-btn">本地</span> 
-            <span class="panel-btn" id="add-song-url-btn">URL</span> 
+            <span class="panel-btn" id="add-song-upload-btn">上传</span> 
             <span class="panel-btn" id="add-song-search-btn" data-lang-key="search">搜索</span>
           </div>
         </div>
@@ -3642,10 +3399,26 @@
         <label class="select-all-label" style="display: flex; align-items: center; gap: 5px;">
             <input type="checkbox" id="select-all-playlist-checkbox"> 全选
         </label>
+        <button id="move-to-playlist-btn" class="action-bar-btn" style="background-color: #34c759;">移到歌单 (0)</button>
         <button id="delete-selected-songs-btn" class="action-bar-btn" style="background-color: #ff3b30;">删除 (0)</button>
         <button id="upload-selected-to-catbox-btn" class="action-bar-btn" style="background-color: #007bff;">上传Catbox (0)</button>
       </div>
       </div> <input type="file" id="local-song-upload-input" accept="audio/*" multiple style="display: none;"> <input type="file" id="lrc-upload-input" accept=".lrc" style="display: none;">
+    <!-- 上传方式选择弹窗 -->
+    <div id="upload-choice-overlay" class="upload-choice-overlay" style="display:none;">
+      <div class="upload-choice-sheet">
+        <div class="upload-choice-title">选择上传方式</div>
+        <button class="upload-choice-option" id="upload-choice-local">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+          本地文件
+        </button>
+        <button class="upload-choice-option" id="upload-choice-url">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          网络URL
+        </button>
+        <button class="upload-choice-cancel" id="upload-choice-cancel">取消</button>
+      </div>
+    </div>
     </div>
     
     <!-- 提示词管理屏幕 -->
@@ -3834,13 +3607,47 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <!-- 整洁聊天详情开关 -->
             <div class="settings-item">
                 <div>
-                    <label>真全屏模式</label>
-                    <div class="settings-desc">隐藏系统状态栏，内容延伸至屏幕顶部</div>
+                    <label>整洁聊天详情</label>
+                    <div class="settings-desc">开启后聊天详情页使用分页Tab布局，更清爽</div>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" id="true-fullscreen-switch">
+                    <input type="checkbox" id="clean-chat-detail-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <!-- 整洁API设置开关 -->
+            <div class="settings-item">
+                <div>
+                    <label>整洁API设置</label>
+                    <div class="settings-desc">开启后API设置页使用分页Tab布局，不用一直下滑</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="clean-api-settings-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <!-- API设置美化开关 -->
+            <div class="settings-item">
+                <div>
+                    <label>API设置美化</label>
+                    <div class="settings-desc">开启后API设置界面使用奶油樱花主题美化</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="api-style-beautify-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <!-- 下拉框弹窗模式开关 -->
+            <div class="settings-item">
+                <div>
+                    <label>下拉框弹窗模式</label>
+                    <div class="settings-desc">部分浏览器下拉框不兼容时，可开启改为弹窗选择</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="dropdown-popup-mode-switch">
                     <span class="slider"></span>
                 </label>
             </div>
@@ -4007,7 +3814,17 @@
               class="form-button-secondary" style="margin-top: 0; padding: 12px; background-color: #ffebee; color: #d32f2f; border-color: #ffcdd2;"data-lang-key="delete">删除</button> </div>
         </div>
         <hr style="margin: 30px 0; opacity: 0.3;">
-        <div class="form-group"> <label for="font-url-input"data-lang-key="fontFileUrlLabel">字体文件URL (.ttf, .otf, .woff等)</label> <input type="text" id="font-url-input" placeholder="https://..../font.ttf"> </div>
+        <div class="form-group"> <label for="font-url-input" data-lang-key="fontFileUrlLabel">字体文件URL (.ttf, .otf, .woff等)</label> <input type="text" id="font-url-input" placeholder="https://..../font.ttf"> </div>
+        <div class="form-group">
+          <label data-lang-key="fontLocalUploadLabel">或上传本地字体文件</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="form-button-secondary" id="font-local-upload-btn" style="margin-top:0; flex-shrink:0;" data-lang-key="fontLocalUploadBtn">选择本地字体</button>
+            <span id="font-local-filename" style="font-size:13px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+            <input type="file" id="font-local-file-input" accept=".ttf,.otf,.woff,.woff2,.eot" style="display:none;">
+          </div>
+          <p id="font-local-warning" style="font-size:12px; color:#e67e22; margin-top:6px; display:none;" data-lang-key="fontLocalSizeWarning">⚠️ 本地字体文件较大，可能导致应用卡顿或闪退。建议使用 5MB 以下的字体文件。</p>
+          <button id="font-local-clear-btn" class="form-button-secondary" style="margin-top:8px; display:none; background-color:#ffebee; color:#d32f2f; border-color:#ffcdd2;" data-lang-key="fontLocalClearBtn">清除本地字体</button>
+        </div>
         <div class="form-group">
           <label>字体大小 <span id="font-size-value">16</span>px</label>
           <input type="range" id="font-size-slider" min="10" max="28" value="16" step="1" style="width:100%;">
@@ -4259,15 +4076,18 @@
         </div>
       </div>
       <div class="list-container" id="memory-list-container" style="padding: 15px; display: flex; flex-direction: column; gap: 15px; background-color: #f0f2f5;">
-        <!-- Tab 切换栏（仅在结构化记忆开启时显示） -->
+        <!-- Tab 切换栏（仅在结构化记忆或向量记忆开启时显示） -->
         <div id="memory-tab-bar" class="sm-tab-bar" style="display: none;">
           <button class="sm-tab active" data-tab="original" id="memory-tab-original">原始记忆</button>
           <button class="sm-tab" data-tab="structured" id="memory-tab-structured">结构化表格</button>
+          <button class="sm-tab" data-tab="vector" id="memory-tab-vector">向量记忆</button>
         </div>
         <!-- 原始记忆列表 -->
         <div id="original-memory-list"></div>
         <!-- 结构化记忆表格 -->
         <div id="structured-memory-container" style="display: none;"></div>
+        <!-- 向量记忆容器 -->
+        <div id="vector-memory-container" style="display: none;"></div>
       </div>
     </div>
     
@@ -4473,16 +4293,12 @@
                 
                 <!-- 后台查看用户手机 -->
                 <div class="settings-item" style="display: flex !important; justify-content: space-between !important; align-items: center !important; flex-direction: row !important;">
-                     <div style="flex: 1; padding-right: 10px; display: flex; flex-direction: column; align-items: flex-start;">
-                        <label style="margin-bottom: 2px;">后台查看用户手机</label>
-                        <div class="settings-desc">
-                            <select id="char-view-myphone-bg-select" style="width: 100%; padding: 5px; margin-top: 5px; border-radius: 4px; border: 1px solid #ddd;">
-                                <option value="null">跟随全局</option>
-                                <option value="true">开启</option>
-                                <option value="false">关闭</option>
-                            </select>
-                        </div>
-                    </div>
+                    <label>后台查看用户手机</label>
+                    <select id="char-view-myphone-bg-select" style="width: auto; min-width: 100px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--secondary-bg); color: var(--text-color);">
+                        <option value="null">跟随全局</option>
+                        <option value="true">开启</option>
+                        <option value="false">关闭</option>
+                    </select>
                 </div>
                 
                 <!-- 查看概率 -->
@@ -4546,29 +4362,43 @@
                  </div>
             </div>
             
-            <!-- 日记模式开关 -->
-            <div class="settings-item">
+            <!-- 记忆模式选择器 -->
+            <div class="settings-item-block">
+                <label style="margin-bottom: 8px; display: block;">记忆模式</label>
+                <div class="memory-mode-selector" id="memory-mode-selector">
+                    <div class="memory-mode-option" data-mode="diary">
+                        <span class="mode-label">日记式</span>
+                        <span class="mode-desc">文字总结</span>
+                    </div>
+                    <div class="memory-mode-option" data-mode="structured">
+                        <span class="mode-label">结构化</span>
+                        <span class="mode-desc">表格压缩</span>
+                    </div>
+                    <div class="memory-mode-option" data-mode="vector">
+                        <span class="mode-label">向量记忆</span>
+                        <span class="mode-desc">智能检索</span>
+                    </div>
+                </div>
+                <div class="settings-desc" style="margin-top: 4px; font-size: 12px; color: #666;">三种模式互斥，同时只能启用一种。切换不会删除其他模式的数据。</div>
+            </div>
+
+            <!-- 日记模式子选项（仅日记模式显示） -->
+            <div class="settings-item" id="diary-mode-options" style="display:none;">
                 <div>
                     <label>日记模式</label>
-                    <div class="settings-desc">开启后手动总结将自动总结上次总结之后的所有消息，适合每天写日记</div>
+                    <div class="settings-desc">手动总结将自动总结上次总结之后的所有消息</div>
                 </div>
                 <label class="toggle-switch"> <input type="checkbox" id="diary-mode-toggle"> <span class="slider"></span> </label>
             </div>
+
+            <!-- 隐藏的兼容性开关 -->
+            <input type="checkbox" id="structured-memory-toggle" style="display:none;">
 
             <!-- 手动总结按钮 -->
             <div class="settings-item">
                  <button id="manual-summary-btn" style="width: 100%; padding: 10px; background: var(--accent-color); color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;">
                     手动总结
                  </button>
-            </div>
-
-            <!-- 结构化动态记忆开关 -->
-            <div class="settings-item">
-                <div>
-                    <label>结构化动态记忆（测试）</label>
-                    <div class="settings-desc">用压缩表格格式存储记忆，大幅降低token占用</div>
-                </div>
-                <label class="toggle-switch"> <input type="checkbox" id="structured-memory-toggle"> <span class="slider"></span> </label>
             </div>
 
             <!-- 限制长期记忆读取数量 -->
@@ -4627,6 +4457,28 @@
        <span class="slider"></span> 
    </label>
 </div>
+
+            <!-- 情侣空间提示词注入 -->
+            <div class="settings-item" id="couple-space-prompt-group" style="display: none;">
+                <div>
+                    <label>情侣空间基础感知</label>
+                    <div class="settings-desc">角色知道情侣空间的存在，能处理邀请</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="couple-space-prompt-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item" id="couple-space-content-group" style="display: none;">
+                <div>
+                    <label>情侣空间内容注入</label>
+                    <div class="settings-desc">日记等内容注入聊天上下文，角色可主动提及</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="couple-space-content-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
 
             <!-- Token 统计 -->
             <div class="settings-section">
@@ -4874,6 +4726,20 @@
                             启用后，语音播报只读取引号内的对话，不读取动作描写等旁白内容
                         </div>
                     </div>
+
+                    <!-- 旁白对话穿插模式 -->
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-weight: 500; font-size: 13px;">旁白与对话穿插</label>
+                            <label class="toggle-switch" style="transform: scale(0.9);">
+                                <input type="checkbox" id="video-interleaved-mode-switch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div style="font-size: 11px; color: #666; line-height: 1.5;">
+                            启用后，旁白和对话按自然顺序穿插显示，而非旁白合并在前、对话在后
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -5112,6 +4978,18 @@
             <div class="settings-item" id="time-perception-group">
                 <label>时间感知</label>
                 <label class="toggle-switch"> <input type="checkbox" id="time-perception-toggle"> <span class="slider"></span> </label>
+            </div>
+
+            <!-- 一起听时长感知 -->
+            <div class="settings-item" id="music-time-awareness-group" style="display: none;">
+                <div style="flex: 1; padding-right: 10px;">
+                    <label style="margin-bottom: 2px;">一起听时长感知</label>
+                    <div class="settings-desc">开启后角色可感知累计一起听歌的时长</div>
+                </div>
+                <label class="toggle-switch" style="margin: 0;">
+                    <input type="checkbox" id="music-time-awareness-toggle">
+                    <span class="slider"></span>
+                </label>
             </div>
             <div class="settings-item-block" id="time-zone-group" style="display: none;">
                 <label>时区设置</label>
@@ -7637,7 +7515,7 @@
 </div>
 <audio id="silent-audio-player" loop preload="auto" style="display:none;">
     <source src="https://phoebeboo.github.io/mewoooo/1-second-of-silence.mp3" type="audio/mpeg">
-  </audio><audio id="tts-audio-player" style="display:none;"></audio>
+  </audio><audio id="tts-audio-player" style="display:none;"></audio><audio id="call-tts-audio-player" style="display:none;"></audio>
 
     <!-- ========== 连接APP独立界面 ========== -->
     <div id="online-app-screen" class="screen">
@@ -8378,304 +8256,11 @@
     <div id="mobile-console-content"></div>
 </div>
 
-<script>
-// ==================== 时间感知与自定义时间系统 ====================
-(function() {
-  'use strict';
+<!-- 时间感知与自定义时间系统（从内联 script 拆分） -->
+<script src="js/time-system.js?v=0.0.36"></script>
 
-  // 获取元素
-  const timePerceptionToggle = document.getElementById('time-perception-toggle');
-  const timeZoneGroup = document.getElementById('time-zone-group');
-  const customTimeToggle = document.getElementById('custom-time-toggle');
-  const customTimeSettingsGroup = document.getElementById('custom-time-settings-group');
-  
-  const customYearInput = document.getElementById('custom-year-input');
-  const customMonthInput = document.getElementById('custom-month-input');
-  const customDayInput = document.getElementById('custom-day-input');
-  const customHourInput = document.getElementById('custom-hour-input');
-  const customMinuteInput = document.getElementById('custom-minute-input');
-  const customTimePreview = document.getElementById('custom-time-preview');
-
-  // 从localStorage加载设置
-  function loadSettings() {
-    const timePerceptionEnabled = localStorage.getItem('time-perception-enabled') === 'true';
-    const customTimeEnabled = localStorage.getItem('custom-time-enabled') === 'true';
-    
-    timePerceptionToggle.checked = timePerceptionEnabled;
-    customTimeToggle.checked = customTimeEnabled;
-    
-    // 显示/隐藏相应的设置面板
-    if (timePerceptionEnabled) {
-      timeZoneGroup.style.display = 'block';
-    }
-    if (customTimeEnabled) {
-      customTimeSettingsGroup.style.display = 'block';
-    }
-    
-    // 加载自定义时间值
-    customYearInput.value = localStorage.getItem('custom-time-year') || '';
-    customMonthInput.value = localStorage.getItem('custom-time-month') || '';
-    customDayInput.value = localStorage.getItem('custom-time-day') || '';
-    customHourInput.value = localStorage.getItem('custom-time-hour') || '';
-    customMinuteInput.value = localStorage.getItem('custom-time-minute') || '';
-    
-    updatePreview();
-  }
-
-  // 更新时间预览
-  function updatePreview() {
-    const year = customYearInput.value;
-    const month = customMonthInput.value;
-    const day = customDayInput.value;
-    const hour = customHourInput.value;
-    const minute = customMinuteInput.value;
-    
-    if (year && month && day && hour !== '' && minute !== '') {
-      const monthStr = String(month).padStart(2, '0');
-      const dayStr = String(day).padStart(2, '0');
-      const hourStr = String(hour).padStart(2, '0');
-      const minuteStr = String(minute).padStart(2, '0');
-      customTimePreview.textContent = `${year}年${monthStr}月${dayStr}日 ${hourStr}:${minuteStr}`;
-    } else {
-      customTimePreview.textContent = '未设置';
-    }
-  }
-
-  // 保存自定义时间设置
-  function saveCustomTimeSettings() {
-    localStorage.setItem('custom-time-year', customYearInput.value);
-    localStorage.setItem('custom-time-month', customMonthInput.value);
-    localStorage.setItem('custom-time-day', customDayInput.value);
-    localStorage.setItem('custom-time-hour', customHourInput.value);
-    localStorage.setItem('custom-time-minute', customMinuteInput.value);
-    updatePreview();
-  }
-
-  // 时间感知开关事件
-  timePerceptionToggle.addEventListener('change', function() {
-    const isEnabled = this.checked;
-    localStorage.setItem('time-perception-enabled', isEnabled);
-    
-    if (isEnabled) {
-      // 显示时区设置
-      timeZoneGroup.style.display = 'block';
-      
-      // 关闭自定义时间
-      if (customTimeToggle.checked) {
-        customTimeToggle.checked = false;
-        customTimeSettingsGroup.style.display = 'none';
-        localStorage.setItem('custom-time-enabled', 'false');
-      }
-    } else {
-      timeZoneGroup.style.display = 'none';
-    }
-  });
-
-  // 自定义时间开关事件
-  customTimeToggle.addEventListener('change', function() {
-    const isEnabled = this.checked;
-    localStorage.setItem('custom-time-enabled', isEnabled);
-    
-    if (isEnabled) {
-      // 显示自定义时间设置
-      customTimeSettingsGroup.style.display = 'block';
-      
-      // 关闭时间感知
-      if (timePerceptionToggle.checked) {
-        timePerceptionToggle.checked = false;
-        timeZoneGroup.style.display = 'none';
-        localStorage.setItem('time-perception-enabled', 'false');
-      }
-      
-      // 如果没有设置值，使用当前时间作为默认值
-      if (!customYearInput.value) {
-        const now = new Date();
-        customYearInput.value = now.getFullYear();
-        customMonthInput.value = now.getMonth() + 1;
-        customDayInput.value = now.getDate();
-        customHourInput.value = now.getHours();
-        customMinuteInput.value = now.getMinutes();
-        saveCustomTimeSettings();
-      }
-    } else {
-      customTimeSettingsGroup.style.display = 'none';
-    }
-  });
-
-  // 监听自定义时间输入变化
-  [customYearInput, customMonthInput, customDayInput, customHourInput, customMinuteInput].forEach(input => {
-    input.addEventListener('input', saveCustomTimeSettings);
-    input.addEventListener('change', saveCustomTimeSettings);
-  });
-
-  // 获取当前时间（考虑自定义时间）
-  window.getCustomTime = function() {
-    const customTimeEnabled = localStorage.getItem('custom-time-enabled') === 'true';
-    
-    if (customTimeEnabled) {
-      const year = localStorage.getItem('custom-time-year');
-      const month = localStorage.getItem('custom-time-month');
-      const day = localStorage.getItem('custom-time-day');
-      const hour = localStorage.getItem('custom-time-hour');
-      const minute = localStorage.getItem('custom-time-minute');
-      
-      if (year && month && day && hour !== null && minute !== null) {
-        return {
-          enabled: true,
-          year: parseInt(year),
-          month: parseInt(month),
-          day: parseInt(day),
-          hour: parseInt(hour),
-          minute: parseInt(minute),
-          formatted: `${year}年${String(month).padStart(2, '0')}月${String(day).padStart(2, '0')}日 ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
-        };
-      }
-    }
-    
-    // 返回当前实际时间
-    const now = new Date();
-    return {
-      enabled: false,
-      year: now.getFullYear(),
-      month: now.getMonth() + 1,
-      day: now.getDate(),
-      hour: now.getHours(),
-      minute: now.getMinutes(),
-      formatted: `${now.getFullYear()}年${String(now.getMonth() + 1).padStart(2, '0')}月${String(now.getDate()).padStart(2, '0')}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-    };
-  };
-
-  // 页面加载时初始化
-  loadSettings();
-
-  console.log('时间感知与自定义时间系统已初始化');
-})();
-</script>
-
-<script>
-// ==================== EPhone 验证系统 ====================
-(function() {
-  'use strict';
-
-  const AUTH_KEY = 'ephone_auth';
-  const introScreen = document.getElementById('intro-screen');
-  const authScreen = document.getElementById('ephone-auth-screen');
-  const phoneScreen = document.getElementById('phone-screen');
-  const accountInput = document.getElementById('ephone-account');
-  const passwordInput = document.getElementById('ephone-password');
-  const loginBtn = document.getElementById('ephone-login-btn');
-  const errorDiv = document.getElementById('ephone-auth-error');
-
-  // 验证函数
-  async function ephoneVerify() {
-    const account = accountInput.value.trim();
-    const password = passwordInput.value.trim();
-
-    // 清除之前的错误信息
-    errorDiv.textContent = '';
-
-    if (!account || !password) {
-      errorDiv.textContent = 'Please enter account and password';
-      return;
-    }
-
-    // 禁用按钮，防止重复提交
-    loginBtn.disabled = true;
-    loginBtn.textContent = 'Unlocking...';
-
-    try {
-      const res = await fetch('https://puppy-subscription-api.zeabur.app/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account: account, password: password })
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // 验证成功
-        localStorage.setItem(AUTH_KEY, 'true');
-        errorDiv.style.color = '#27ae60';
-        errorDiv.textContent = 'Unlocked!';
-        
-        // 添加淡出动画
-        authScreen.classList.add('fade-out');
-        
-        // 等待动画完成后隐藏验证界面
-        setTimeout(() => {
-          authScreen.classList.add('hidden');
-          phoneScreen.style.display = 'block';
-        }, 500);
-      } else {
-        // 验证失败
-        errorDiv.style.color = '#ff6b81';
-        errorDiv.textContent = 'Failed: ' + (data.message || 'Wrong Account or Password');
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Unlock!';
-      }
-    } catch (error) {
-      console.error('验证请求失败:', error);
-      errorDiv.style.color = '#ff6b81';
-      errorDiv.textContent = 'Network Error';
-      loginBtn.disabled = false;
-      loginBtn.textContent = 'Unlock!';
-    }
-  }
-
-  // 检查验证状态
-  function checkAuthStatus() {
-    const isAuthenticated = localStorage.getItem(AUTH_KEY) === 'true';
-    
-    if (isAuthenticated) {
-      // 已验证，隐藏所有验证相关界面
-      introScreen.style.display = 'none';
-      authScreen.classList.add('hidden');
-      phoneScreen.style.display = 'block';
-    } else {
-      // 未验证，显示开场动画，隐藏主界面
-      introScreen.classList.remove('hidden');
-      authScreen.classList.add('hidden');
-      phoneScreen.style.display = 'none';
-      
-      // 绑定开场动画点击事件
-      introScreen.addEventListener('click', () => {
-        introScreen.classList.add('hidden');
-        setTimeout(() => {
-            introScreen.style.display = 'none';
-            authScreen.classList.remove('hidden');
-        }, 500);
-      });
-    }
-  }
-
-  // 绑定事件
-  loginBtn.addEventListener('click', ephoneVerify);
-
-  // 支持回车键提交
-  passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      ephoneVerify();
-    }
-  });
-
-  accountInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      passwordInput.focus();
-    }
-  });
-
-  // 页面加载时检查验证状态
-  checkAuthStatus();
-
-  // 可选：添加退出登录功能（可以在设置中调用）
-  window.ephoneLogout = function() {
-    localStorage.removeItem(AUTH_KEY);
-    location.reload();
-  };
-
-  console.log('EPhone 验证系统已初始化');
-})();
-</script>
+<!-- EPhone 验证系统（从内联 script 拆分） -->
+<script src="js/auth-system.js?v=0.0.36"></script>
 
 </body>
 </html>

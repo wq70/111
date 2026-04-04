@@ -725,6 +725,12 @@
                display: flex;
            }
 
+           /* 导入弹窗需要高于 custom-modal-overlay(z-index:10200) */
+           #import-options-modal,
+           #selective-import-modal {
+               z-index: 10300;
+           }
+
            .modal-content {
                width: 90%;
                max-height: 90%;
@@ -2074,6 +2080,52 @@
                font-size: 16px;
                cursor: pointer;
                color: var(--accent-color);
+           }
+
+           /* 歌单分组标签栏 */
+           .playlist-tabs-container {
+               display: flex;
+               overflow-x: auto;
+               padding: 10px 15px;
+               gap: 8px;
+               flex-shrink: 0;
+               background-color: transparent;
+               -ms-overflow-style: none;
+               scrollbar-width: none;
+           }
+
+           .playlist-tabs-container::-webkit-scrollbar {
+               display: none;
+           }
+
+           .playlist-tab {
+               padding: 7px 18px;
+               cursor: pointer;
+               border: none;
+               background-color: var(--primary-bg);
+               font-size: 14px;
+               font-weight: 500;
+               color: var(--text-secondary);
+               border-radius: 20px;
+               transition: all 0.2s ease-in-out;
+               white-space: nowrap;
+               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+           }
+
+           .playlist-tab.active {
+               color: #ffffff;
+               background-color: var(--accent-color);
+               font-weight: 600;
+               box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+           }
+
+           #phone-screen.dark-mode .playlist-tab {
+               background-color: rgba(255, 255, 255, 0.08);
+           }
+
+           #phone-screen.dark-mode .playlist-tab.active {
+               color: #ffffff;
+               background-color: var(--accent-color);
            }
 
            .playlist-body {
@@ -4946,6 +4998,97 @@
                flex-shrink: 0;
            }
 
+           /* 歌单分享卡片 */
+           .playlist-share-card {
+               width: 210px;
+               background-color: var(--secondary-bg);
+               border-radius: 10px;
+               border: 1px solid #e0e0e0;
+               padding: 12px;
+               display: flex;
+               flex-direction: column;
+               gap: 8px;
+           }
+
+           .playlist-share-header {
+               display: flex;
+               align-items: center;
+               gap: 8px;
+           }
+
+           .playlist-share-icon {
+               flex-shrink: 0;
+               color: var(--text-secondary);
+           }
+
+           .playlist-share-title {
+               font-weight: 600;
+               font-size: 15px;
+               color: #1f1f1f;
+               overflow: hidden;
+               text-overflow: ellipsis;
+               white-space: nowrap;
+           }
+
+           .playlist-share-songs {
+               display: flex;
+               flex-direction: column;
+               gap: 6px;
+           }
+
+           .playlist-song-item {
+               display: flex;
+               align-items: center;
+               gap: 8px;
+           }
+
+           .playlist-song-index {
+               font-size: 12px;
+               color: var(--text-secondary);
+               width: 16px;
+               text-align: center;
+               flex-shrink: 0;
+           }
+
+           .playlist-song-info {
+               display: flex;
+               flex-direction: column;
+               overflow: hidden;
+               min-width: 0;
+           }
+
+           .playlist-song-name {
+               font-size: 13px;
+               color: #1f1f1f;
+               overflow: hidden;
+               text-overflow: ellipsis;
+               white-space: nowrap;
+           }
+
+           .playlist-song-artist {
+               font-size: 11px;
+               color: var(--text-secondary);
+               overflow: hidden;
+               text-overflow: ellipsis;
+               white-space: nowrap;
+           }
+
+           .playlist-song-more {
+               font-size: 12px;
+               color: var(--text-secondary);
+               padding-left: 24px;
+           }
+
+           .playlist-share-footer {
+               display: flex;
+               align-items: center;
+               font-size: 12px;
+               color: var(--text-secondary);
+               margin-top: 4px;
+               padding-top: 8px;
+               border-top: 1px solid #e8e8e8;
+           }
+
            .comment-item {
                position: relative;
                padding-right: 25px;
@@ -5151,6 +5294,62 @@
                background-color: #333;
                border-color: #555;
                color: #fff;
+           }
+
+           /* 本地字体上传按钮 */
+           #font-local-upload-btn {
+               background-color: #4a90d9 !important;
+               color: #fff !important;
+               border: 1px solid #3a7bc8 !important;
+               border-radius: 8px !important;
+               padding: 8px 18px !important;
+               font-size: 13px !important;
+               font-weight: 500 !important;
+               cursor: pointer;
+               transition: background-color 0.2s ease, box-shadow 0.2s ease;
+               box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+               letter-spacing: 0.3px;
+           }
+
+           #font-local-upload-btn:active {
+               background-color: #3a7bc8 !important;
+               box-shadow: 0 0 0 2px rgba(74,144,217,0.3);
+               transform: scale(0.97);
+           }
+
+           /* 清除本地字体按钮 */
+           #font-local-clear-btn {
+               border-radius: 8px !important;
+               padding: 7px 16px !important;
+               font-size: 13px !important;
+               font-weight: 500 !important;
+               cursor: pointer;
+               transition: background-color 0.2s ease;
+           }
+
+           #font-local-clear-btn:active {
+               background-color: #ffcdd2 !important;
+               transform: scale(0.97);
+           }
+
+           #phone-screen.dark-mode #font-local-upload-btn {
+               background-color: #3a7bc8 !important;
+               border-color: #2e6ab3 !important;
+               color: #fff !important;
+           }
+
+           #phone-screen.dark-mode #font-local-upload-btn:active {
+               background-color: #2e6ab3 !important;
+           }
+
+           #phone-screen.dark-mode #font-local-clear-btn {
+               background-color: #4a2020 !important;
+               color: #ff8a80 !important;
+               border-color: #5a2a2a !important;
+           }
+
+           #phone-screen.dark-mode #font-local-clear-btn:active {
+               background-color: #5a2a2a !important;
            }
 
            #phone-screen.dark-mode #font-preview {

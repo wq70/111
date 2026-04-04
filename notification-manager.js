@@ -128,8 +128,8 @@ class NotificationManager {
             // 设置默认选项（强制横幅显示）
             const notificationOptions = {
                 body: options.body || '您有新消息',
-                icon: options.icon || 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
-                badge: options.badge || 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
+                icon: options.icon || 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
+                badge: options.badge || 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
                 tag: options.tag || `msg-${Date.now()}`,
                 requireInteraction: true, // 强制用户交互
                 vibrate: options.vibrate || [200, 100, 200, 100, 200], // 更明显的震动

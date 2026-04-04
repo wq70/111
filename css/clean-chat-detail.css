@@ -1,0 +1,112 @@
+/* ========== 整洁聊天详情 Tab 分页布局 ========== */
+
+#clean-chat-detail-screen {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 999;
+  background: var(--primary-bg, #fff);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#clean-chat-detail-screen .ccd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #eee);
+  background: var(--primary-bg, #fff);
+  flex-shrink: 0;
+}
+
+#clean-chat-detail-screen .ccd-header .ccd-back {
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-color, #333);
+  line-height: 1;
+  padding: 0 8px 0 0;
+}
+
+#clean-chat-detail-screen .ccd-header .ccd-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-color, #333);
+}
+
+#clean-chat-detail-screen .ccd-header .ccd-save {
+  font-size: 15px;
+  color: var(--accent-color, #007AFF);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+/* Tab 栏 */
+#clean-chat-detail-screen .ccd-tabs {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid var(--border-color, #eee);
+  background: var(--primary-bg, #fff);
+  flex-shrink: 0;
+  scrollbar-width: none;
+  gap: 0;
+}
+
+#clean-chat-detail-screen .ccd-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+#clean-chat-detail-screen .ccd-tab {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--text-secondary, #999);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  text-align: center;
+}
+
+#clean-chat-detail-screen .ccd-tab.active {
+  color: var(--accent-color, #007AFF);
+  border-bottom-color: var(--accent-color, #007AFF);
+  font-weight: 600;
+}
+
+/* 内容区域 */
+#clean-chat-detail-screen .ccd-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+#clean-chat-detail-screen .ccd-panel {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+  display: none;
+}
+
+#clean-chat-detail-screen .ccd-panel.active {
+  display: block;
+}
+
+/* 复用原有的 settings-section / settings-item 样式，不需要重写 */
+#clean-chat-detail-screen .settings-container {
+  padding-bottom: 40px;
+}
+
+/* 整洁模式下，弹窗需要高于 #clean-chat-detail-screen (z-index:999) */
+#persona-library-modal.visible,
+#ai-avatar-library-modal.visible,
+#my-avatar-library-modal.visible,
+#avatar-frame-modal.visible,
+#group-management-modal.visible {
+  z-index: 1000;
+  position: fixed;
+}

@@ -903,7 +903,7 @@ class OnlineChatManager {
                     title: title,
                     options: {
                         body: body,
-                        icon: 'https://s3plus.meituan.net/opapisdk/op_ticket_885190757_1758510900942_qdqqd_djw0z2.jpeg',
+                        icon: 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
                         tag: `online-${chatId}-${Date.now()}`,
                         requireInteraction: true,
                         renotify: true,
@@ -1283,6 +1283,8 @@ class OnlineChatManager {
 
     scheduleReconnect() {
             if (this.reconnectAttempts >= this.maxReconnectAttempts) return;
+            // ★ 清除旧的重连定时器
+            if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
             const delay = Math.min(3000 * Math.pow(1.5, this.reconnectAttempts), 60000);
             this.reconnectAttempts++;
             console.log(`[连接APP] ${delay / 1000}秒后重连 (第${this.reconnectAttempts}次)`);
@@ -1297,7 +1299,11 @@ class OnlineChatManager {
         }
 
     setupVisibilityListener() {
-            document.addEventListener('visibilitychange', () => {
+            // ★ 先移除旧的，防止叠加
+            if (this._onVisibilityChange) {
+                document.removeEventListener('visibilitychange', this._onVisibilityChange);
+            }
+            this._onVisibilityChange = () => {
                 if (!document.hidden && this.shouldAutoReconnect && !this.isConnected) {
                     const enableSwitch = document.getElementById('online-app-enable-switch');
                     if (enableSwitch && enableSwitch.checked) {
@@ -1309,7 +1315,8 @@ class OnlineChatManager {
                         }
                     }
                 }
-            });
+            };
+            document.addEventListener('visibilitychange', this._onVisibilityChange);
         }
 
     setupBeforeUnloadListener() {

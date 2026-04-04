@@ -1,0 +1,355 @@
+    /* 守护甜心风格验证界面 */
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap');
+
+    #ephone-auth-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* 淡粉色梦幻渐变背景 */
+      background: linear-gradient(135deg, #fff0f5 0%, #ffdbde 50%, #f8cdda 100%);
+      /* 叠加一个格纹纹理 */
+      background-image: 
+        linear-gradient(135deg, #fff0f5 0%, #ffdbde 50%, #f8cdda 100%),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.4) 0px, rgba(255, 255, 255, 0.4) 20px, transparent 20px, transparent 40px),
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.4) 0px, rgba(255, 255, 255, 0.4) 20px, transparent 20px, transparent 40px);
+      background-blend-mode: overlay;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      animation: fadeIn 0.5s ease-in-out;
+      font-family: 'Quicksand', sans-serif;
+    }
+
+    #ephone-auth-screen.hidden {
+      display: none;
+    }
+
+    .ephone-auth-container {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 30px;
+      padding: 40px 30px;
+      /* 粉色光晕阴影 */
+      box-shadow: 0 10px 40px rgba(255, 183, 197, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.8);
+      text-align: center;
+      max-width: 320px;
+      width: 85%;
+      backdrop-filter: blur(5px);
+      border: 4px solid #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 顶部装饰条 - 模仿皇冠或花边 */
+    .ephone-auth-container::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 10px;
+      background: repeating-linear-gradient(90deg, #ffb7c5, #ffb7c5 10px, #ffffff 10px, #ffffff 20px);
+    }
+
+    /* 四角的扑克牌花色装饰 */
+    .shugo-chara-decoration {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      opacity: 0.6;
+      user-select: none;
+      animation: float 3s ease-in-out infinite;
+    }
+    .deco-heart { top: 20px; left: 20px; color: #ff6b81; animation-delay: 0s; }
+    .deco-spade { top: 20px; right: 20px; color: #70a1ff; animation-delay: 1s; }
+    .deco-clover { bottom: 20px; left: 20px; color: #7bed9f; animation-delay: 2s; }
+    .deco-diamond { bottom: 20px; right: 20px; color: #ffd32a; animation-delay: 3s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-5px) rotate(10deg); }
+    }
+
+    .ephone-auth-logo {
+      width: 70px;
+      height: 70px;
+      margin: 0 auto 15px auto;
+      color: #ff6b81;
+      animation: heartbeat 2s ease-in-out infinite;
+      filter: drop-shadow(0 2px 5px rgba(255, 107, 129, 0.3));
+    }
+
+    @keyframes heartbeat {
+      0% { transform: scale(1); }
+      14% { transform: scale(1.1); }
+      28% { transform: scale(1); }
+      42% { transform: scale(1.1); }
+      70% { transform: scale(1); }
+    }
+
+    .ephone-auth-title {
+      font-family: 'Fredoka One', cursive; /* 可爱的圆体字 */
+      font-size: 26px;
+      color: #ff6b81; /* 守护甜心标志性的粉红色 */
+      margin: 5px 0 15px 0;
+      text-shadow: 2px 2px 0px #fff, 3px 3px 0px rgba(255, 183, 197, 0.5);
+      letter-spacing: 1px;
+    }
+
+    .ephone-auth-subtitle {
+      font-size: 13px;
+      color: #ff9ca8;
+      margin-bottom: 25px;
+      background: #fff0f5;
+      display: inline-block;
+      padding: 5px 15px;
+      border-radius: 15px;
+    }
+
+    .ephone-auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .ephone-auth-form input {
+      padding: 12px 15px;
+      border: 2px solid #ffe0e6;
+      border-radius: 20px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      outline: none;
+      background: rgba(255, 255, 255, 0.8);
+      color: #ff6b81;
+      text-align: center;
+    }
+
+    .ephone-auth-form input::placeholder {
+      color: #ffc2cd;
+    }
+
+    .ephone-auth-form input:focus {
+      border-color: #ff6b81;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(255, 107, 129, 0.1);
+      transform: scale(1.02);
+    }
+
+    .ephone-auth-form button {
+      padding: 12px;
+      /* 经典的守护甜心粉红渐变 */
+      background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); 
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+      box-shadow: 0 5px 15px rgba(255, 154, 158, 0.4);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 按钮上的闪光特效 */
+    .ephone-auth-form button::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+      transform: rotate(45deg);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) rotate(45deg); }
+    }
+
+    .ephone-auth-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(255, 154, 158, 0.6);
+    }
+
+    .ephone-auth-form button:active {
+      transform: translateY(0);
+    }
+    
+    .ephone-auth-form button:disabled {
+        background: #e0e0e0;
+        box-shadow: none;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .ephone-auth-error {
+      color: #ff6b81;
+      font-size: 13px;
+      margin-top: 15px;
+      min-height: 20px;
+      font-weight: bold;
+    }
+
+    .ephone-auth-help {
+      margin-top: 20px;
+      padding: 12px 15px;
+      background: rgba(255, 240, 245, 0.5);
+      border-radius: 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .ephone-auth-help p {
+      margin: 0;
+      color: #ff9ca8;
+    }
+
+    .ephone-auth-help a {
+      color: #ff6b81;
+      text-decoration: none;
+      font-weight: bold;
+      border-bottom: 1px dashed #ff6b81;
+      transition: all 0.3s ease;
+    }
+
+    .ephone-auth-help a:hover {
+      color: #ff4757;
+      border-bottom-style: solid;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: scale(1); }
+      to { opacity: 0; transform: scale(1.05); }
+    }
+
+    #ephone-auth-screen.fade-out {
+      animation: fadeOut 0.5s ease-in-out forwards;
+    }
+
+    /* 开场动画界面 */
+    #intro-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      /* 白里透粉：中心纯白 -> 中间极淡粉白 -> 边缘淡粉 */
+      background: radial-gradient(circle at center, #ffffff 0%, #fffbfd 45%, #fff0f5 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100000;
+      cursor: pointer;
+      transition: opacity 0.5s ease-in-out;
+    }
+
+    #intro-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .intro-egg-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: floatEgg 3s ease-in-out infinite;
+      /* 整体发光带一点点粉色光晕 */
+      filter: drop-shadow(0 0 25px rgba(255, 240, 245, 0.9));
+    }
+
+    .intro-egg {
+      width: 120px;
+      height: 160px;
+      /* 蛋身白里透粉 */
+      background: radial-gradient(circle at 35% 35%, #ffffff, #fff5f7);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      box-shadow: 
+        inset -5px -5px 15px rgba(255, 192, 203, 0.1), /* 极淡的粉色内阴影 */
+        0 0 25px rgba(255, 255, 255, 1), /* 纯白外发光 */
+        0 15px 35px rgba(255, 182, 193, 0.15); /* 落地投影带粉 */
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .egg-pattern {
+      opacity: 0.3; /* 图案更淡一点，融入白色 */
+    }
+
+    .intro-wing {
+      width: 90px;
+      height: 90px;
+      position: absolute;
+      top: 35px;
+      z-index: 1;
+      /* 翅膀阴影极淡，像羽毛一样轻盈 */
+      filter: drop-shadow(0 2px 8px rgba(255, 192, 203, 0.1));
+    }
+
+    .left-wing {
+      left: -65px;
+      transform-origin: right center;
+      animation: flapLeft 2s ease-in-out infinite;
+    }
+
+    .right-wing {
+      right: -65px;
+      transform-origin: left center;
+      animation: flapRight 2s ease-in-out infinite;
+    }
+    
+    .intro-wing svg {
+        fill: #ffffff;
+        /* 极细的粉白描边 */
+        stroke: #ffeef2;
+        stroke-width: 1.5px;
+    }
+
+    .intro-text {
+      margin-top: 60px;
+      font-family: 'Quicksand', sans-serif;
+      /* 文字改为粉灰色，温柔一点 */
+      color: #d8c0c6; 
+      font-size: 16px;
+      letter-spacing: 4px;
+      font-weight: 500;
+      animation: pulseText 2s infinite;
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
+    }
+
+    @keyframes floatEgg {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+
+    @keyframes flapLeft {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(15deg); }
+    }
+
+    @keyframes flapRight {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-15deg); }
+    }
+
+    @keyframes pulseText {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
