@@ -105,7 +105,7 @@
     .fc-fab:active { transform: scale(0.95); }
 
     /* Grid for album */
-    .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; overflow-y: auto; height: 100%; padding-bottom: 80px; }
+    .album-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: 80px; }
     .album-item { background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #f5f5f4; overflow: hidden; cursor: pointer; transition: transform 0.15s; }
     .album-item:active { transform: scale(0.97); }
     .album-thumb { background: #f5f5f4; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
@@ -1796,7 +1796,7 @@ function openFeature(id) {
 function getFeatureHTML(id) {
   switch(id) {
     case 'diary': return '<div class="fc-full"><div class="fc-scroll diary-list" id="diary-list-container"></div><div class="diary-fab-menu" id="diary-fab-menu" style="display:none"></div><button class="fc-fab" id="diary-fab-btn" onclick="toggleDiaryFab()">' + SVG_PLUS + '</button></div>';
-    case 'album': return '<div class="fc-full"><div class="album-grid" id="album-list-container"></div><div class="album-fab-menu" id="album-fab-menu" style="display:none"></div><button class="fc-fab" id="album-fab-btn" onclick="toggleAlbumFab()">' + SVG_PLUS + '</button></div>';
+    case 'album': return '<div class="fc-full"><div class="fc-scroll"><div class="album-grid" id="album-list-container"></div></div><div class="album-fab-menu" id="album-fab-menu" style="display:none"></div><button class="fc-fab" id="album-fab-btn" onclick="toggleAlbumFab()">' + SVG_PLUS + '</button></div>';
     case 'anniversary': return '<div class="fc-full">' +
       '<div class="anniv-tab-bar" id="anniv-tab-bar">' +
         '<button class="anniv-tab active" onclick="switchAnnivView(\'list\')">列表</button>' +
@@ -2070,6 +2070,7 @@ function editDistance() {
 
 // ===== Days calc =====
 var csCreatedAt = null;
+var csOriginalCreatedAt = null; // 保存原始起始日
 function calcDays(createdAt) {
   var start = new Date(createdAt); start.setHours(0,0,0,0);
   var now = new Date(); now.setHours(0,0,0,0);
@@ -2089,16 +2090,20 @@ function updateDaysDisplay() {
     document.getElementById('days-count').textContent = realDays;
   }
 }
+function updateStartDateDisplay() {
+  if (!csCreatedAt) return;
+  document.getElementById('start-date').textContent = '始于 ' + formatDate(csCreatedAt);
+}
 function editDays() {
   if (!currentCharId || !csCreatedAt) return;
   var ov = getCustomOverrides();
-  var realDays = calcDays(csCreatedAt);
+  var realDays = calcDays(csOriginalCreatedAt || csCreatedAt); // 使用原始起始日计算真实天数
   var currentDisplay = ov.customDays !== undefined && ov.customDays !== null ? Math.max(ov.customDays, realDays) : realDays;
   var overlay = document.createElement('div');
   overlay.className = 'sig-overlay animate-fade-in';
   overlay.innerHTML = '<div class="sig-modal animate-slide-up"><h3>自定义天数</h3>' +
     '<input id="days-input" type="number" min="1" value="' + currentDisplay + '" placeholder="输入天数..." />' +
-    '<p style="font-size:11px;color:#a8a29e;margin-top:8px">仅修改显示天数，重置后恢复真实天数（' + realDays + '天）</p>' +
+    '<p style="font-size:11px;color:#a8a29e;margin-top:8px">修改天数会自动调整起始日，重置后恢复真实天数（' + realDays + '天）</p>' +
     '<div class="sig-btns"><button class="sig-cancel" id="days-cancel">取消</button><button class="sig-reset" id="days-reset">重置</button><button class="sig-confirm" id="days-confirm">确定</button></div></div>';
   document.getElementById('app').appendChild(overlay);
   var input = overlay.querySelector('#days-input'); input.focus(); input.select();
@@ -2107,7 +2112,11 @@ function editDays() {
   overlay.querySelector('#days-reset').onclick = function() {
     var ov2 = getCustomOverrides();
     delete ov2.customDays;
+    delete ov2.customCreatedAt; // 删除自定义起始日
     saveCustomOverrides(ov2);
+    // 恢复原始起始日
+    csCreatedAt = csOriginalCreatedAt;
+    updateStartDateDisplay();
     updateDaysDisplay();
     overlay.remove();
   };
@@ -2116,7 +2125,15 @@ function editDays() {
     if (!val || val < 1) return;
     var ov2 = getCustomOverrides();
     ov2.customDays = val;
+    // 根据新天数反推起始日：当前日期 - (天数 - 1)
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var newCreatedAt = new Date(now.getTime() - (val - 1) * 86400000).getTime();
+    ov2.customCreatedAt = newCreatedAt;
     saveCustomOverrides(ov2);
+    // 更新当前起始日
+    csCreatedAt = newCreatedAt;
+    updateStartDateDisplay();
     updateDaysDisplay();
     overlay.remove();
   };
@@ -2141,8 +2158,15 @@ window.addEventListener('message', function(e) {
       if (d.charAvatar) { el.style.backgroundImage = 'url(' + d.charAvatar + ')'; el.style.backgroundSize = 'cover'; }
     });
     if (d.createdAt) {
-      csCreatedAt = d.createdAt;
-      document.getElementById('start-date').textContent = '始于 ' + formatDate(d.createdAt);
+      csOriginalCreatedAt = d.createdAt; // 保存原始起始日
+      // 检查是否有自定义起始日
+      var ov = getCustomOverrides();
+      if (ov.customCreatedAt !== undefined && ov.customCreatedAt !== null) {
+        csCreatedAt = ov.customCreatedAt;
+      } else {
+        csCreatedAt = d.createdAt;
+      }
+      updateStartDateDisplay();
       updateDaysDisplay();
     }
     loadSignatures();
@@ -3208,6 +3232,7 @@ function renderAlbumList() {
     return;
   }
   container.className = 'album-grid';
+  container.parentElement.className = 'fc-scroll';
   // Sort newest first
   var sorted = photos.slice().sort(function(a, b) { return b.timestamp - a.timestamp; });
   container.innerHTML = sorted.map(function(p) {
@@ -3966,7 +3991,8 @@ function renderAnnivList() {
     var totalHearts = (userLiked ? 1 : 0) + (charLiked ? 1 : 0);
 
     var badge = '';
-    if (untilNext === 0) {
+    var isToday = (untilNext === 0);
+    if (isToday) {
       badge = '<div class="anniv-card-today">今天!</div>';
     } else if (untilNext <= 7) {
       badge = '<div class="anniv-card-countdown">还有' + untilNext + '天</div>';
@@ -3989,10 +4015,10 @@ function renderAnnivList() {
           '<div class="anniv-card-title">' + escHtml(a.title) + '</div>' +
           '<div class="anniv-card-date">' + a.date + '</div>' +
         '</div>' +
-        '<div class="anniv-card-days">' +
+        (isToday ? '' : '<div class="anniv-card-days">' +
           '<div class="anniv-card-days-num">' + daysDisplay + '</div>' +
           '<div class="anniv-card-days-label">' + daysLabel + '</div>' +
-        '</div>' +
+        '</div>') +
       '</div>' +
       (a.reason ? '<div class="anniv-card-reason">' + escHtml(a.reason) + '</div>' : '') +
       '<div class="anniv-card-footer">' +
