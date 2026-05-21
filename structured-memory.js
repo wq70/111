@@ -221,10 +221,18 @@ class StructuredMemoryManager {
       .map(([code, cat]) => `${code}=${cat.name}`)
       .join(' ');
 
+    const now = new Date();
+    const yy = String(now.getFullYear()).substring(2);
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${yy}${mm}${dd}`;
+    const todayFullStr = now.toLocaleDateString('zh-CN');
+
     output += `## 你的记忆数据库（压缩格式）
 以下是你的完整记忆档案。格式说明：
 - ${catDescriptions}
 - 日期格式为YYMMDD，如260105=2026年1月5日
+- 【【时间认知铁律】】今天具体的现实日期是：${todayFullStr}（格式为 ${todayStr}）。你【必须】在读取记忆时，将记忆的YYMMDD与今天的日期进行对比计算，准确分辨事情是发生在“昨天”、“一周前”还是“几个月前”，绝对不能把过去发生的事当成刚刚或昨天发生的！
 - 你必须像读取自己的记忆一样理解这些数据，在对话中自然引用，不要提及"数据库"或"表格"。\n`;
 
     // 默认分类
@@ -241,7 +249,17 @@ class StructuredMemoryManager {
     const eventMonths = Object.keys(mem.events).sort();
     if (eventMonths.length > 0) {
       output += `\n[E${categories.E.name}]\n`;
-      for (const ym of eventMonths) output += `${ym}:${mem.events[ym]}\n`;
+      for (const ym of eventMonths) {
+        const events = mem.events[ym].split('|');
+        for (const evt of events) {
+          const match = evt.match(/^\[(\d{2})\](.*)$/);
+          if (match) {
+            output += `[${ym}${match[1]}] ${match[2]}\n`;
+          } else {
+            output += `${ym}:${evt}\n`;
+          }
+        }
+      }
     }
 
     if (mem.plans.length > 0) {

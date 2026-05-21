@@ -204,6 +204,108 @@
                /* 新增：确保它在标题span之上 */
            }
 
+           /* =========================================
+              MyPhone 下拉菜单样式 
+              ========================================= */
+           .myphone-dropdown-container {
+               position: relative;
+               display: inline-block;
+           }
+
+           .myphone-dropdown-toggle {
+               cursor: pointer;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               padding: 5px;
+           }
+
+           .myphone-dropdown-menu {
+               display: none;
+               position: absolute;
+               right: 0;
+               top: 100%;
+               background-color: var(--secondary-bg);
+               min-width: 160px;
+               box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+               border-radius: 8px;
+               z-index: 100;
+               padding: 5px 0;
+               border: 1px solid var(--border-color);
+               overflow: hidden;
+               white-space: nowrap; /* 确保菜单足够宽以容纳文字 */
+           }
+
+           .myphone-dropdown-menu.show {
+               display: block;
+           }
+
+           .myphone-dropdown-item {
+               display: block !important;
+               width: auto !important; /* 打破原有 30px 的限制 */
+               min-width: 100%;
+               box-sizing: border-box;
+               padding: 12px 15px !important;
+               text-align: left !important;
+               border-bottom: 1px solid #f0f0f0;
+               color: var(--text-primary) !important;
+               font-size: 15px !important;
+               font-weight: normal !important;
+               cursor: pointer;
+               background: none;
+               border-left: none;
+               border-right: none;
+               border-top: none;
+               border-radius: 0;
+           }
+
+           .myphone-dropdown-item:last-child {
+               border-bottom: none;
+           }
+
+           .myphone-dropdown-item:hover {
+               background-color: #f5f5f5;
+           }
+
+           .myphone-dropdown-item:active {
+               background-color: #ebebeb;
+           }
+
+           .dropdown-item-content {
+               display: flex;
+               align-items: center;
+               gap: 10px;
+               white-space: nowrap !important; /* 强制文字横向不换行 */
+               width: 100%;
+           }
+
+           .dropdown-item-content svg {
+               width: 18px;
+               height: 18px;
+               min-width: 18px; /* 防止图标被挤压 */
+               flex-shrink: 0; /* 防止图标被挤压 */
+               color: var(--accent-color);
+           }
+
+           .dropdown-item-text {
+               flex-grow: 1;
+           }
+
+           #phone-screen.dark-mode .myphone-dropdown-menu {
+               background-color: #2c2c2e;
+               border-color: #38383a;
+               box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+           }
+
+           #phone-screen.dark-mode .myphone-dropdown-item {
+               color: #fff !important;
+               border-bottom-color: #38383a;
+           }
+
+           #phone-screen.dark-mode .myphone-dropdown-item:hover {
+               background-color: #3a3a3c;
+           }
+
            .header .back-btn,
            .header .action-btn {
                font-size: 24px;

@@ -2,6 +2,28 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    window._syncData = {};
+    window.sysStorage = {
+      getItem: function(key) { return window._syncData.hasOwnProperty(key) ? window._syncData[key] : null; },
+      setItem: function(key, value) { 
+        window._syncData[key] = String(value); 
+        window.parent.postMessage({ type: 'coupleSpaceSyncStorageSet', key: key, value: String(value) }, '*'); 
+      },
+      removeItem: function(key) { 
+        delete window._syncData[key]; 
+        window.parent.postMessage({ type: 'coupleSpaceSyncStorageRemove', key: key }, '*'); 
+      },
+      clear: function() { window._syncData = {}; },
+      get length() { return Object.keys(window._syncData).length; },
+      key: function(i) { return Object.keys(window._syncData)[i] || null; }
+    };
+    try {
+      Object.defineProperty(window, 'localStorage', {
+        get: function() { return window.sysStorage; }
+      });
+    } catch(e) { console.error('Failed to redefine localStorage', e); }
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>情侣空间</title>
   <style>
@@ -2145,6 +2167,9 @@ window.addEventListener('message', function(e) {
   if (e.data && e.data.type === 'coupleSpaceInit') {
     var d = e.data;
     currentCharId = d.charId;
+    if (d.syncData) {
+      window._syncData = d.syncData;
+    }
     csCharName = d.charName;
     csCharAvatar = d.charAvatar;
     csUserName = d.userName;

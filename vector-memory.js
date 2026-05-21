@@ -710,11 +710,14 @@ ${formattedHistory}
           <div id="vm-custom-embedding-fields" style="display:${s.useCustomEmbedding ? 'block' : 'none'}; margin-top:8px;">
             <input type="text" id="vm-embedding-endpoint" value="${s.embeddingEndpoint || ''}" placeholder="https://api.openai.com (如需拉取模型请确保地址以/v1结尾)" class="vm-input-full">
             <input type="password" id="vm-embedding-apikey" value="${s.embeddingApiKey || ''}" placeholder="API Key (留空则使用主设置的Key)" class="vm-input-full" style="margin-top:4px;">
-            <div style="display:flex; gap:8px; margin-top:4px; position:relative;">
-              <input type="text" id="vm-embedding-model" value="${s.embeddingModel || 'text-embedding-3-small'}" placeholder="Model Name" class="vm-input-full" style="flex:1;">
+            <div style="display:flex; gap:8px; margin-top:4px;">
+              <input type="text" id="vm-embedding-model-input" value="${s.embeddingModel || 'text-embedding-3-small'}" placeholder="或手动输入模型名称" class="vm-input-full" style="flex:1; display:none;">
+              <select id="vm-embedding-model-select" class="vm-input-full" style="flex:1;">
+                <option value="${s.embeddingModel || 'text-embedding-3-small'}">${s.embeddingModel || 'text-embedding-3-small'}</option>
+              </select>
               <button id="vm-fetch-models-btn" class="vm-btn-secondary" style="white-space:nowrap; padding:0 12px;">拉取模型</button>
             </div>
-            <div id="vm-models-list" style="display:none; max-height:200px; overflow-y:auto; background:var(--bg-color,#fff); border:1px solid var(--border-color,#eee); border-radius:8px; margin-top:4px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:absolute; z-index:100; width:calc(100% - 30px);"></div>
+            <div style="font-size:11px;color:#999;margin-top:4px;text-align:right;cursor:pointer;" id="vm-toggle-model-input">切换为手动输入</div>
           </div>
         </div>
 
@@ -737,7 +740,9 @@ ${formattedHistory}
     vm.settings.useCustomEmbedding = document.getElementById('vm-custom-embedding')?.checked || false;
     vm.settings.embeddingEndpoint = document.getElementById('vm-embedding-endpoint')?.value || '';
     vm.settings.embeddingApiKey = document.getElementById('vm-embedding-apikey')?.value || '';
-    vm.settings.embeddingModel = document.getElementById('vm-embedding-model')?.value || 'text-embedding-3-small';
+    const modelInput = document.getElementById('vm-embedding-model-input')?.value.trim();
+    const modelSelect = document.getElementById('vm-embedding-model-select')?.value;
+    vm.settings.embeddingModel = modelInput || modelSelect || 'text-embedding-3-small';
     
     if (vm._retrievalCache) vm._retrievalCache = { query: '', result: null, timestamp: 0, msgCount: 0 };
   }

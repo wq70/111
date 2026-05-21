@@ -111,3 +111,10 @@
   z-index: 1000;
   position: fixed;
 }
+
+/* 人设库的二级操作弹窗，需要比人设库本身（z-index:1000）更高 */
+#persona-action-modal.visible,
+#persona-editor-modal.visible {
+  z-index: 1001 !important;
+  position: fixed;
+}

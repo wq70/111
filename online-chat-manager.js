@@ -2005,21 +2005,25 @@ class OnlineChatManager {
                 if (isGemini) {
                     const geminiConfig = this.toGeminiRequest(model, apiKey, systemPrompt, messagesPayload);
                     response = await fetch(geminiConfig.url, geminiConfig.data);
-                } else {
-                    response = await fetch(`${proxyUrl}/v1/chat/completions`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${getRandomValue(apiKey)}`
-                        },
-                        body: JSON.stringify({
+                    } else {
+                        let reqBody = {
                             model: model,
                             messages: [{ role: 'system', content: systemPrompt }, ...messagesPayload],
                             temperature: (window.state.globalSettings && window.state.globalSettings.apiTemperature) || 0.8,
                             stream: false
-                        })
-                    });
-                }
+                        };
+                        if (window.state && window.state.globalSettings && window.state.globalSettings.apiMaxTokens > 0) {
+                            reqBody.max_tokens = window.state.globalSettings.apiMaxTokens;
+                        }
+                        response = await fetch(`${proxyUrl}/v1/chat/completions`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${getRandomValue(apiKey)}`
+                            },
+                            body: JSON.stringify(reqBody)
+                        });
+                    }
 
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
@@ -2206,6 +2210,10 @@ class OnlineChatManager {
                     parts: [{ text: String(m.content) }]
                 }))
             ];
+            let generationConfig = { temperature: (window.state && window.state.globalSettings && window.state.globalSettings.apiTemperature) || 0.8 };
+            if (window.state && window.state.globalSettings && window.state.globalSettings.apiMaxTokens > 0) {
+                generationConfig.maxOutputTokens = window.state.globalSettings.apiMaxTokens;
+            }
             return {
                 url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${getRandomValue(apiKey)}`,
                 data: {
@@ -2213,7 +2221,7 @@ class OnlineChatManager {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: contents,
-                        generationConfig: { temperature: (window.state && window.state.globalSettings && window.state.globalSettings.apiTemperature) || 0.8 }
+                        generationConfig: generationConfig
                     })
                 }
             };
