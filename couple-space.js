@@ -39,7 +39,38 @@ function sendOrSaveCoupleSpaceData(charId, msgObj, storageKey, itemToSave) {
       items.push(itemToSave);
       localStorage.setItem(storageKey + charId, JSON.stringify(items));
       console.log(`[情侣空间] 💾 页面未打开，已将数据安全保存到本地离线存储 (${storageKey})`);
-    } catch(e) { console.error('Failed to save offline:', e); }
+      
+      // 检查是否开启了后台更新弹窗提醒
+      const chat = state.chats[charId];
+      if (chat && chat.settings && chat.settings.enableCoupleSpaceNotify) {
+        let actionDesc = '留了点东西';
+        if (msgObj.type === 'coupleSpaceDiaryAutoWritten') actionDesc = '写了一篇新日记';
+        else if (msgObj.type === 'coupleSpaceAlbumAutoResult') actionDesc = '发了一张新照片';
+        else if (msgObj.type === 'coupleSpaceAnnivAiCreated') actionDesc = '创建了一个纪念日';
+        else if (msgObj.type === 'coupleSpaceChecklistAutoResult') actionDesc = '添加了一个愿望清单';
+        else if (msgObj.type === 'coupleSpaceMessageAutoResult') actionDesc = '给你留了言';
+        else if (msgObj.type === 'coupleSpaceMoodAutoResult') actionDesc = '更新了心情';
+        else if (msgObj.type === 'coupleSpaceTimelineAutoResult') actionDesc = '记录了时光轴';
+        else if (msgObj.type === 'coupleSpaceLetterAutoResult') actionDesc = '写了一封信';
+        else if (msgObj.type === 'coupleSpaceGardenAutoResult') actionDesc = '给情侣树浇了水';
+        else if (msgObj.type === 'coupleSpaceLocationAutoResult') actionDesc = '分享了新定位';
+        else if (msgObj.type === 'coupleSpaceSleepAutoResult') {
+          if (msgObj.phase === 'sleep') actionDesc = '记录了入睡';
+          else if (msgObj.phase === 'wake') actionDesc = '记录了起床';
+        }
+        else if (msgObj.type === 'coupleSpaceFinanceAutoResult') actionDesc = '记了一笔账';
+        
+        const notificationText = `“${chat.name || 'TA'}”好像在情侣空间里${actionDesc}哦～`;
+        
+        if (typeof showToast === 'function') {
+          showToast(notificationText, 'info', 5000);
+        } else if (typeof showNotification === 'function') {
+          showNotification(charId, notificationText);
+        } else {
+          console.log(`[情侣空间提醒] ${notificationText}`);
+        }
+      }
+    } catch(e) { console.error('Failed to save offline or notify:', e); }
   }
 }
 
@@ -324,6 +355,15 @@ function enterCoupleSpace(charId) {
   iframe.onload = function() {
     const spaces = getCoupleSpaces();
     const space = spaces.find(s => s.charId === charId);
+    
+    const syncData = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        syncData[key] = localStorage.getItem(key);
+      }
+    }
+
     iframe.contentWindow.postMessage({
       type: 'coupleSpaceInit',
       charId: charId,
@@ -331,7 +371,8 @@ function enterCoupleSpace(charId) {
       charAvatar: charAvatar,
       userName: userNickname,
       userAvatar: userAvatar,
-      createdAt: space ? space.createdAt : Date.now()
+      createdAt: space ? space.createdAt : Date.now(),
+      syncData: syncData
     }, '*');
   };
   showScreen('couple-space-screen');
@@ -345,6 +386,14 @@ function closeCoupleSpace() {
 window.addEventListener('message', function(e) {
   if (e.data === 'closeCoupleSpace') closeCoupleSpace();
   if (e.data === 'coupleSpaceSwitchPartner') showCoupleSpaceSelect('list');
+
+  // --- Storage Sync ---
+  if (e.data && e.data.type === 'coupleSpaceSyncStorageSet') {
+    try { localStorage.setItem(e.data.key, e.data.value); } catch(err) {}
+  }
+  if (e.data && e.data.type === 'coupleSpaceSyncStorageRemove') {
+    try { localStorage.removeItem(e.data.key); } catch(err) {}
+  }
 
   // --- Diary AI requests ---
   if (e.data && e.data.type === 'coupleSpaceDiaryAiRequest') {

@@ -215,6 +215,12 @@
     const oldContainer = document.querySelector('#chat-settings-screen .settings-container');
     if (!oldContainer || !cleanScreenEl) return;
 
+    // 如果 oldContainer 中已经有了新生成的 settings-section (说明系统刚刚重新渲染了列表)
+    // 则不需要把旧的 DOM 元素塞回去，避免元素重复叠加导致卡顿
+    if (oldContainer.querySelectorAll('.settings-section').length > 0) {
+      return;
+    }
+
     // 收集所有被搬运的元素
     const movedEls = cleanScreenEl.querySelectorAll(
       '.settings-section, #weather-settings-section, #video-call-optimization-section, ' +

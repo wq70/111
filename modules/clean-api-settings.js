@@ -271,6 +271,12 @@
     const oldContainer = document.querySelector('#api-settings-screen .settings-container');
     if (!oldContainer || !cleanScreenEl) return;
 
+    // 如果 oldContainer 中已经有了新元素（说明系统刚刚重新渲染了设置列表）
+    // 那么我们不需要（也不应该）把旧的 DOM 元素再塞回去，否则会导致元素重复且数量翻倍
+    if (oldContainer.children.length > 0) {
+      return;
+    }
+
     // 按原始顺序还原所有子元素
     originalOrder.forEach(el => {
       oldContainer.appendChild(el);

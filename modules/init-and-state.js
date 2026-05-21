@@ -126,6 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
       viewMyPhoneChance: null,               // 新增：后台查看用户手机概率，null=AI自主决定，0-100=按概率触发
       blockCooldownHours: 1,
       apiTemperature: 0.8,
+      apiTopPEnabled: false,
+      apiMaxTokensEnabled: false,
+      apiPresencePenaltyEnabled: false,
+      apiFrequencyPenaltyEnabled: false,
+      enableApiStream: false,
+      apiMaxTokens: 0,
       appIcons: {
         ...DEFAULT_APP_ICONS
       },
@@ -219,6 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     chatsArr.forEach(chat => {
+      if (!chat) return;
+      if (!chat.settings) chat.settings = {};
       if (typeof chat.settings.enableTimePerception === 'undefined') {
         chat.settings.enableTimePerception = true;
       }
@@ -237,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
     state.chats = chatsArr.reduce((acc, chat) => {
+      if (!chat) return acc;
       if (typeof chat.unreadCount === 'undefined') chat.unreadCount = 0;
       if (chat.isGroup) {
         if (typeof chat.settings.enableBackgroundActivity === 'undefined') {

@@ -996,7 +996,11 @@ ${charsContext}
               { role: 'system', content: systemPrompt },
               ...messages
             ],
-            temperature: 0.9 // 提高温度，让它更啰嗦一点
+            temperature: 0.9, // 提高温度，让它更啰嗦一点
+            ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+            ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+            ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+            ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
           })
         });
       }
@@ -1710,7 +1714,12 @@ ${updatePrompt}
             content: fullPrompt
           }],
           temperature: 0.8,
-          max_tokens: Math.min(4096, targetWordCount * 3) // 增加max_tokens，至少3倍目标字数
+          ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined 
+            ? { max_tokens: state.globalSettings.apiMaxTokens } 
+            : { max_tokens: Math.min(4096, targetWordCount * 3) }), // 增加max_tokens，至少3倍目标字数
+          ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+          ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+          ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
         };
 
         response = await fetch(`${apiConfig.proxyUrl}/v1/chat/completions`, {

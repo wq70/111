@@ -1821,19 +1821,202 @@
     modal.classList.add('visible');
   }
 
+  // 全局定义或在此声明，避免重复绑定时丢失引用
+  let thoughtsManagementEventsBound = false;
+
   async function showThoughtsHistory() { // <-- 1. 添加 async
     document.getElementById('profile-main-content').style.display = 'none';
     document.getElementById('profile-thoughts-history-view').style.display = 'flex';
+    
+    // 初始化管理模式状态为关闭
+    if (isThoughtsManagementMode) {
+      toggleThoughtsManagementMode();
+    }
+    
+    // 在显示历史记录时，重新绑定/确保绑定了管理相关事件
+    bindThoughtsManagementEvents();
+    
     await renderThoughtsHistory(); // <-- 2. 添加 await
+  }
+
+  function bindThoughtsManagementEvents() {
+    const manageBtn = document.getElementById('manage-thoughts-btn');
+    if (manageBtn) {
+      // 避免重复绑定
+      manageBtn.removeEventListener('click', toggleThoughtsManagementMode);
+      manageBtn.addEventListener('click', toggleThoughtsManagementMode);
+    }
+
+    const selectAllCheckbox = document.getElementById('select-all-thoughts-checkbox');
+    if (selectAllCheckbox) {
+      selectAllCheckbox.removeEventListener('change', handleSelectAllThoughts);
+      selectAllCheckbox.addEventListener('change', handleSelectAllThoughts);
+    }
+
+    const deleteBtn = document.getElementById('delete-selected-thoughts-btn');
+    if (deleteBtn) {
+      deleteBtn.removeEventListener('click', executeBatchDeleteThoughts);
+      deleteBtn.addEventListener('click', executeBatchDeleteThoughts);
+    }
   }
 
 
   function hideThoughtsHistory() {
     document.getElementById('profile-thoughts-history-view').style.display = 'none';
-
-
     document.getElementById('profile-main-content').style.display = 'flex';
+    
+    // 退出时恢复管理模式状态
+    if (isThoughtsManagementMode) {
+      toggleThoughtsManagementMode();
+    }
   }
+
+  // --- 心声批量管理模式逻辑 ---
+  let isThoughtsManagementMode = false;
+  let selectedThoughts = new Set();
+
+  function toggleThoughtsManagementMode() {
+    isThoughtsManagementMode = !isThoughtsManagementMode;
+    const listEl = document.getElementById('thoughts-history-list');
+    const actionBar = document.getElementById('thoughts-action-bar');
+    const manageBtn = document.getElementById('manage-thoughts-btn');
+    const selectAllCheckbox = document.getElementById('select-all-thoughts-checkbox');
+
+    if (isThoughtsManagementMode) {
+      listEl.classList.add('management-mode');
+      actionBar.style.display = 'flex';
+      manageBtn.textContent = '完成';
+      manageBtn.style.color = 'var(--accent-color)';
+      selectedThoughts.clear();
+      selectAllCheckbox.checked = false;
+      updateDeleteThoughtsButton();
+    } else {
+      listEl.classList.remove('management-mode');
+      actionBar.style.display = 'none';
+      manageBtn.textContent = '管理';
+      manageBtn.style.color = 'var(--text-secondary)';
+      selectedThoughts.clear();
+      
+      // 取消所有的选中状态样式
+      document.querySelectorAll('.thought-card.selected').forEach(card => {
+        card.classList.remove('selected');
+        const cb = card.querySelector('.thought-checkbox');
+        if (cb) cb.checked = false;
+      });
+    }
+    
+    // 切换卡片内复选框和删除按钮的显示状态
+    document.querySelectorAll('.thought-card').forEach(card => {
+      const cb = card.querySelector('.thought-checkbox');
+      const delBtn = card.querySelector('.thought-delete-btn');
+      if (cb) cb.style.display = isThoughtsManagementMode ? 'block' : 'none';
+      if (delBtn) delBtn.style.display = isThoughtsManagementMode ? 'none' : 'block';
+    });
+  }
+
+  function updateDeleteThoughtsButton() {
+    const btn = document.getElementById('delete-selected-thoughts-btn');
+    if (btn) {
+      btn.textContent = `删除 (${selectedThoughts.size})`;
+      if (selectedThoughts.size > 0) {
+        btn.style.backgroundColor = '#ff3b30';
+        btn.style.opacity = '1';
+        btn.disabled = false;
+      } else {
+        btn.style.backgroundColor = '#ff3b30';
+        btn.style.opacity = '0.4';
+        btn.disabled = true;
+      }
+    }
+  }
+
+  function handleSelectAllThoughts() {
+    const isChecked = document.getElementById('select-all-thoughts-checkbox').checked;
+    const cards = document.querySelectorAll('#thoughts-history-list .thought-card');
+    
+    cards.forEach(card => {
+      const timestamp = parseInt(card.dataset.timestamp);
+      if (isNaN(timestamp)) return;
+      
+      const cb = card.querySelector('.thought-checkbox');
+      if (cb) {
+        cb.checked = isChecked;
+        if (isChecked) {
+          card.classList.add('selected');
+          selectedThoughts.add(timestamp);
+        } else {
+          card.classList.remove('selected');
+          selectedThoughts.delete(timestamp);
+        }
+      }
+    });
+    
+    updateDeleteThoughtsButton();
+  }
+
+  async function executeBatchDeleteThoughts() {
+    if (selectedThoughts.size === 0) return;
+
+    const confirmed = await showCustomConfirm(
+      '确认删除',
+      `确定要删除选中的 ${selectedThoughts.size} 条心声记录吗？此操作不可恢复。`, {
+      confirmButtonClass: 'btn-danger'
+    });
+
+    if (confirmed) {
+      const chat = state.chats[state.activeChatId];
+      if (!chat || !chat.thoughtsHistory) return;
+
+      const idsToDelete = [...selectedThoughts];
+      // 判断是否包含最新的一条心声
+      let includesLatest = false;
+      if (chat.thoughtsHistory.length > 0) {
+        const latestTimestamp = chat.thoughtsHistory[chat.thoughtsHistory.length - 1].timestamp;
+        includesLatest = idsToDelete.includes(latestTimestamp);
+      }
+
+      chat.thoughtsHistory = chat.thoughtsHistory.filter(thought => !idsToDelete.includes(thought.timestamp));
+
+      // 如果删除了最新的心声，需要回退当前心声状态
+      if (includesLatest) {
+        if (chat.thoughtsHistory.length > 0) {
+          const newLatestThought = chat.thoughtsHistory[chat.thoughtsHistory.length - 1];
+          chat.heartfeltVoice = newLatestThought.heartfeltVoice;
+          chat.randomJottings = newLatestThought.randomJottings;
+          chat.customThoughts = newLatestThought.customThoughts ? JSON.parse(JSON.stringify(newLatestThought.customThoughts)) : {};
+
+          const heartfeltVoiceEl = document.getElementById('profile-heartfelt-voice');
+          const randomJottingsEl = document.getElementById('profile-random-jottings');
+          if (heartfeltVoiceEl) heartfeltVoiceEl.textContent = chat.heartfeltVoice;
+          if (randomJottingsEl) randomJottingsEl.textContent = chat.randomJottings;
+
+          console.log("批量删除包含了最新心声，当前心声已回滚至上一条。");
+        } else {
+          chat.heartfeltVoice = '...';
+          chat.randomJottings = '...';
+          chat.customThoughts = {};
+
+          const heartfeltVoiceEl = document.getElementById('profile-heartfelt-voice');
+          const randomJottingsEl = document.getElementById('profile-random-jottings');
+          if (heartfeltVoiceEl) heartfeltVoiceEl.textContent = chat.heartfeltVoice;
+          if (randomJottingsEl) randomJottingsEl.textContent = chat.randomJottings;
+
+          console.log("所有心声记录均已被删除，当前心声已重置。");
+        }
+      }
+
+      await db.chats.put(chat);
+      
+      toggleThoughtsManagementMode(); // 操作完成后退出管理模式
+      await renderThoughtsHistory(); // 重新渲染列表
+      await showCustomAlert('删除成功', `已成功删除 ${idsToDelete.length} 条心声记录。`);
+    }
+  }
+
+  // 初始化时调用一次绑定（主要针对没有使用自定义 UI 的原生情况）
+  document.addEventListener('DOMContentLoaded', () => {
+    bindThoughtsManagementEvents();
+  });
 
 
 
@@ -1944,8 +2127,15 @@
       }
     }
 
+    card.dataset.timestamp = thought.timestamp; // 添加 timestamp 到 card 数据属性，方便多选获取
+    
+    // 初始化时根据是否在管理模式来决定显示复选框还是删除按钮
+    const displayCheckbox = isThoughtsManagementMode ? 'block' : 'none';
+    const displayDeleteBtn = isThoughtsManagementMode ? 'none' : 'block';
+    
     card.innerHTML = `
-        <button class="thought-delete-btn" data-timestamp="${thought.timestamp}" title="删除此条记录">×</button>
+        <input type="checkbox" class="thought-checkbox" style="display: ${displayCheckbox}; position: absolute; right: 15px; top: 15px; z-index: 2; transform: scale(1.3); cursor: pointer; margin: 0; pointer-events: none;">
+        <button class="thought-delete-btn" data-timestamp="${thought.timestamp}" title="删除此条记录" style="display: ${displayDeleteBtn};">×</button>
         <div class="thought-header">${dateString}</div>
         <div class="thought-content">
             <div class="voice">
@@ -1965,6 +2155,26 @@
             ${customThoughtsHtml}
         </div>
     `;
+    
+    // 添加点击卡片本身选中复选框的功能
+    card.addEventListener('click', (e) => {
+      if (isThoughtsManagementMode) {
+        const cb = card.querySelector('.thought-checkbox');
+        if (cb) {
+           cb.checked = !cb.checked;
+           const timestamp = parseInt(card.dataset.timestamp);
+           if (cb.checked) {
+              card.classList.add('selected');
+              selectedThoughts.add(timestamp);
+           } else {
+              card.classList.remove('selected');
+              selectedThoughts.delete(timestamp);
+           }
+           updateDeleteThoughtsButton();
+        }
+      }
+    });
+
     return card;
   }
 
@@ -4472,17 +4682,4 @@ ${email.content}
   window.handleDeleteThought = handleDeleteThought;
 
   // 绑定心声历史列表的删除按钮事件
-  (function() {
-    const thoughtsList = document.getElementById('thoughts-history-list');
-    if (thoughtsList) {
-      thoughtsList.addEventListener('click', (e) => {
-        const deleteBtn = e.target.closest('.thought-delete-btn');
-        if (deleteBtn) {
-          const timestamp = parseInt(deleteBtn.dataset.timestamp);
-          if (!isNaN(timestamp)) {
-            handleDeleteThought(timestamp);
-          }
-        }
-      });
-    }
-  })();
+  // 该事件已在 initThoughtsManagementEvents 中由全选/批量删除及 renderThoughtsHistory 时绑定，此处可保留或整合，为避免重复绑定此处不再额外添加

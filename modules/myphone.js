@@ -31,6 +31,85 @@
   };
   window.myPhoneDeleteMode = myPhoneDeleteMode;
 
+  // 初始化 MY Phone 下拉菜单
+  function initMyPhoneDropdownMenus() {
+    const screens = [
+      'myphone-amap-screen',
+      'myphone-qq-screen',
+      'myphone-album-screen',
+      'myphone-browser-screen',
+      'myphone-taobao-screen',
+      'myphone-memo-screen',
+      'myphone-diary-screen',
+      'myphone-usage-screen',
+      'myphone-music-screen'
+    ];
+
+    screens.forEach(screenId => {
+      const screen = document.getElementById(screenId);
+      if (!screen) return;
+      const headerActions = screen.querySelector('.header .header-actions');
+      if (!headerActions) return;
+
+      const actionBtns = Array.from(headerActions.querySelectorAll('.action-btn'));
+      // 如果有多于2个按钮，合并为下拉菜单
+      if (actionBtns.length >= 2) {
+        const dropdownContainer = document.createElement('div');
+        dropdownContainer.className = 'myphone-dropdown-container';
+
+        const toggleBtn = document.createElement('span');
+        toggleBtn.className = 'action-btn myphone-dropdown-toggle';
+        toggleBtn.title = '更多操作';
+        toggleBtn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+
+        const dropdownMenu = document.createElement('div');
+        dropdownMenu.className = 'myphone-dropdown-menu';
+        
+        actionBtns.forEach(btn => {
+          const title = btn.getAttribute('title') || '';
+          const originalContent = btn.innerHTML;
+          
+          btn.innerHTML = `<div class="dropdown-item-content">${originalContent}<span class="dropdown-item-text">${title}</span></div>`;
+          btn.classList.add('myphone-dropdown-item');
+          
+          dropdownMenu.appendChild(btn);
+        });
+
+        dropdownContainer.appendChild(toggleBtn);
+        dropdownContainer.appendChild(dropdownMenu);
+
+        headerActions.innerHTML = '';
+        headerActions.appendChild(dropdownContainer);
+
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isVisible = dropdownMenu.classList.contains('show');
+          
+          document.querySelectorAll('.myphone-dropdown-menu.show').forEach(menu => {
+             menu.classList.remove('show');
+          });
+
+          if (!isVisible) {
+            dropdownMenu.classList.add('show');
+          }
+        });
+      }
+    });
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.myphone-dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+      });
+    });
+  }
+
+  // DOM 准备好后初始化下拉菜单
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMyPhoneDropdownMenus);
+  } else {
+    initMyPhoneDropdownMenus();
+  }
+
   function openMyphoneScreen() {
     renderMyPhoneCharacterSelector();
     showScreen('myphone-selection-screen');
@@ -258,6 +337,10 @@
     // 隐藏其他按钮，只显示返回按钮
     const actionBtns = header.querySelectorAll('.action-btn');
     actionBtns.forEach(btn => btn.style.display = 'none');
+    
+    // 也隐藏下拉菜单容器
+    const dropdownContainer = header.querySelector('.myphone-dropdown-container');
+    if (dropdownContainer) dropdownContainer.style.display = 'none';
 
     // 创建删除模式工具栏
     let deleteToolbar = header.querySelector('.delete-mode-toolbar');
@@ -296,6 +379,10 @@
     // 恢复显示操作按钮
     const actionBtns = header.querySelectorAll('.action-btn');
     actionBtns.forEach(btn => btn.style.display = '');
+
+    // 恢复显示下拉菜单容器
+    const dropdownContainer = header.querySelector('.myphone-dropdown-container');
+    if (dropdownContainer) dropdownContainer.style.display = '';
 
     // 隐藏删除模式工具栏
     const deleteToolbar = header.querySelector('.delete-mode-toolbar');

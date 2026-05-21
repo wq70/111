@@ -1176,15 +1176,17 @@ window.initEventBindingsA = async function(state, db) {
             showToast('正在转换长期记忆...', 'info');
             await convertLongTermMemoryToStructured(state.activeChatId);
           }
-        } else if (mode === 'vector' && chat.longTermMemory && chat.longTermMemory.length > 0 && window.vectorMemoryManager) {
-          const confirmed = await showCustomConfirm(
-            '批量转换长期记忆',
-            '检测到尚未转换的旧版长期记忆。\n是否将其转换为变量记忆（可能会消耗较多API额度）？',
-            { confirmText: '立即转换' }
-          );
-          if (confirmed) {
-            showToast('正在转换长期记忆...', 'info');
-            await convertLongTermMemoryToVector(state.activeChatId);
+        } else if (mode === 'vector' && window.vectorMemoryManager) {
+          // 检查是否有长期记忆或结构化记忆数据
+          const hasLongTerm = chat.longTermMemory && chat.longTermMemory.length > 0;
+          let hasStructured = false;
+          if (chat.structuredMemory) {
+             const stats = window.structuredMemoryManager.getStats(chat);
+             hasStructured = stats.factsCount > 0 || stats.eventsTotal > 0 || stats.decisionsCount > 0 || stats.plansCount > 0 || stats.emotionsCount > 0 || Object.values(stats.customStats).some(c => c > 0);
+          }
+          
+          if (hasLongTerm || hasStructured) {
+             await convertLongTermMemoryToVector(state.activeChatId);
           }
         }
       });
@@ -2079,8 +2081,20 @@ window.initEventBindingsA = async function(state, db) {
       state.globalSettings.chatListRenderWindow = parseInt(document.getElementById('chat-list-render-window-input').value) || 30;
       state.globalSettings.apiTemperature = parseFloat(document.getElementById('api-temperature-input').value);
       state.globalSettings.apiTopP = parseFloat(document.getElementById('api-top-p-input').value);
+      state.globalSettings.apiMaxTokens = parseInt(document.getElementById('api-max-tokens-input').value) || 0;
       state.globalSettings.apiPresencePenalty = parseFloat(document.getElementById('api-presence-penalty-input').value);
       state.globalSettings.apiFrequencyPenalty = parseFloat(document.getElementById('api-frequency-penalty-input').value);
+
+      // 新增：保存 API 参数独立开关
+      const topPEnabledCheckbox = document.getElementById('api-top-p-enabled');
+      const maxTokensEnabledCheckbox = document.getElementById('api-max-tokens-enabled');
+      const presenceEnabledCheckbox = document.getElementById('api-presence-penalty-enabled');
+      const frequencyEnabledCheckbox = document.getElementById('api-frequency-penalty-enabled');
+
+      if (topPEnabledCheckbox) state.globalSettings.apiTopPEnabled = topPEnabledCheckbox.checked;
+      if (maxTokensEnabledCheckbox) state.globalSettings.apiMaxTokensEnabled = maxTokensEnabledCheckbox.checked;
+      if (presenceEnabledCheckbox) state.globalSettings.apiPresencePenaltyEnabled = presenceEnabledCheckbox.checked;
+      if (frequencyEnabledCheckbox) state.globalSettings.apiFrequencyPenaltyEnabled = frequencyEnabledCheckbox.checked;
       
       // 方案4：保存API历史记录开关状态
       const apiHistorySwitch = document.getElementById('enable-api-history-switch');
@@ -2093,6 +2107,11 @@ window.initEventBindingsA = async function(state, db) {
       const oldSafeRenderMode = state.globalSettings.safeRenderMode;
       if (safeRenderSwitch) {
         state.globalSettings.safeRenderMode = safeRenderSwitch.checked;
+      }
+      
+      const apiStreamSwitch = document.getElementById('enable-api-stream-switch');
+      if (apiStreamSwitch) {
+        state.globalSettings.enableApiStream = apiStreamSwitch.checked;
       }
       
       await db.globalSettings.put(state.globalSettings);
@@ -3428,14 +3447,18 @@ window.initEventBindingsA = async function(state, db) {
       // 加载情侣空间感知开关（仅单聊）
       const coupleSpacePromptGroup = document.getElementById('couple-space-prompt-group');
       const coupleSpaceContentGroup = document.getElementById('couple-space-content-group');
+      const coupleSpaceNotifyGroup = document.getElementById('couple-space-notify-group');
       if (!isGroup) {
         coupleSpacePromptGroup.style.display = 'flex';
         coupleSpaceContentGroup.style.display = 'flex';
+        coupleSpaceNotifyGroup.style.display = 'flex';
         document.getElementById('couple-space-prompt-toggle').checked = chat.settings.enableCoupleSpacePrompt || false;
         document.getElementById('couple-space-content-toggle').checked = chat.settings.enableCoupleSpaceContent || false;
+        document.getElementById('couple-space-notify-toggle').checked = chat.settings.enableCoupleSpaceNotify || false;
       } else {
         coupleSpacePromptGroup.style.display = 'none';
         coupleSpaceContentGroup.style.display = 'none';
+        coupleSpaceNotifyGroup.style.display = 'none';
       }
 
       setTimeout(() => {
@@ -3686,6 +3709,7 @@ window.initEventBindingsA = async function(state, db) {
       if (!chat.isGroup) {
         chat.settings.enableCoupleSpacePrompt = document.getElementById('couple-space-prompt-toggle').checked;
         chat.settings.enableCoupleSpaceContent = document.getElementById('couple-space-content-toggle').checked;
+        chat.settings.enableCoupleSpaceNotify = document.getElementById('couple-space-notify-toggle').checked;
       }
 
       chat.settings.enableTimePerception = document.getElementById('time-perception-toggle').checked;

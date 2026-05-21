@@ -1802,34 +1802,91 @@
                     <input type="number" id="api-temperature-input" class="settings-num-input" min="0" max="2" step="0.1" value="0.8" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
                 </div>
             </div>
+            <div class="settings-item">
+                <div>
+                    <div style="font-weight: 500;">流式输出 (Stream)</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">开启后主对话会逐步显示回复内容，默认关闭</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="enable-api-stream-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 高级参数设置 -->
+        <div class="settings-header">高级参数</div>
+        <div class="settings-section">
              <div class="settings-item" style="display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 12px !important; width: 100% !important; box-sizing: border-box !important;">
                 <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
-                    <label style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">核采样 (Top P)</label>
-                    <button id="reset-api-top-p-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="api-top-p-enabled" style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">核采样 (Top P)</label>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="api-top-p-enabled" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
-                    <input type="range" id="api-top-p-slider" min="0" max="1" step="0.05" value="1.0" style="flex-grow: 1 !important; width: auto !important;">
-                    <input type="number" id="api-top-p-input" class="settings-num-input" min="0" max="1" step="0.05" value="1.0" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
+                <div id="api-top-p-config" style="display: flex !important; flex-direction: column !important; gap: 12px !important; width: 100% !important;">
+                    <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
+                        <input type="range" id="api-top-p-slider" min="0" max="1" step="0.05" value="1.0" style="flex-grow: 1 !important; width: auto !important;">
+                        <input type="number" id="api-top-p-input" class="settings-num-input" min="0" max="1" step="0.05" value="1.0" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
+                        <button id="reset-api-top-p-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    </div>
                 </div>
             </div>
              <div class="settings-item" style="display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 12px !important; width: 100% !important; box-sizing: border-box !important;">
                 <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
-                    <label style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">话题新鲜度 (Presence Penalty)</label>
-                    <button id="reset-api-presence-penalty-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="api-max-tokens-enabled" style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">最大回复长度 (Max Tokens)</label>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="api-max-tokens-enabled">
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
-                    <input type="range" id="api-presence-penalty-slider" min="-2" max="2" step="0.1" value="0.0" style="flex-grow: 1 !important; width: auto !important;">
-                    <input type="number" id="api-presence-penalty-input" class="settings-num-input" min="-2" max="2" step="0.1" value="0.0" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
+                <div id="api-max-tokens-config" style="display: none !important; flex-direction: column !important; gap: 12px !important; width: 100% !important;">
+                    <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
+                        <input type="range" id="api-max-tokens-slider" min="0" max="32768" step="1" value="0" style="flex-grow: 1 !important; width: auto !important;">
+                        <input type="number" id="api-max-tokens-input" class="settings-num-input" min="0" step="1" value="0" placeholder="0为不限制" style="width: 80px !important; text-align: center !important; flex: 0 0 auto !important;">
+                        <button id="reset-api-max-tokens-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    </div>
                 </div>
             </div>
              <div class="settings-item" style="display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 12px !important; width: 100% !important; box-sizing: border-box !important;">
                 <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
-                    <label style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">重复惩罚 (Frequency Penalty)</label>
-                    <button id="reset-api-frequency-penalty-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="api-presence-penalty-enabled" style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">话题新鲜度 (Presence Penalty)</label>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="api-presence-penalty-enabled" checked>
+                        <span class="slider"></span>
+                    </label>
                 </div>
-                <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
-                    <input type="range" id="api-frequency-penalty-slider" min="-2" max="2" step="0.1" value="0.0" style="flex-grow: 1 !important; width: auto !important;">
-                    <input type="number" id="api-frequency-penalty-input" class="settings-num-input" min="-2" max="2" step="0.1" value="0.0" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
+                <div id="api-presence-penalty-config" style="display: flex !important; flex-direction: column !important; gap: 12px !important; width: 100% !important;">
+                    <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
+                        <input type="range" id="api-presence-penalty-slider" min="-2" max="2" step="0.1" value="0.0" style="flex-grow: 1 !important; width: auto !important;">
+                        <input type="number" id="api-presence-penalty-input" class="settings-num-input" min="-2" max="2" step="0.1" value="0.0" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
+                        <button id="reset-api-presence-penalty-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    </div>
+                </div>
+            </div>
+             <div class="settings-item" style="display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 12px !important; width: 100% !important; box-sizing: border-box !important;">
+                <div style="display: flex !important; justify-content: space-between !important; align-items: center !important; width: 100% !important;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <label for="api-frequency-penalty-enabled" style="margin: 0 !important; width: auto !important; flex: 1 1 auto !important;">重复惩罚 (Frequency Penalty)</label>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="api-frequency-penalty-enabled" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="api-frequency-penalty-config" style="display: flex !important; flex-direction: column !important; gap: 12px !important; width: 100% !important;">
+                    <div style="display: flex !important; align-items: center !important; gap: 10px !important; width: 100% !important;">
+                        <input type="range" id="api-frequency-penalty-slider" min="-2" max="2" step="0.1" value="0.0" style="flex-grow: 1 !important; width: auto !important;">
+                        <input type="number" id="api-frequency-penalty-input" class="settings-num-input" min="-2" max="2" step="0.1" value="0.0" style="width: 60px !important; text-align: center !important; flex: 0 0 auto !important;">
+                        <button id="reset-api-frequency-penalty-btn" class="settings-mini-btn" style="padding: 2px 8px !important; font-size: 12px !important; margin: 0 !important; min-width: auto !important; height: auto !important; flex: 0 0 auto !important;">重置</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2169,6 +2226,18 @@
                             <option value="9:16">9:16 (竖屏宽)</option>
                             <option value="16:9">16:9 (横屏宽)</option>
                         </select>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label style="font-size: 13px;">附加正面提示词</label>
+                    <div class="settings-right">
+                        <textarea id="google-imagen-positive" rows="2" placeholder="默认拼接到AI提示词后，如: masterpiece, best quality" style="width:100%; border:1px solid #ccc; border-radius:4px; padding:5px; font-size:12px; resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="settings-item">
+                    <label style="font-size: 13px;">附加负面提示词</label>
+                    <div class="settings-right">
+                        <textarea id="google-imagen-negative" rows="2" placeholder="仅对支持的中转API有效" style="width:100%; border:1px solid #ccc; border-radius:4px; padding:5px; font-size:12px; resize:vertical;"></textarea>
                     </div>
                 </div>
                 <div class="settings-item" style="justify-content: space-around;">
@@ -4729,6 +4798,16 @@
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="settings-item" id="couple-space-notify-group" style="display: none;">
+                <div>
+                    <label>后台更新弹窗提醒</label>
+                    <div class="settings-desc">角色在后台更新情侣空间内容时弹出提示</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="couple-space-notify-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
 
             <!-- Token 统计 -->
             <div class="settings-section">
@@ -6758,9 +6837,21 @@
         </div>
       </div>
       <div id="profile-thoughts-history-view">
-        <div class="profile-header"> <span>心声记录</span> <button id="history-back-btn" title="返回"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg> </button> </div>
+        <div class="profile-header"> 
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span>心声记录</span> 
+                <button id="manage-thoughts-btn" style="background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-secondary); cursor:pointer; font-size:12px; padding: 4px 10px; border-radius: 12px;">管理</button>
+            </div>
+            <button id="history-back-btn" title="返回"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg> </button> 
+        </div>
+        <div id="thoughts-action-bar" style="display: none; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--bg-color); border-bottom: 1px solid var(--border-color);">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: var(--text-color);">
+                <input type="checkbox" id="select-all-thoughts-checkbox"> 全选
+            </label>
+            <button id="delete-selected-thoughts-btn" class="btn-danger" style="padding: 6px 15px; border-radius: 15px; border: none; color: white; cursor: pointer;">删除</button>
+        </div>
         <div id="thoughts-history-list"></div>
       </div>
     </div>

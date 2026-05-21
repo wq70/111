@@ -3870,7 +3870,37 @@ window.initEventBindingsB = function(state, db) {
     document.getElementById('memory-tab-structured').addEventListener('click', () => switchMemoryTab('structured'));
     document.getElementById('memory-tab-vector').addEventListener('click', () => switchMemoryTab('vector'));
 
-    document.getElementById('memory-list-container').addEventListener('click', (e) => {
+    document.getElementById('memory-list-container').addEventListener('click', async (e) => {
+      const restoreBtn = e.target.closest('.restore-memory-btn');
+      if (restoreBtn) {
+        const authorId = restoreBtn.dataset.authorId;
+        const memoryTimestamp = parseInt(restoreBtn.dataset.memoryTimestamp);
+        const authorChat = state.chats[authorId];
+        
+        if (authorChat && authorChat.longTermMemory) {
+          const memoryIndex = authorChat.longTermMemory.findIndex(m => m.timestamp === memoryTimestamp);
+          if (memoryIndex !== -1) {
+            const memory = authorChat.longTermMemory[memoryIndex];
+            if (memory.originalMemories && Array.isArray(memory.originalMemories)) {
+              const confirmed = await showCustomConfirm('确认还原', '确定要撤销精炼，还原之前的旧记忆吗？\n当前这条精简记忆将被删除。', {
+                confirmButtonClass: 'btn-primary',
+                confirmText: '确认还原'
+              });
+              if (confirmed) {
+                // 删除精简记忆，并将旧记忆插入到原来位置
+                authorChat.longTermMemory.splice(memoryIndex, 1, ...memory.originalMemories);
+                await db.chats.put(authorChat);
+                if (typeof renderLongTermMemoryList === 'function') {
+                  renderLongTermMemoryList();
+                }
+                showToast('已成功还原旧记忆', 'success');
+              }
+            }
+          }
+        }
+        return;
+      }
+      
       const editBtn = e.target.closest('.edit-memory-btn');
       if (editBtn) {
         handleEditMemory(editBtn.dataset.authorId, parseInt(editBtn.dataset.memoryTimestamp));

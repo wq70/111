@@ -1002,39 +1002,84 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
     });
   }
 
+  // 模型输入/下拉切换
+  const toggleModelInputBtn = panel.querySelector('#vm-toggle-model-input');
+  const modelInputEl = panel.querySelector('#vm-embedding-model-input');
+  const modelSelectEl = panel.querySelector('#vm-embedding-model-select');
+  
+  if (toggleModelInputBtn && modelInputEl && modelSelectEl) {
+    toggleModelInputBtn.addEventListener('click', () => {
+      if (modelInputEl.style.display === 'none') {
+        modelInputEl.style.display = 'block';
+        modelSelectEl.style.display = 'none';
+        toggleModelInputBtn.textContent = '切换为下拉选择';
+      } else {
+        modelInputEl.style.display = 'none';
+        modelSelectEl.style.display = 'block';
+        toggleModelInputBtn.textContent = '切换为手动输入';
+      }
+    });
+  }
+
+  // 监听下拉框变化，自动填入手写框
+  if (modelSelectEl && modelInputEl) {
+    modelSelectEl.addEventListener('change', (e) => {
+      const selectedModel = e.target.value;
+      if (selectedModel) {
+        modelInputEl.value = selectedModel;
+      }
+    });
+  }
+
   // 拉取模型按钮
   const fetchModelsBtn = panel.querySelector('#vm-fetch-models-btn');
   if (fetchModelsBtn) {
     fetchModelsBtn.addEventListener('click', async () => {
-      const listEl = panel.querySelector('#vm-models-list');
-      if (!listEl) return;
+      if (!modelSelectEl) return;
       fetchModelsBtn.textContent = '拉取中...';
       fetchModelsBtn.disabled = true;
       try {
         const models = await window.vectorMemoryManager.fetchAvailableModels(chat);
+        
+        modelSelectEl.innerHTML = '';
+        
         if (models.length === 0) {
-          listEl.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-secondary,#999);font-size:13px;">未找到可用模型</div>';
+           const option = document.createElement('option');
+           option.value = "";
+           option.textContent = "未找到可用模型";
+           modelSelectEl.appendChild(option);
         } else {
-          const embeddingKeywords = ['embed', 'embedding', 'text-embedding', 'bge', 'e5', 'gte', 'jina'];
-          listEl.innerHTML = models.map(m => {
-            const isEmb = embeddingKeywords.some(k => m.toLowerCase().includes(k));
-            return `<div class="vm-model-item${isEmb ? ' vm-model-recommended' : ''}" data-model="${m}" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border-color,#eee);font-size:13px;display:flex;justify-content:space-between;align-items:center;">
-              <span>${m}</span>
-              ${isEmb ? '<span style="font-size:10px;color:#007aff;background:rgba(0,122,255,0.1);padding:2px 6px;border-radius:4px;">推荐</span>' : ''}
-            </div>`;
-          }).join('');
-        }
-        listEl.style.display = 'block';
+          // 当前保存的模型或者输入框里的模型
+          const currentModel = vm.settings.embeddingModel || 'text-embedding-3-small';
+          let foundCurrent = false;
 
-        // 点击选择模型
-        listEl.querySelectorAll('.vm-model-item').forEach(item => {
-          item.addEventListener('click', () => {
-            const modelInput = panel.querySelector('#vm-embedding-model');
-            if (modelInput) modelInput.value = item.dataset.model;
-            listEl.style.display = 'none';
-            showToast('已选择: ' + item.dataset.model, 'success');
+          models.forEach(modelId => {
+            const option = document.createElement('option');
+            option.value = modelId;
+            option.textContent = modelId;
+            if (modelId === currentModel) {
+                option.selected = true;
+                foundCurrent = true;
+            }
+            modelSelectEl.appendChild(option);
           });
-        });
+          
+          // 如果当前模型不在列表里，把它也加进去并选中
+          if (!foundCurrent && currentModel) {
+              const option = document.createElement('option');
+              option.value = currentModel;
+              option.textContent = currentModel + " (当前)";
+              option.selected = true;
+              modelSelectEl.insertBefore(option, modelSelectEl.firstChild);
+          }
+          
+          // 切换到下拉框模式
+          modelInputEl.style.display = 'none';
+          modelSelectEl.style.display = 'block';
+          if(toggleModelInputBtn) toggleModelInputBtn.textContent = '切换为手动输入';
+          
+          showToast('模型列表已更新', 'success');
+        }
       } catch (e) {
         showToast('拉取模型失败: ' + e.message, 'error');
       } finally {
@@ -1134,6 +1179,13 @@ async function executeVectorExtraction(chat, messages, updateTimestamp = false) 
   const data = await response.json();
   const rawText = typeof getGeminiResponseText === 'function' ? getGeminiResponseText(data) : (data.choices?.[0]?.message?.content || '');
 
+  // 查找本次处理的最后一条消息在总历史记录中的索引
+  let processedLastIndex = -1;
+  if (chat.history) {
+    const lastMsg = messages[messages.length - 1];
+    processedLastIndex = chat.history.findIndex(m => m.timestamp === lastMsg.timestamp);
+  }
+
   const extracted = window.vectorMemoryManager.parseExtractionResult(rawText);
   if (extracted.length > 0) {
     // 使用提取的消息段中最后一条消息的时间作为这段记忆的发生时间
@@ -1141,7 +1193,11 @@ async function executeVectorExtraction(chat, messages, updateTimestamp = false) 
     const newIds = await window.vectorMemoryManager.mergeExtractedMemories(chat, extracted, defaultMemoryTime);
     if (updateTimestamp) {
       const vm = window.vectorMemoryManager.getVariableMemory(chat);
-      // 基于最新架构：通过方法内部更新的 _tempLastMsgIndex 进行赋值，此处可以略过或者用以兜底
+      if (processedLastIndex !== -1) {
+        vm.settings.lastExtractedMsgIndex = processedLastIndex;
+      } else if (window.vectorMemoryManager._tempLastMsgIndex !== undefined && window.vectorMemoryManager._tempLastMsgIndex !== -1) {
+        vm.settings.lastExtractedMsgIndex = window.vectorMemoryManager._tempLastMsgIndex;
+      }
     }
     await db.chats.put(chat);
     showToast(`成功提取 ${newIds.length} 条变量记忆`, 'success');
@@ -1151,18 +1207,24 @@ async function executeVectorExtraction(chat, messages, updateTimestamp = false) 
   } else {
     if (updateTimestamp) {
       const vm = window.vectorMemoryManager.getVariableMemory(chat);
-      if (window.vectorMemoryManager._tempLastMsgIndex !== undefined && window.vectorMemoryManager._tempLastMsgIndex !== -1) {
+      if (processedLastIndex !== -1) {
+        vm.settings.lastExtractedMsgIndex = processedLastIndex;
+      } else if (window.vectorMemoryManager._tempLastMsgIndex !== undefined && window.vectorMemoryManager._tempLastMsgIndex !== -1) {
         vm.settings.lastExtractedMsgIndex = window.vectorMemoryManager._tempLastMsgIndex;
       }
       await db.chats.put(chat);
       console.log('[变量记忆] 虽未提取到新记忆，但已更新消息索引以避免重复处理');
     }
     
-    // 如果没有提取到记忆，使用明显的弹窗告知用户，避免用户觉得点击了没反应
-    if (typeof showCustomAlert === 'function') {
-      await showCustomAlert('提取完成', '当前对话片段中没有发现值得作为长期记忆记录的新内容。\n\n系统进度已更新，后续会继续检查新消息。');
+    // 如果没有提取到记忆，仅在手动提取时才弹窗告知，自动提取（后台）仅使用轻量提示
+    if (!updateTimestamp) {
+      if (typeof showCustomAlert === 'function') {
+        await showCustomAlert('提取完成', '当前对话片段中没有发现值得作为长期记忆记录的新内容。\n\n系统进度已更新，后续会继续检查新消息。');
+      } else {
+        alert('提取完成：当前对话片段中没有发现值得作为长期记忆记录的新内容。\n\n系统进度已更新，后续会继续检查新消息。');
+      }
     } else {
-      alert('提取完成：当前对话片段中没有发现值得作为长期记忆记录的新内容。\n\n系统进度已更新，后续会继续检查新消息。');
+      showToast('变量记忆：暂无新内容需提取，已更新进度', 'info');
     }
   }
 }
@@ -1507,6 +1569,14 @@ function loadMoreMemories() {
                   </div>
                   
                   <div style="display: flex; gap: 8px;">
+                      ${memory.source === 'refined' && memory.originalMemories ? `
+                      <button class="memory-action-btn restore-memory-btn" data-author-id="${memory.authorChatId}" data-memory-timestamp="${memory.timestamp}" title="还原旧记忆">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px; stroke: #28a745;">
+                              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                              <path d="M3 3v5h5"></path>
+                          </svg>
+                      </button>
+                      ` : ''}
                       <button class="memory-action-btn edit-memory-btn" data-author-id="${memory.authorChatId}" data-memory-timestamp="${memory.timestamp}" title="编辑">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -1627,91 +1697,281 @@ async function handleManualSummary() {
   }
 }
 
-// ==================== 向量记忆 - 长期记忆转换 ====================
+// ==================== 向量记忆 - 旧记忆转换 (支持多选及结构化记忆) ====================
 async function convertLongTermMemoryToVector(chatId) {
   const chat = state.chats[chatId];
-  if (!chat || !window.vectorMemoryManager || !chat.longTermMemory || chat.longTermMemory.length === 0) {
-    showToast('没有可转换的长期记忆', 'warning');
+  if (!chat || !window.vectorMemoryManager) {
+    showToast('模块未加载', 'warning');
     return;
   }
 
-  const totalMemories = chat.longTermMemory.length;
-  
-  let shouldProceed = true;
-  if (totalMemories > 50) {
-    const message = `检测到长期记忆：\n\n- 记忆数量：${totalMemories} 条\n- 将逐条调用模型生成向量，预计需要一定时间和额度\n\n继续转换？`;
-    shouldProceed = await showCustomConfirm('变量记忆转换', message);
+  let items = [];
+
+  // 1. 提取旧的长期记忆
+  if (chat.longTermMemory && chat.longTermMemory.length > 0) {
+    chat.longTermMemory.forEach((mem, idx) => {
+      items.push({
+        type: 'longTerm',
+        content: mem.content,
+        timestamp: mem.timestamp || Date.now(),
+        categoryCode: 'E',
+        mappedCategory: 'E',
+        id: idx,
+        displayLabel: '[长期记忆] ' + mem.content
+      });
+    });
   }
 
-  if (!shouldProceed) {
-    showToast('已取消转换', 'info');
+  // 2. 提取结构化记忆
+  if (window.structuredMemoryManager && chat.structuredMemory) {
+    const mem = window.structuredMemoryManager.getStructuredMemory(chat);
+    
+    for (const [k, v] of Object.entries(mem.facts)) {
+      items.push({ type: 'structured', categoryCode: 'F', mappedCategory: 'U', content: `${k} = ${v}`, id: `F_${k}`, displayLabel: '[偏好/事实] ' + `${k} = ${v}` });
+    }
+    if (mem.relationship) {
+      items.push({ type: 'structured', categoryCode: 'R', mappedCategory: 'R', content: mem.relationship, id: 'R_relationship', displayLabel: '[关系] ' + mem.relationship });
+    }
+    for (const ym of Object.keys(mem.events)) {
+      const evts = mem.events[ym].split('|');
+      evts.forEach((evt, idx) => {
+        items.push({ type: 'structured', categoryCode: 'E', mappedCategory: 'E', content: `[${ym}] ${evt}`, id: `E_${ym}_${idx}`, displayLabel: '[事件] ' + `[${ym}] ${evt}` });
+      });
+    }
+    mem.plans.forEach((p, idx) => {
+      items.push({ type: 'structured', categoryCode: 'P', mappedCategory: 'P', content: p, id: `P_${idx}`, displayLabel: '[计划] ' + p });
+    });
+    mem.decisions.forEach((d, idx) => {
+      items.push({ type: 'structured', categoryCode: 'D', mappedCategory: 'E', content: d, id: `D_${idx}`, displayLabel: '[决定] ' + d });
+    });
+    mem.emotions.forEach((e, idx) => {
+      items.push({ type: 'structured', categoryCode: 'M', mappedCategory: 'M', content: e, id: `M_${idx}`, displayLabel: '[情绪] ' + e });
+    });
+    for (const [code, cat] of Object.entries(mem._customCategories || {})) {
+      const list = mem._custom[code] || [];
+      list.forEach((item, idx) => {
+        items.push({ type: 'structured', categoryCode: code, mappedCategory: 'E', content: item, id: `C_${code}_${idx}`, displayLabel: `[${cat.name || code}] ` + item });
+      });
+    }
+  }
+
+  if (items.length === 0) {
+    showToast('没有可转换的旧版记忆或结构化记忆', 'warning');
     return;
   }
 
-  const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;
-  const { proxyUrl, apiKey, model } = useSecondaryApi
-    ? { proxyUrl: state.apiConfig.secondaryProxyUrl, apiKey: state.apiConfig.secondaryApiKey, model: state.apiConfig.secondaryModel }
-    : state.apiConfig;
+  // 构建多选列表弹窗
+  return new Promise(resolve => {
+    window._modalResolve = resolve;
+    window._modalTitle.textContent = '记忆转换中心 (升级为变量记忆)';
+    
+    let listHtml = items.map((item, index) => {
+      return `
+        <div style="margin-bottom: 8px; padding: 10px; background: var(--secondary-bg, #f5f5f5); border-radius: 8px; border: 1px solid var(--border-color, #eee); box-sizing: border-box; width: 100%;">
+          <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0; line-height: 1.5; width: 100%;">
+            <input type="checkbox" class="memory-convert-checkbox" data-index="${index}" style="margin-right: 10px; margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px;" checked>
+            <div style="flex: 1; min-width: 0; font-size: 13px; color: var(--text-color, #333); text-align: left; word-break: break-word; white-space: pre-wrap;">
+              ${item.displayLabel.replace(/</g, '<').replace(/>/g, '>')}
+            </div>
+          </label>
+        </div>
+      `;
+    }).join('');
 
-  if (!proxyUrl || !apiKey || !model) {
-    showToast('API未配置，无法转换', 'error');
-    return;
-  }
+    window._modalBody.innerHTML = `
+      <div style="width: 100%; text-align: left; box-sizing: border-box;">
+        <div style="margin-bottom: 15px; color: var(--text-secondary, #666); font-size: 13px; line-height: 1.5; padding: 0 5px;">
+          检测到 <strong>${items.length}</strong> 条可转换的记忆。将它们转换成变量记忆后，AI 能更智能地在对话中检索它们。<br>
+          <span style="color:#ff9500; font-size:12px; display: inline-block; margin-top: 5px;">注：即使没配 Embedding API，也会无缝转为强大的 BM25 本地检索！不消耗额度。</span>
+        </div>
+        <div style="display: flex; justify-content: flex-start; margin-bottom: 10px; padding: 0 5px;">
+          <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
+            <input type="checkbox" id="convert-select-all" checked style="margin-right: 8px; flex-shrink: 0; width: 16px; height: 16px;"> <strong>全选</strong>
+          </label>
+        </div>
+        <div style="max-height: 40vh; overflow-y: auto; overflow-x: hidden; margin-bottom: 15px; border-top: 1px solid var(--border-color, #eee); border-bottom: 1px solid var(--border-color, #eee); padding: 10px 5px; box-sizing: border-box;">
+          ${listHtml}
+        </div>
+        <label style="display: flex; align-items: flex-start; cursor: pointer; margin-top: 10px; padding: 12px; background: rgba(255, 149, 0, 0.08); border: 1px solid rgba(255, 149, 0, 0.2); border-radius: 8px; font-size: 13px; color: var(--text-color, #333); line-height: 1.5; box-sizing: border-box; width: 100%;">
+          <input type="checkbox" id="keep-original-memory" checked style="margin-right: 8px; margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px;">
+          <span style="flex: 1; min-width: 0; word-break: break-word;">
+            <strong>转换后保留原记忆 (推荐)</strong><br>
+            <span style="font-size: 11px; color: var(--text-secondary, #666);">防止误操作。若取消勾选，则转换后将从原记忆库中删除。</span>
+          </span>
+        </label>
+      </div>
+    `;
 
-  let progressToast = showToast(`转换中... 0/${totalMemories}`, 'info', 0);
-  let successCount = 0;
-  let failCount = 0;
+    const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
+    if (modalFooter) {
+      modalFooter.style.flexDirection = 'row';
+      modalFooter.style.justifyContent = 'flex-end';
+      modalFooter.innerHTML = `
+        <button id="custom-modal-cancel">取消</button>
+        <button id="custom-modal-confirm" class="confirm-btn">开始转换</button>
+      `;
+    }
 
-  try {
-    for (let i = 0; i < chat.longTermMemory.length; i++) {
-      const mem = chat.longTermMemory[i];
+    const selectAllCb = document.getElementById('convert-select-all');
+    const allCbs = document.querySelectorAll('.memory-convert-checkbox');
+    
+    selectAllCb.addEventListener('change', (e) => {
+      allCbs.forEach(cb => cb.checked = e.target.checked);
+    });
+    
+    allCbs.forEach(cb => {
+      cb.addEventListener('change', () => {
+        const total = allCbs.length;
+        const checked = document.querySelectorAll('.memory-convert-checkbox:checked').length;
+        selectAllCb.checked = (total === checked);
+      });
+    });
+
+    const confirmBtn = document.getElementById('custom-modal-confirm');
+    const cancelBtn = document.getElementById('custom-modal-cancel');
+    cancelBtn.style.display = 'block';
+
+    confirmBtn.onclick = async () => {
+      const selectedIndices = Array.from(document.querySelectorAll('.memory-convert-checkbox:checked')).map(cb => parseInt(cb.dataset.index));
+      const keepOriginal = document.getElementById('keep-original-memory').checked;
+      
+      if (selectedIndices.length === 0) {
+        showToast('请至少选择一条记忆', 'info');
+        return;
+      }
+      
+      hideCustomModal();
+      
+      let progressToast = showToast(`转换中... 0/${selectedIndices.length}`, 'info', 0);
+      let successCount = 0;
+      let failCount = 0;
+      
+      // 分别记录需要删除的索引
+      let structuredToDelete = {}; // { cat: [indices...] }
+      let longTermToDelete = [];
+
       try {
-        const embedding = await window.vectorMemoryManager.getEmbedding(mem.content, chat);
-        if (embedding) {
-          window.vectorMemoryManager.createFragment(chat, {
-            content: mem.content,
-            tags: ['旧日记转换'],
-            category: 'E',
-            importance: 5,
-            emotionalWeight: 3,
-            embedding,
-            memoryTime: mem.timestamp || Date.now(),
-            source: 'manual'
-          });
-          successCount++;
-        } else {
-          failCount++;
+        for (let i = 0; i < selectedIndices.length; i++) {
+          const item = items[selectedIndices[i]];
+          try {
+            // 尝试获取向量（如果失败返回null，不报错）
+            const embedding = await window.vectorMemoryManager.getEmbedding(item.content, chat);
+            
+            // 只要到这里，无论 embedding 有无，都保存（有embedding就是向量，没有就是BM25）
+            window.vectorMemoryManager.createFragment(chat, {
+              content: item.content,
+              tags: [item.type === 'longTerm' ? '旧长期记忆转换' : '旧结构化转换'],
+              category: item.mappedCategory,
+              importance: 5,
+              emotionalWeight: 3,
+              embedding: embedding || null,
+              memoryTime: item.timestamp || Date.now(),
+              source: 'manual'
+            });
+            successCount++;
+            
+            // 记录要删除的条目
+            if (!keepOriginal) {
+              if (item.type === 'longTerm') {
+                longTermToDelete.push(item.id);
+              } else if (item.type === 'structured') {
+                if (!structuredToDelete[item.categoryCode]) structuredToDelete[item.categoryCode] = [];
+                // 这里存放的是字符串形式的 id，解析出它原来的数据索引/key
+                structuredToDelete[item.categoryCode].push(item.id);
+              }
+            }
+            
+          } catch (err) {
+            console.error(`转换第 ${i+1} 条记忆失败:`, err);
+            failCount++;
+          }
+          
+          const toastElement = document.querySelector('.toast:last-child');
+          if (toastElement) {
+            toastElement.textContent = `转换中... ${i+1}/${selectedIndices.length} (成功: ${successCount}, 失败: ${failCount})`;
+          }
+          
+          await new Promise(res => setTimeout(res, 300)); // 避免API被限流
         }
-      } catch (err) {
-        console.error(`转换第 ${i+1} 条记忆失败:`, err);
-        failCount++;
+        
+        // 如果不需要保留原记忆，执行删除
+        if (!keepOriginal) {
+          if (longTermToDelete.length > 0) {
+            // 降序删除
+            longTermToDelete.sort((a, b) => b - a);
+            longTermToDelete.forEach(idx => chat.longTermMemory.splice(idx, 1));
+          }
+          if (Object.keys(structuredToDelete).length > 0 && window.structuredMemoryManager) {
+            const mem = window.structuredMemoryManager.getStructuredMemory(chat);
+            // 处理默认分类
+            if (structuredToDelete['F']) {
+               structuredToDelete['F'].forEach(strId => { const k = strId.substring(2); delete mem.facts[k]; });
+            }
+            if (structuredToDelete['R']) mem.relationship = '';
+            
+            // 以下数组需降序删除
+            if (structuredToDelete['E']) {
+               let eventMap = {}; 
+               for (const ym of Object.keys(mem.events)) {
+                 eventMap[ym] = mem.events[ym].split('|');
+               }
+               const eIds = structuredToDelete['E'].map(id => id.split('_'));
+               eIds.sort((a, b) => parseInt(b[2]) - parseInt(a[2]));
+               eIds.forEach(parts => {
+                 const ym = parts[1];
+                 const idx = parseInt(parts[2]);
+                 if (eventMap[ym]) eventMap[ym].splice(idx, 1);
+               });
+               mem.events = {};
+               for (const ym of Object.keys(eventMap)) {
+                 if (eventMap[ym].length > 0) mem.events[ym] = eventMap[ym].join('|');
+               }
+            }
+            if (structuredToDelete['P']) {
+               const pIds = structuredToDelete['P'].map(id => parseInt(id.substring(2))).sort((a, b) => b - a);
+               pIds.forEach(idx => mem.plans.splice(idx, 1));
+            }
+            if (structuredToDelete['D']) {
+               const dIds = structuredToDelete['D'].map(id => parseInt(id.substring(2))).sort((a, b) => b - a);
+               dIds.forEach(idx => mem.decisions.splice(idx, 1));
+            }
+            if (structuredToDelete['M']) {
+               const mIds = structuredToDelete['M'].map(id => parseInt(id.substring(2))).sort((a, b) => b - a);
+               mIds.forEach(idx => mem.emotions.splice(idx, 1));
+            }
+            // 自定义分类
+            for (const [code, cat] of Object.entries(mem._customCategories || {})) {
+              if (structuredToDelete[code]) {
+                const cIds = structuredToDelete[code].map(id => {
+                  const parts = id.split('_');
+                  return parseInt(parts[2]);
+                }).sort((a, b) => b - a);
+                cIds.forEach(idx => {
+                  if (mem._custom[code]) mem._custom[code].splice(idx, 1);
+                });
+              }
+            }
+          }
+        }
+
+        await db.chats.put(chat);
+        
+        if (progressToast) document.querySelectorAll('.toast').forEach(el => el.remove());
+        showToast(`转换完成！\n- 成功：${successCount} 条\n- 失败：${failCount} 条`, 'success', 5000);
+        
+        if (document.getElementById('vector-memory-container')?.style.display !== 'none') {
+          if (typeof renderVectorMemoryView === 'function') renderVectorMemoryView();
+        }
+      } catch (error) {
+        if (progressToast) document.querySelectorAll('.toast').forEach(el => el.remove());
+        console.error('变量记忆转换出错:', error);
+        showToast(`转换中断：${error.message}\n已成功转换 ${successCount} 条`, 'error', 5000);
       }
-      
-      const toastElement = document.querySelector('.toast:last-child');
-      if (toastElement) {
-        toastElement.textContent = `转换中... ${i+1}/${totalMemories} (成功: ${successCount}, 失败: ${failCount})`;
-      }
-      
-      // 批次间稍微延迟避免限流
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    
-    // 保存结果
-    await db.chats.put(chat);
-    
-    if (progressToast) {
-      document.querySelectorAll('.toast').forEach(el => el.remove());
-    }
-    showToast(`转换完成！\n- 成功：${successCount} 条\n- 失败：${failCount} 条`, 'success', 5000);
-    
-    if (document.getElementById('vector-memory-container')?.style.display !== 'none') {
-      renderVectorMemoryView();
-    }
-  } catch (error) {
-    if (progressToast) document.querySelectorAll('.toast').forEach(el => el.remove());
-    console.error('向量记忆转换出错:', error);
-    showToast(`转换中断：${error.message}\n已成功转换 ${successCount} 条`, 'error', 5000);
-  }
+    };
+
+    cancelBtn.onclick = () => { hideCustomModal(); };
+    showCustomModal();
+  });
 }
 
 // ==================== 结构化动态记忆 - 长期记忆转换 ====================
@@ -3068,104 +3328,168 @@ ${memoryContent}
 现在，请以"${targetChatForRefine.originalName}"的身份，开始你的回忆梳理与精炼。`;
 
 
-  await showCustomAlert("请稍候...", "正在请求AI进行记忆精炼...");
+  let messagesPayload = [{
+    role: 'user',
+    content: "请开始整合。"
+  }];
+  
+  let finalSummary = null;
+  let userCancelled = false;
+  
+  let progressToast = showToast('正在请求AI进行记忆精炼...', 'info', 0);
 
-  try {
-    const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;
-    const {
-      proxyUrl,
-      apiKey,
-      model
-    } = useSecondaryApi
-        ?
-        {
-          proxyUrl: state.apiConfig.secondaryProxyUrl,
-          apiKey: state.apiConfig.secondaryApiKey,
-          model: state.apiConfig.secondaryModel
-        } :
-        state.apiConfig;
+  while(true) {
+    try {
+      const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;
+      const {
+        proxyUrl,
+        apiKey,
+        model
+      } = useSecondaryApi
+          ?
+          {
+            proxyUrl: state.apiConfig.secondaryProxyUrl,
+            apiKey: state.apiConfig.secondaryApiKey,
+            model: state.apiConfig.secondaryModel
+          } :
+          state.apiConfig;
 
-    if (!proxyUrl || !apiKey || !model) {
-      throw new Error('请先在API设置中配置好（主或副）API以进行总结。');
-    }
-
-    let isGemini = proxyUrl.includes('generativelanguage');
-    let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, [{
-      role: 'user',
-      content: "请开始整合。"
-    }]);
-
-    const response = isGemini ?
-      await fetch(geminiConfig.url, geminiConfig.data) :
-      await fetch(`${proxyUrl}/v1/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [{
-            role: 'system',
-            content: systemPrompt
-          }, {
-            role: 'user',
-            content: "请开始整合。"
-          }],
-          temperature: 0.7,
-        })
-      });
-
-    if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
-
-    const data = await response.json();
-    let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
-
-    const result = robustJsonParse(rawContent);
-
-    if (result && result.summary && typeof result.summary === 'string' && result.summary.trim()) {
-
-      const userConfirmedReplacement = await showCustomConfirm(
-        '精炼完成，请确认',
-        `AI已将您的 <strong>${rangeDescription}</strong> 总结为以下核心记忆：<br><br><div class="scrollable-content-preview">${result.summary.trim()}</div><br>是否用这条新记忆替换掉这些旧记忆？`, {
-        confirmText: '确认替换',
-        cancelText: '保留旧的',
-        confirmButtonClass: 'btn-danger'
+      if (!proxyUrl || !apiKey || !model) {
+        throw new Error('请先在API设置中配置好（主或副）API以进行总结。');
       }
-      );
 
-      if (userConfirmedReplacement) {
-        const newMemoryEntry = {
-          content: result.summary.trim(),
-          timestamp: Date.now(),
-          source: 'refined'
-        };
+      let isGemini = proxyUrl.includes('generativelanguage');
+      let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload);
 
-        // 根据范围进行智能替换
-        // 保留范围前的记忆 + 新的精炼记忆 + 保留范围后的记忆
-        const memoriesBeforeRange = rangeStartIndex > 0 ? targetChatForRefine.longTermMemory.slice(0, rangeStartIndex) : [];
-        const memoriesAfterRange = rangeEndIndex < totalMemories ? targetChatForRefine.longTermMemory.slice(rangeEndIndex) : [];
+      const response = isGemini ?
+        await fetch(geminiConfig.url, geminiConfig.data) :
+        await fetch(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [{
+              role: 'system',
+              content: systemPrompt
+            }, ...messagesPayload],
+            temperature: 0.7,
+          })
+        });
 
-        targetChatForRefine.longTermMemory = [...memoriesBeforeRange, newMemoryEntry, ...memoriesAfterRange];
+      if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
-        targetChatForRefine.lastMemorySummaryTimestamp = Date.now();
-        await db.chats.put(targetChatForRefine);
+      if (progressToast) {
+        document.querySelectorAll('.toast').forEach(el => el.remove());
+        progressToast = null;
+      }
 
-        if (document.getElementById('long-term-memory-screen').classList.contains('active')) {
-          renderLongTermMemoryList();
+      const data = await response.json();
+      let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
+
+      const result = robustJsonParse(rawContent);
+
+      if (result && result.summary && typeof result.summary === 'string' && result.summary.trim()) {
+
+        const userAction = await new Promise(resolve => {
+            window._modalResolve = resolve;
+            window._modalTitle.textContent = '精炼完成，请确认';
+            window._modalBody.innerHTML = `
+              <div style="text-align: left;">
+                <p>AI已将您的 <strong>${rangeDescription}</strong> 总结为以下核心记忆：</p>
+                <div class="scrollable-content-preview" style="max-height: 200px; overflow-y: auto; background: var(--secondary-bg, #f5f5f5); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                  ${result.summary.trim().replace(/\n/g, '<br>')}
+                </div>
+                <p style="margin-bottom: 5px; font-size: 13px; color: var(--text-secondary, #666);">如果不满意，您可以在下方填写反馈意见让AI重新生成：</p>
+                <textarea id="refine-feedback-input" style="width: 100%; height: 60px; padding: 8px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; box-sizing: border-box; resize: vertical;" placeholder="例如：太长了，请精简一些；或者：漏掉了XXX事情..."></textarea>
+              </div>
+            `;
+            
+            const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
+            if (modalFooter) {
+              // 恢复水平排列，使用等宽分布，避免界面太长和按钮过于突兀
+              modalFooter.style.flexDirection = 'row';
+              modalFooter.style.gap = '8px';
+              modalFooter.style.justifyContent = 'space-between';
+              modalFooter.innerHTML = `
+                <button id="custom-modal-cancel" style="flex: 1; margin: 0; padding: 8px 4px; font-size: 13px; white-space: nowrap;">保留旧的</button>
+                <button id="custom-modal-rewrite" style="flex: 1; margin: 0; padding: 8px 4px; font-size: 13px; white-space: nowrap; background: transparent; color: var(--text-color, #333); border: 1px solid var(--border-color, #ddd); border-radius: 8px; cursor: pointer;">让AI重写</button>
+                <button id="custom-modal-confirm" class="confirm-btn btn-danger" style="flex: 1; margin: 0; padding: 8px 4px; font-size: 13px; white-space: nowrap;">确认替换</button>
+              `;
+            }
+
+            const confirmBtn = document.getElementById('custom-modal-confirm');
+            const rewriteBtn = document.getElementById('custom-modal-rewrite');
+            const cancelBtn = document.getElementById('custom-modal-cancel');
+
+            confirmBtn.onclick = () => { hideCustomModal(); resolve({action: 'confirm'}); };
+            cancelBtn.onclick = () => { hideCustomModal(); resolve({action: 'cancel'}); };
+            rewriteBtn.onclick = () => { 
+                const fb = document.getElementById('refine-feedback-input').value;
+                if (!fb.trim()) {
+                    showToast('请先输入反馈意见再重写', 'info');
+                    return;
+                }
+                hideCustomModal(); 
+                resolve({action: 'rewrite', feedback: fb}); 
+            };
+            showCustomModal();
+        });
+
+        if (!userAction || userAction.action === 'cancel') {
+          finalSummary = null;
+          userCancelled = true;
+          break;
+        } else if (userAction.action === 'confirm') {
+          finalSummary = result.summary.trim();
+          break;
+        } else if (userAction.action === 'rewrite') {
+          messagesPayload.push({ role: 'assistant', content: rawContent });
+          messagesPayload.push({ role: 'user', content: `我对上面的总结不满意，请根据以下反馈重新生成：\n${userAction.feedback}\n\n注意：请依然严格遵守之前的格式要求，只输出JSON对象。` });
+          progressToast = showToast('正在根据您的反馈重新生成...', 'info', 0);
+          continue; // 继续循环
         }
-        await showCustomAlert('精炼成功', `已成功将 ${countToRefine} 条记忆精炼为 1 条核心记忆！`);
+
       } else {
-        await showCustomAlert('操作已取消', '您的旧有记忆已被完整保留，未作任何修改。');
+        throw new Error("AI返回了空的或格式不正确的总结内容。");
       }
 
-    } else {
-      throw new Error("AI返回了空的或格式不正确的总结内容。");
+    } catch (error) {
+      if (progressToast) {
+        document.querySelectorAll('.toast').forEach(el => el.remove());
+      }
+      console.error("精炼长期记忆时出错:", error);
+      await showCustomAlert('精炼失败', `操作失败，请检查API配置或稍后重试。\n错误信息: ${error.message}`);
+      break;
     }
+  }
 
-  } catch (error) {
-    console.error("精炼长期记忆时出错:", error);
-    await showCustomAlert('精炼失败', `操作失败，请检查API配置或稍后重试。\n错误信息: ${error.message}`);
+  if (finalSummary) {
+    const newMemoryEntry = {
+      content: finalSummary,
+      timestamp: Date.now(),
+      source: 'refined',
+      originalMemories: memoriesToRefine
+    };
+
+    // 根据范围进行智能替换
+    // 保留范围前的记忆 + 新的精炼记忆 + 保留范围后的记忆
+    const memoriesBeforeRange = rangeStartIndex > 0 ? targetChatForRefine.longTermMemory.slice(0, rangeStartIndex) : [];
+    const memoriesAfterRange = rangeEndIndex < totalMemories ? targetChatForRefine.longTermMemory.slice(rangeEndIndex) : [];
+
+    targetChatForRefine.longTermMemory = [...memoriesBeforeRange, newMemoryEntry, ...memoriesAfterRange];
+
+    targetChatForRefine.lastMemorySummaryTimestamp = Date.now();
+    await db.chats.put(targetChatForRefine);
+
+    if (document.getElementById('long-term-memory-screen').classList.contains('active')) {
+      renderLongTermMemoryList();
+    }
+    await showCustomAlert('精炼成功', `已成功将 ${countToRefine} 条记忆精炼为 1 条核心记忆！`);
+  } else if (userCancelled) {
+    await showCustomAlert('操作已取消', '您的旧有记忆已被完整保留，未作任何修改。');
   }
 }
 

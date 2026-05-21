@@ -37,6 +37,7 @@
       // 因为 showChoiceModal可能会破坏Footer结构导致ID丢失，这里必须重建
       const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
       if (modalFooter) {
+        modalFooter.style.cssText = ''; // 彻底清理内联样式
         modalFooter.style.flexDirection = 'row'; // 恢复横向布局
         modalFooter.style.justifyContent = 'flex-end'; // 按钮靠右
         modalFooter.innerHTML = `
@@ -170,6 +171,7 @@
 
       // 强制重置 Footer 结构，防止被 showChoiceModal 修改后导致 ID 丢失
       if (modalFooter) {
+        modalFooter.style.cssText = ''; // 彻底清理内联样式
         modalFooter.style.flexDirection = 'row'; // 恢复默认横向布局
         modalFooter.innerHTML = `
               <button id="custom-modal-cancel">取消</button>
@@ -212,6 +214,7 @@
 
       const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
       if (modalFooter) {
+        modalFooter.style.cssText = ''; // 彻底清理内联样式
         modalFooter.style.flexDirection = 'row';
         modalFooter.innerHTML = `
           <button id="recovery-modal-backup-btn" class="confirm-btn" style="margin-right: 8px;">📤 备份本站数据</button>
@@ -300,10 +303,9 @@
       // 防止因为之前调用过 showChoiceModal 导致按钮丢失
       const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
       if (modalFooter) {
+        modalFooter.style.cssText = ''; // 彻底清理内联样式
         modalFooter.style.flexDirection = 'row';
         modalFooter.style.justifyContent = 'flex-end';
-        modalFooter.style.maxHeight = '';
-        modalFooter.style.overflowY = '';
 
         // 暴力重置：把按钮塞回去
         modalFooter.innerHTML = `
@@ -391,6 +393,7 @@
       });
 
       modalFooter.innerHTML = '';
+      modalFooter.style.cssText = ''; // 清理内联样式
       modalFooter.style.flexDirection = 'row';
       modalFooter.style.flexWrap = 'wrap';
       modalFooter.style.gap = '8px';
@@ -440,6 +443,11 @@
       const modalFooter = document.querySelector('#custom-modal .custom-modal-footer');
 
       modalTitle.textContent = title;
+      
+      // 清空内联样式，防止其他弹窗（如 showCustomConfirm）的 flex-end 残留导致无法滚动
+      modalBody.style.cssText = '';
+      modalFooter.style.cssText = '';
+      
       modalBody.innerHTML = ''; // 清空主体，选项主要在 Footer
 
       // 清空 Footer 并设置为列布局
@@ -577,6 +585,7 @@
 
         // 分类列表放 modalBody（可滚动）
         modalBody.innerHTML = '';
+        modalBody.style.cssText = '';
         modalBody.style.maxHeight = '45vh';
         modalBody.style.overflowY = 'auto';
         modalBody.style.webkitOverflowScrolling = 'touch';
@@ -665,11 +674,10 @@
 
         // 底部固定区域：新建分类 + 取消
         modalFooter.innerHTML = '';
+        modalFooter.style.cssText = '';
         modalFooter.style.flexDirection = 'column';
         modalFooter.style.padding = '10px';
         modalFooter.style.gap = '8px';
-        modalFooter.style.maxHeight = '';
-        modalFooter.style.overflowY = '';
 
         const addBtn = document.createElement('button');
         addBtn.className = 'payment-option-item';

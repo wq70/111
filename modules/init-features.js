@@ -255,6 +255,7 @@ window.initFeatures = function(state, db) {
       state.globalSettings.globalCss = document.getElementById('global-css-input').value.trim();
       state.globalSettings.notificationSoundUrl = document.getElementById('notification-sound-url-input').value.trim();
       state.globalSettings.notificationVolume = parseInt(document.getElementById('notification-volume-slider').value) / 100;
+      state.globalSettings.apiMaxTokens = parseInt(document.getElementById('api-max-tokens-input').value) || 0;
       state.globalSettings.showStatusBar = document.getElementById('status-bar-toggle-switch').checked;
       state.globalSettings.showSeconds = document.getElementById('global-show-seconds-switch').checked;
       state.globalSettings.dropdownPopupMode = document.getElementById('dropdown-popup-mode-switch').checked;
@@ -1900,6 +1901,8 @@ window.initFeatures = function(state, db) {
     const tempInput = document.getElementById('api-temperature-input');
     const topPSlider = document.getElementById('api-top-p-slider');
     const topPInput = document.getElementById('api-top-p-input');
+    const maxTokensSlider = document.getElementById('api-max-tokens-slider');
+    const maxTokensInput = document.getElementById('api-max-tokens-input');
     const presenceSlider = document.getElementById('api-presence-penalty-slider');
     const presenceInput = document.getElementById('api-presence-penalty-input');
     const frequencySlider = document.getElementById('api-frequency-penalty-slider');
@@ -1912,11 +1915,51 @@ window.initFeatures = function(state, db) {
     topPSlider.addEventListener('input', (e) => topPInput.value = e.target.value);
     topPInput.addEventListener('input', (e) => topPSlider.value = e.target.value);
 
+    maxTokensSlider.addEventListener('input', (e) => maxTokensInput.value = e.target.value);
+    maxTokensInput.addEventListener('input', (e) => maxTokensSlider.value = e.target.value);
+
     presenceSlider.addEventListener('input', (e) => presenceInput.value = e.target.value);
     presenceInput.addEventListener('input', (e) => presenceSlider.value = e.target.value);
 
     frequencySlider.addEventListener('input', (e) => frequencyInput.value = e.target.value);
     frequencyInput.addEventListener('input', (e) => frequencySlider.value = e.target.value);
+
+    // API开关状态加载 (只在设置面板打开/初始化时用到)
+    const topPEnabledCheckbox = document.getElementById('api-top-p-enabled');
+    const maxTokensEnabledCheckbox = document.getElementById('api-max-tokens-enabled');
+    const presenceEnabledCheckbox = document.getElementById('api-presence-penalty-enabled');
+    const frequencyEnabledCheckbox = document.getElementById('api-frequency-penalty-enabled');
+    
+    // 初始化折叠面板显示状态的辅助函数
+    const initConfigDisplay = (checkboxId, configId) => {
+        const checkbox = document.getElementById(checkboxId);
+        const config = document.getElementById(configId);
+        if (checkbox && config) {
+            config.style.display = checkbox.checked ? 'flex' : 'none';
+            // 添加切换事件监听
+            checkbox.addEventListener('change', (e) => {
+                config.style.display = e.target.checked ? 'flex' : 'none';
+            });
+        }
+    };
+
+    if (topPEnabledCheckbox) {
+        topPEnabledCheckbox.checked = !!state.globalSettings.apiTopPEnabled;
+        initConfigDisplay('api-top-p-enabled', 'api-top-p-config');
+    }
+    if (maxTokensEnabledCheckbox) {
+        maxTokensEnabledCheckbox.checked = !!state.globalSettings.apiMaxTokensEnabled;
+        initConfigDisplay('api-max-tokens-enabled', 'api-max-tokens-config');
+    }
+    if (presenceEnabledCheckbox) {
+        presenceEnabledCheckbox.checked = !!state.globalSettings.apiPresencePenaltyEnabled;
+        initConfigDisplay('api-presence-penalty-enabled', 'api-presence-penalty-config');
+    }
+    if (frequencyEnabledCheckbox) {
+        frequencyEnabledCheckbox.checked = !!state.globalSettings.apiFrequencyPenaltyEnabled;
+        initConfigDisplay('api-frequency-penalty-enabled', 'api-frequency-penalty-config');
+    }
+
 
     // 重置按钮逻辑
     document.getElementById('reset-api-temperature-btn').addEventListener('click', () => {
@@ -1926,6 +1969,10 @@ window.initFeatures = function(state, db) {
     document.getElementById('reset-api-top-p-btn').addEventListener('click', () => {
       topPSlider.value = 1.0;
       topPInput.value = 1.0;
+    });
+    document.getElementById('reset-api-max-tokens-btn').addEventListener('click', () => {
+      maxTokensSlider.value = 0;
+      maxTokensInput.value = 0;
     });
     document.getElementById('reset-api-presence-penalty-btn').addEventListener('click', () => {
       presenceSlider.value = 0.0;
@@ -2868,7 +2915,14 @@ ${qaContext}
         const response = await fetch(`${proxyUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.8 }),
+          body: JSON.stringify((() => {
+            let reqBody = { model: model, messages: [{ role: 'user', content: systemPrompt }], temperature: 0.8 };
+            if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+            if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+            if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+            if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+            return reqBody;
+          })()),
           signal: truthGameState.abortController.signal
         });
         clearTimeout(timeoutId);
@@ -2978,11 +3032,18 @@ ${qaContext}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: conversationHistory,
-            temperature: 0.8
-          }),
+          body: JSON.stringify((() => {
+            let reqBody = {
+              model: model,
+              messages: conversationHistory,
+              temperature: 0.8
+            };
+            if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+            if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+            if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+            if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+            return reqBody;
+          })()),
           signal: truthGameState.abortController.signal
         });
 
@@ -3659,14 +3720,21 @@ ${truthGameHistoryContext}
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
               },
-              body: JSON.stringify({
-                model: model,
-                messages: [{
-                  role: 'user',
-                  content: `请将以下内容翻译成中文，只输出翻译结果，不要有任何解释：\n\n${textToSend}`
-                }],
-                temperature: 0.3
-              })
+              body: JSON.stringify((() => {
+                let reqBody = {
+                  model: model,
+                  messages: [{
+                    role: 'user',
+                    content: `请将以下内容翻译成中文，只输出翻译结果，不要有任何解释：\n\n${textToSend}`
+                  }],
+                  temperature: 0.3
+                };
+                if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+                if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+                if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+                if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+                return reqBody;
+              })())
             });
 
             if (!response.ok) throw new Error('翻译失败');
@@ -3757,11 +3825,18 @@ ${truthGameHistoryContext}
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
               },
-              body: JSON.stringify({
-                model: model,
-                messages: [{ role: 'user', content: prompt }],
-                temperature: 0.8
-              }),
+              body: JSON.stringify((() => {
+                let reqBody = {
+                  model: model,
+                  messages: [{ role: 'user', content: prompt }],
+                  temperature: 0.8
+                };
+                if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+                if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+                if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+                if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+                return reqBody;
+              })()),
               signal: truthGameState.abortController.signal
             });
 
@@ -4850,14 +4925,18 @@ ${linkedContents}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: messagesPayload,
-            temperature: state.globalSettings.apiTemperature || 0.8,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-          })
+          body: JSON.stringify((() => {
+            let reqBody = {
+              model: model,
+              messages: messagesPayload,
+              temperature: state.globalSettings.apiTemperature || 0.8
+            };
+            if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+            if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+            if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+            if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+            return reqBody;
+          })())
         });
 
         if (!apiResponse.ok) {

@@ -290,7 +290,9 @@
       model: 'imagen-4.0-generate-001',
       endpoint: 'https://generativelanguage.googleapis.com',
       aspectRatio: '1:1',
-      numberOfImages: 1
+      numberOfImages: 1,
+      positivePrompt: '',
+      negativePrompt: ''
     };
     const saved = localStorage.getItem('google-imagen-settings');
     if (saved) {
@@ -306,12 +308,17 @@
     const apiKey = document.getElementById('google-imagen-api-key').value.trim();
     const endpoint = document.getElementById('google-imagen-endpoint').value.trim();
     const aspectRatio = document.getElementById('google-imagen-aspect-ratio').value;
+    
+    const posInput = document.getElementById('google-imagen-positive');
+    const negInput = document.getElementById('google-imagen-negative');
+    const positivePrompt = posInput ? posInput.value.trim() : '';
+    const negativePrompt = negInput ? negInput.value.trim() : '';
 
     localStorage.setItem('google-imagen-enabled', enabled);
     localStorage.setItem('google-imagen-model', model);
     localStorage.setItem('google-imagen-api-key', apiKey);
 
-    const settings = { model, endpoint: endpoint || 'https://generativelanguage.googleapis.com', aspectRatio };
+    const settings = { model, endpoint: endpoint || 'https://generativelanguage.googleapis.com', aspectRatio, positivePrompt, negativePrompt };
     localStorage.setItem('google-imagen-settings', JSON.stringify(settings));
   }
 
@@ -328,13 +335,18 @@
     const baseEndpoint = (settings.endpoint || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
     const isGemini = baseEndpoint.includes('generativelanguage.googleapis.com');
 
+    let finalPrompt = aiPrompt;
+    if (settings.positivePrompt) {
+        finalPrompt = finalPrompt + ', ' + settings.positivePrompt;
+    }
+
     let apiUrl, requestBody, headers;
 
     if (isGemini) {
       // 官方 Google API → 用 :predict 端点
       apiUrl = `${baseEndpoint}/v1beta/models/${model}:predict`;
       requestBody = {
-        instances: [{ prompt: aiPrompt }],
+        instances: [{ prompt: finalPrompt }],
         parameters: {
           sampleCount: 1,
           aspectRatio: settings.aspectRatio || '1:1'
@@ -349,10 +361,13 @@
       apiUrl = `${baseEndpoint}/v1/images/generations`;
       requestBody = {
         model: model,
-        prompt: aiPrompt,
+        prompt: finalPrompt,
         response_format: 'b64_json',
         n: 1
       };
+      if (settings.negativePrompt) {
+          requestBody.negative_prompt = settings.negativePrompt;
+      }
       headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getRandomValue(apiKey)}`

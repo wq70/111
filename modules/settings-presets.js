@@ -133,9 +133,21 @@
         </div>
       </div>
       <div id="profile-thoughts-history-view">
-        <div class="profile-header"> <span>心声记录</span> <button id="history-back-btn" title="返回"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg> </button> </div>
+        <div class="profile-header"> 
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span>心声记录</span> 
+                <button id="manage-thoughts-btn" style="background:var(--bg-secondary); border:1px solid var(--border-color); color:var(--text-secondary); cursor:pointer; font-size:12px; padding: 4px 10px; border-radius: 12px;">管理</button>
+            </div>
+            <button id="history-back-btn" title="返回"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg> </button> 
+        </div>
+        <div id="thoughts-action-bar" style="display: none; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--bg-color); border-bottom: 1px solid var(--border-color);">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: var(--text-color);">
+                <input type="checkbox" id="select-all-thoughts-checkbox"> 全选
+            </label>
+            <button id="delete-selected-thoughts-btn" class="btn-danger" style="padding: 6px 15px; border-radius: 15px; border: none; color: white; cursor: pointer;">删除</button>
+        </div>
         <div id="thoughts-history-list"></div>
       </div>`;
   }
@@ -1187,6 +1199,12 @@
       safeRenderSwitch.checked = state.globalSettings.safeRenderMode || false;
     }
     
+    // 加载主对话流式输出开关状态
+    const apiStreamSwitch = document.getElementById('enable-api-stream-switch');
+    if (apiStreamSwitch) {
+      apiStreamSwitch.checked = state.globalSettings.enableApiStream || false;
+    }
+    
     // 加载悬浮球开关状态
     const floatingBallSwitch = document.getElementById('floating-ball-switch');
     if (floatingBallSwitch) {
@@ -1270,6 +1288,8 @@
     document.getElementById('google-imagen-api-key').value = googleImagenApiKey;
     document.getElementById('google-imagen-endpoint').value = googleImagenSettings.endpoint || 'https://generativelanguage.googleapis.com';
     document.getElementById('google-imagen-aspect-ratio').value = googleImagenSettings.aspectRatio || '1:1';
+    if(document.getElementById('google-imagen-positive')) document.getElementById('google-imagen-positive').value = googleImagenSettings.positivePrompt || '';
+    if(document.getElementById('google-imagen-negative')) document.getElementById('google-imagen-negative').value = googleImagenSettings.negativePrompt || '';
     document.getElementById('google-imagen-details').style.display = googleImagenEnabled ? 'block' : 'none';
 
     const imgbbEnableSwitch = document.getElementById('imgbb-enable-switch');

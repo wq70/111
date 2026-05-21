@@ -408,12 +408,15 @@
     p = p.replace(/\$\{chat\.name\}/g, '{{chat.name}}');
     p = p.replace(/\$\{chat\.settings\.aiPersona\}/g, '{{aiPersona}}');
     p = p.replace(/\$\{latestThoughtContext\}/g, '{{latestThoughtContext}}');
-    p = p.replace(/\$\{worldBookContent[^\}]*\}/g, '{{worldBookContent}}');
+    p = p.replace(/\$\{worldBookContent\s*\|\|[^}]*\}/g, '{{worldBookContent}}');
+    p = p.replace(/\$\{worldBookContent\}/g, '{{worldBookContent}}');
     p = p.replace(/\$\{getMemoryContextForPrompt\(chat\)\}/g, '{{memoryContextForPrompt}}');
     p = p.replace(/\$\{multiLayeredSummaryContext\}/g, '{{multiLayeredSummaryContext}}');
+    p = p.replace(/\$\{multiLayeredSummaryContext_group\}/g, '{{multiLayeredSummaryContext_group}}');
     p = p.replace(/\$\{todoListContext\}/g, '{{todoListContext}}');
     p = p.replace(/\$\{periodSummaryContext\}/g, '{{periodSummaryContext}}');
     p = p.replace(/\$\{myNickname\}/g, '{{myNickname}}');
+    p = p.replace(/\$\{myOriginalName\}/g, '{{myOriginalName}}');
     p = p.replace(/\$\{chat\.settings\.myPersona[^\}]*\}/g, '{{myPersona}}');
     
     // 特别处理连着两个 ${} 的 status，如 ${chat.settings.userStatus ? ...} ${chat...}
@@ -425,6 +428,7 @@
     p = p.replace(/\$\{chat\.settings\.enableTimePerception[^\n]*\}/g, '{{timePerceptionContext}}');
     p = p.replace(/\$\{weatherContext\}/g, '{{weatherContext}}');
     p = p.replace(/\$\{timeContext\}/g, '{{timeContext}}');
+    p = p.replace(/\$\{timeContextText\}/g, '{{groupTimeContextText}}');
     p = p.replace(/\$\{musicContext\s*\?[^\n]*\}/g, '{{musicContextStr}}');
     p = p.replace(/\$\{readingContext\s*\?[^\n]*\}/g, '{{readingContextStr}}');
     p = p.replace(/\$\{contactsList\}/g, '{{contactsList}}');
@@ -439,11 +443,43 @@
     p = p.replace(/\$\{coupleSpaceContext\}/g, '{{coupleSpaceContext}}');
     p = p.replace(/\$\{thoughtsPrompt\}/g, '{{thoughtsPrompt}}');
     p = p.replace(/\$\{stickerContext\}/g, '{{stickerContext}}');
-    p = p.replace(/\$\{chat\.settings\.aiAvatarLibrary\}/g, '{{aiAvatarLibrary}}');
-    p = p.replace(/\$\{chat\.settings\.myAvatarLibrary\}/g, '{{myAvatarLibrary}}');
+    p = p.replace(/\$\{chat\.settings\.aiAvatarLibrary[^\n]*\}/g, '{{aiAvatarLibrary}}');
+    p = p.replace(/\$\{chat\.settings\.myAvatarLibrary[^\n]*\}/g, '{{myAvatarLibrary}}');
 
-    // 尝试把遗漏的简单 ${xxx} 转成 {{xxx}}
-    p = p.replace(/\$\{([^}]+)\}/g, '{{$1}}');
+    p = p.replace(/\$\{chat\.longTermMemory[\s\S]*?暂无\)'\}/g, '{{memoryContextForPrompt}}');
+    p = p.replace(/\$\{chat\.settings\.enableDynamicCurrency[\s\S]*?CNY[\s\S]*?''\}/g, '');
+    p = p.replace(/\$\{chat\.settings\.enableDynamicCurrency[\s\S]*?货币与汇率信息[\s\S]*?''\}/g, '{{currencyExchangeContext}}');
+    p = p.replace(/\$\{chat\.settings\.enableDynamicCurrency[\s\S]*?注意：你可以自由选择货币[\s\S]*?''\}/g, '');
+    p = p.replace(/\$\{historySlice[\s\S]*?join\('\\n'\)\}/g, '{{historySliceStr}}');
+    p = p.replace(/\$\{membersWithContacts\}/g, '{{membersWithContacts}}');
+    p = p.replace(/\$\{membersList\}/g, '{{membersList}}');
+    p = p.replace(/\$\{longTermMemoryContext\}/g, '{{longTermMemoryContext}}');
+    p = p.replace(/\$\{linkedMemoryContext\}/g, '{{linkedMemoryContext}}');
+    p = p.replace(/\$\{presetContext\}/g, '{{presetContext}}');
+    p = p.replace(/\$\{minLength\}/g, '{{minLength}}');
+    p = p.replace(/\$\{maxLength\}/g, '{{maxLength}}');
+    p = p.replace(/\$\{formatRules\}/g, '{{formatRules}}');
+    p = p.replace(/\$\{userDisplayNameForAI\}/g, '{{userDisplayNameForAI}}');
+    p = p.replace(/\$\{recentHistory\}/g, '{{recentHistory}}');
+    p = p.replace(/\$\{auctionContext\}/g, '{{auctionContext}}');
+    p = p.replace(/\$\{charList\}/g, '{{charList}}');
+    p = p.replace(/\$\{truthGameHistoryContext\}/g, '{{truthGameHistoryContext}}');
+    p = p.replace(/\$\{question\}/g, '{{question}}');
+    p = p.replace(/\$\{userPersona\}/g, '{{userPersona}}');
+    p = p.replace(/\$\{shortTermMemoryContext\}/g, '{{shortTermMemoryContext}}');
+    p = p.replace(/\$\{mountedMemoryContext\}/g, '{{mountedMemoryContext}}');
+    p = p.replace(/\$\{mainChatHistory\s*\|\|\s*'无'\}/g, '{{mainChatHistory}}');
+    p = p.replace(/\$\{drawGuessHistory\s*\|\|\s*'无'\}/g, '{{drawGuessHistory}}');
+    p = p.replace(/\$\{drawGuessHistory\s*\|\|\s*'（游戏刚开始）'\}/g, '{{drawGuessHistory}}');
+    p = p.replace(/\$\{userNickname\}/g, '{{userNickname}}');
+    p = p.replace(/\$\{canvasContentDescription\}/g, '{{canvasContentDescription}}');
+    p = p.replace(/\$\{shortTermMemory\s*\|\|\s*'（暂无）'\}/g, '{{shortTermMemory}}');
+    p = p.replace(/\$\{longTermMemory\s*\|\|\s*'（暂无）'\}/g, '{{longTermMemory}}');
+    p = p.replace(/\$\{finalInstruction\}/g, '{{finalInstruction}}');
+    p = p.replace(/\$\{new Date\(\)\.toLocaleDateString\('zh-CN'\)\}/g, '{{currentDate}}');
+
+    // 针对任意剩余的 ${xxx}，仅匹配由字母、数字、下划线、小数点组成的变量，避免破坏复杂的脚本结构
+    p = p.replace(/\$\{([a-zA-Z0-9_.]+)\}/g, '{{$1}}');
 
     // 2. 将 {{xxx}} 变量映射到 contextMap 真实数据
     return p.replace(/\{\{([^{}]+)\}\}/g, (match, key) => {
@@ -566,6 +602,84 @@
       type: 'text',
       content: content
     }];
+  }
+
+  function getStreamDeltaText(delta) {
+    if (!delta) return '';
+
+    if (typeof delta.content === 'string') {
+      return delta.content;
+    }
+
+    if (Array.isArray(delta.content)) {
+      return delta.content.map(part => {
+        if (typeof part === 'string') return part;
+        if (typeof part?.text === 'string') return part.text;
+        return '';
+      }).join('');
+    }
+
+    return '';
+  }
+
+  async function readOpenAiStreamResponse(response, onChunk) {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('当前响应不支持流式读取。');
+    }
+
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let fullText = '';
+
+    function processEventBlock(block) {
+      const lines = block.split(/\r?\n/);
+
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+
+        const payload = line.slice(5).trim();
+        if (!payload) continue;
+        if (payload === '[DONE]') return true;
+
+        try {
+          const json = JSON.parse(payload);
+          const deltaText = getStreamDeltaText(json.choices?.[0]?.delta);
+          if (!deltaText) continue;
+
+          fullText += deltaText;
+          if (typeof onChunk === 'function') {
+            onChunk(fullText, json);
+          }
+        } catch (error) {
+          console.warn('流式分片解析失败，已跳过:', payload, error);
+        }
+      }
+
+      return false;
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+
+      const eventBlocks = buffer.split(/\r?\n\r?\n/);
+      buffer = eventBlocks.pop() || '';
+
+      for (const block of eventBlocks) {
+        if (processEventBlock(block)) {
+          return fullText;
+        }
+      }
+
+      if (done) {
+        const remaining = buffer.trim();
+        if (remaining) {
+          processEventBlock(remaining);
+        }
+        return fullText;
+      }
+    }
   }
 
 
@@ -732,23 +846,25 @@ ${linkedContents}
         let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload);
         response = await fetch(geminiConfig.url, geminiConfig.data);
       } else {
+      let reqBody = {
+            model: model,
+            messages: [{
+              role: 'system',
+              content: systemPrompt
+            }, ...messagesPayload],
+            temperature: state.globalSettings.apiTemperature || 0.9
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
         response = await fetch(`${proxyUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesPayload],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-          })
+          body: JSON.stringify(reqBody)
         });
       }
 
@@ -904,6 +1020,7 @@ ${linkedContents}
     setAvatarActingState(chatId, true);
     const chatHeaderTitle = document.getElementById('chat-header-title');
     const typingIndicator = document.getElementById('typing-indicator');
+    const stopBtn = document.getElementById('stop-api-call-btn');
 
     const chatListItem = document.querySelector(`.chat-list-item[data-chat-id="${chatId}"]`);
     const avatarInList = chatListItem ? chatListItem.querySelector('.avatar') : null;
@@ -1002,11 +1119,18 @@ ${linkedContents}
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-              model: model,
-              messages: messagesForCallDecision,
-              temperature: 0.7
-            })
+            body: JSON.stringify((() => {
+              let reqBody = {
+                model: model,
+                messages: messagesForCallDecision,
+                temperature: 0.7,
+                ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+                ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+                ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+                ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
+              };
+              return reqBody;
+            })())
           });
 
           if (!response.ok) {
@@ -1141,11 +1265,18 @@ ${linkedContents}
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-              model: model,
-              messages: messagesForCallDecision,
-              temperature: 0.7
-            })
+            body: JSON.stringify((() => {
+              let reqBody = {
+                model: model,
+                messages: messagesForCallDecision,
+                temperature: 0.7,
+                ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+                ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+                ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+                ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
+              };
+              return reqBody;
+            })())
           });
 
           if (!response.ok) {
@@ -1345,14 +1476,18 @@ ${linkedContents}
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
               },
-              body: JSON.stringify({
-                model: model,
-                messages: messagesForDecision,
-                temperature: state.globalSettings.apiTemperature || 0.8,
-                top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-                presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-                frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-              })
+              body: JSON.stringify((() => {
+                let reqBody = {
+                  model: model,
+                  messages: messagesForDecision,
+                  temperature: state.globalSettings.apiTemperature || 0.8,
+                  ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+                  ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+                  ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+                  ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
+                };
+                return reqBody;
+              })())
             });
 
           if (!response.ok) {
@@ -3411,11 +3546,11 @@ ${getActiveThoughtsPrompt()}
       currentApiController = new AbortController();
 
       // 显示暂停调用按钮
-      const stopBtn = document.getElementById('stop-api-call-btn');
       if (stopBtn) {
         stopBtn.style.display = 'flex';
         stopBtn.classList.add('active');
       }
+      const useStream = !isGemini && !!state.globalSettings.enableApiStream;
 
       // 记录API请求数据
       const requestData = {
@@ -3429,15 +3564,83 @@ ${getActiveThoughtsPrompt()}
           content: systemPrompt
         }, ...messagesPayload],
         temperature: state.globalSettings.apiTemperature || 0.8,
-        top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-        presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-        frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0,
+        ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+        ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+        ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+        ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {}),
+        stream: useStream,
         isGemini: isGemini,
         apiUrl: isGemini ? geminiConfig.url : `${proxyUrl}/v1/chat/completions`
       };
 
       let response;
+      let aiResponseContent = '';
+      let responsePayload = null;
+      let temporaryStreamMessage = null;
+      let lastStreamRenderAt = 0;
+      let streamRenderPending = false;
+      let streamRenderQueued = false;
+
+      function scheduleStreamRender(force = false) {
+        if (!isViewingThisChat) return;
+
+        const now = Date.now();
+        if (!force && now - lastStreamRenderAt < 120) {
+          return;
+        }
+        if (streamRenderPending) {
+          streamRenderQueued = true;
+          return;
+        }
+
+        lastStreamRenderAt = now;
+        streamRenderPending = true;
+        Promise.resolve(renderChatInterface(chatId))
+          .catch(error => console.warn('流式渲染更新失败:', error))
+          .finally(() => {
+            streamRenderPending = false;
+            if (streamRenderQueued) {
+              streamRenderQueued = false;
+              scheduleStreamRender(true);
+            }
+          });
+      }
+
+      function updateTemporaryStreamMessage(content) {
+        if (!isViewingThisChat) return;
+
+        const streamContent = content || '...';
+        if (!temporaryStreamMessage) {
+          temporaryStreamMessage = {
+            timestamp: Date.now(),
+            role: 'assistant',
+            senderName: chat.name,
+            type: 'text',
+            content: streamContent,
+            isTemporary: true
+          };
+          chat.history.push(temporaryStreamMessage);
+        } else {
+          temporaryStreamMessage.content = streamContent;
+        }
+
+        scheduleStreamRender();
+      }
+
       try {
+        let reqBody = {
+            model: model,
+            messages: [{
+                role: 'system',
+                content: systemPrompt
+            }, ...messagesPayload],
+            temperature: state.globalSettings.apiTemperature || 0.8,
+            stream: useStream,
+            ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+            ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+            ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+            ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
+        };
         response = isGemini ?
           await fetch(geminiConfig.url, {
             ...geminiConfig.data,
@@ -3449,41 +3652,14 @@ ${getActiveThoughtsPrompt()}
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-              model: model,
-              messages: [{
-                role: 'system',
-                content: systemPrompt
-              }, ...messagesPayload],
-              temperature: state.globalSettings.apiTemperature || 0.8,
-              top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-              presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-              frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0,
-              stream: false
-            }),
+            body: JSON.stringify(reqBody),
             signal: currentApiController.signal
           });
       } catch (networkError) {
-        // 隐藏暂停调用按钮
-        if (stopBtn) {
-          stopBtn.style.display = 'none';
-          stopBtn.classList.remove('active');
-        }
-
-        // 检查是否是用户主动取消
         if (networkError.name === 'AbortError') {
-          console.log('API调用已被用户取消');
-          // 不添加任何消息到聊天历史，避免AI看到系统消息而困惑
-          return;
+          throw networkError;
         }
         throw new Error(`网络请求失败: ${networkError.message}`);
-      } finally {
-        // 清理 controller 和隐藏按钮
-        currentApiController = null;
-        if (stopBtn) {
-          stopBtn.style.display = 'none';
-          stopBtn.classList.remove('active');
-        }
       }
 
       if (!response.ok) {
@@ -3501,14 +3677,29 @@ ${getActiveThoughtsPrompt()}
         throw new Error(errorMsg);
       }
 
-      const data = await response.json();
-      const aiResponseContent = getGeminiResponseText(data);
+      if (useStream) {
+        aiResponseContent = await readOpenAiStreamResponse(response, streamedText => {
+          updateTemporaryStreamMessage(streamedText);
+        });
+        responsePayload = {
+          stream: true,
+          content: aiResponseContent
+        };
+        if (temporaryStreamMessage) {
+          temporaryStreamMessage.content = aiResponseContent || temporaryStreamMessage.content;
+          scheduleStreamRender(true);
+        }
+      } else {
+        const data = await response.json();
+        aiResponseContent = getGeminiResponseText(data);
+        responsePayload = data;
+      }
 
       // 记录API响应数据
       const responseData = {
         ...requestData,
         responseTimestamp: Date.now(),
-        responseData: data,
+        responseData: responsePayload,
         aiResponseContent: aiResponseContent,
         responseStatus: response.status,
         responseStatusText: response.statusText
@@ -6255,6 +6446,12 @@ ${getActiveThoughtsPrompt()}
 
       chat.history = chat.history.filter(msg => !msg.isTemporary);
 
+      if (error.name === 'AbortError') {
+        console.log('API调用已被用户取消');
+        videoCallState.isAwaitingResponse = false;
+        return;
+      }
+
       if (!chat.isGroup && chat.relationship?.status === 'pending_ai_approval') {
         chat.relationship.status = 'blocked_by_ai';
         await showCustomAlert('申请失败', `AI在处理你的好友申请时出错了，请稍后重试。\n错误信息: ${error.message}`);
@@ -6271,6 +6468,11 @@ ${getActiveThoughtsPrompt()}
 
       videoCallState.isAwaitingResponse = false;
     } finally {
+      currentApiController = null;
+      if (stopBtn) {
+        stopBtn.style.display = 'none';
+        stopBtn.classList.remove('active');
+      }
       setAvatarActingState(chatId, false);
 
 
@@ -6566,6 +6768,18 @@ ${linkedContents}
       let isGemini = proxyUrl === GEMINI_API_URL;
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
+      let reqBody = {
+            model: model,
+            messages: [{
+              role: 'system',
+              content: systemPrompt
+            }, ...messagesForApi],
+            temperature: state.globalSettings.apiTemperature || 0.8,
+            ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
+            ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined ? { max_tokens: state.globalSettings.apiMaxTokens } : {}),
+            ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
+            ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
+      };
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
@@ -6574,17 +6788,7 @@ ${linkedContents}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.8,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-          })
+          body: JSON.stringify(reqBody)
         });
 
       if (!response.ok) {

@@ -1055,6 +1055,19 @@ ${recentHistoryWithUser}
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
 
+      let reqBody = {
+        model: model,
+        messages: [{
+          role: 'system',
+          content: systemPrompt
+        }, ...messagesForApi],
+        temperature: state.globalSettings.apiTemperature || 0.95
+      };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
@@ -1063,18 +1076,7 @@ ${recentHistoryWithUser}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.95,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-
-          })
+          body: JSON.stringify(reqBody)
         });
 
 
@@ -1187,23 +1189,25 @@ ${recentHistoryWithUser}
       }];
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
+      let reqBody = {
+          model: model,
+          messages: [{
+            role: 'system',
+            content: systemPrompt
+          }, ...messagesForApi],
+          temperature: state.globalSettings.apiTemperature || 0.95
+      };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
       const response = isGemini ? await fetch(geminiConfig.url, geminiConfig.data) : await fetch(`${proxyUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify({
-          model: model,
-          messages: [{
-            role: 'system',
-            content: systemPrompt
-          }, ...messagesForApi],
-          temperature: state.globalSettings.apiTemperature || 0.95,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-          })
+        body: JSON.stringify(reqBody)
         });
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
       const data = await response.json();
@@ -1722,29 +1726,30 @@ ${stickerContext}
         role: 'user',
         content: "请根据你的设定，生成模拟聊天记录。"
       }];
-      let isGemini = proxyUrl.includes('generativelanguage');
-      let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
-
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let isGemini = proxyUrl.includes('generativelanguage');
+        let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
+        let reqBody = {
             model: model,
             messages: [{
               role: 'system',
               content: systemPrompt
             }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-          })
-        });
+            temperature: state.globalSettings.apiTemperature || 0.95
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -1906,26 +1911,28 @@ ${historySlice.map(msg => `${msg.role === 'user' ? myNickname : chat.name}: ${St
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: [{
               role: 'system',
               content: systemPrompt
             }, ...messagesPayload],
-            temperature: state.globalSettings.apiTemperature || 0.8,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0,
-          })
-        });
+            temperature: state.globalSettings.apiTemperature || 0.95
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) {
         throw new Error(`API 请求失败: ${(await response.json()).error.message}`);
@@ -2410,7 +2417,18 @@ ${recentHistoryWithUser}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
-
+      let reqBody = {
+          model: model,
+          messages: [{
+            role: 'system',
+            content: systemPrompt
+          }, ...messagesForApi],
+          temperature: state.globalSettings.apiTemperature || 0.9
+      };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
@@ -2419,18 +2437,7 @@ ${recentHistoryWithUser}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-
-          })
+          body: JSON.stringify(reqBody)
         });
 
 
@@ -2562,7 +2569,18 @@ ${recentHistoryWithUser}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
-
+      let reqBody = {
+          model: model,
+          messages: [{
+            role: 'system',
+            content: systemPrompt
+          }, ...messagesForApi],
+          temperature: state.globalSettings.apiTemperature || 0.9
+      };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
@@ -2571,18 +2589,7 @@ ${recentHistoryWithUser}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-
-          })
+          body: JSON.stringify(reqBody)
         });
 
 
@@ -2829,7 +2836,18 @@ ${recentHistoryWithUser}
       }];
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
-
+      let reqBody = {
+            model: model,
+            messages: [{
+              role: 'system',
+              content: systemPrompt
+            }, ...messagesForApi],
+            temperature: state.globalSettings.apiTemperature || 0.9
+      };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
@@ -2838,17 +2856,7 @@ ${recentHistoryWithUser}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-          })
+          body: JSON.stringify(reqBody)
         });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
@@ -3095,27 +3103,28 @@ ${recentHistoryWithUser}
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: [{
               role: 'system',
               content: systemPrompt
             }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-
-          })
-        });
+            temperature: state.globalSettings.apiTemperature || 0.9
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
 
       if (!response.ok) {
@@ -3262,27 +3271,28 @@ ${recentHistoryWithUser}
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: [{
               role: 'system',
               content: systemPrompt
             }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-
-          })
-        });
+            temperature: state.globalSettings.apiTemperature || 0.9
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
@@ -3458,27 +3468,28 @@ ${recentHistoryWithUser}
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: [{
               role: 'system',
               content: systemPrompt
             }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 0.9,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0
-            // response_format: { "type": "json_object" } <-- 此行已被删除
-          })
-        });
+            temperature: state.globalSettings.apiTemperature || 0.9
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
@@ -3621,14 +3632,18 @@ ${recentHistoryWithUser}
         await fetch(`${proxyUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: model,
-            messages: [{ role: 'system', content: systemPrompt }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 1.0,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0,
-          })
+          body: JSON.stringify((() => {
+            let reqBody = {
+              model: model,
+              messages: [{ role: 'system', content: systemPrompt }, ...messagesForApi],
+              temperature: state.globalSettings.apiTemperature || 1.0
+            };
+            if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+            if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+            if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+            if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+            return reqBody;
+          })())
         });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
@@ -3858,17 +3873,21 @@ ${recentHistoryWithUser}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, ...messagesForApi],
-            temperature: state.globalSettings.apiTemperature || 1.0,
-            top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0,
-            presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0,
-            frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0,
-          })
+          body: JSON.stringify((() => {
+            let reqBody = {
+              model: model,
+              messages: [{
+                role: 'system',
+                content: systemPrompt
+              }, ...messagesForApi],
+              temperature: state.globalSettings.apiTemperature || 1.0
+            };
+            if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+            if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+            if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+            if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+            return reqBody;
+          })())
         });
 
 
@@ -3932,6 +3951,9 @@ ${recentHistoryWithUser}
 
     const prompt = `你现在要扮演"${userDisplayNameForAI}"（也就是我），基于我与"${chat.name}"的对话历史，推测我的性格、兴趣和社交圈，然后生成我的QQ聊天记录。
 
+# 核心规则
+1. **【时间铁律 (最高优先级)】**: 今天的日期是 **${new Date().toLocaleDateString('zh-CN')}**。绝对禁止生成任何未来的日期！请确保聊天记录的时间是在今天或最近的过去。
+
 ## 我与"${chat.name}"的最近对话：
 ${recentHistory}
 
@@ -3945,8 +3967,8 @@ ${recentHistory}
     "avatar": "",
     "lastMessage": "最后一条消息预览",
     "messages": [
-      {"role": "user", "content": "我发送的消息", "timestamp": "2024-01-01T12:00:00Z"},
-      {"role": "assistant", "content": "对方的回复", "timestamp": "2024-01-01T12:01:00Z"}
+      {"role": "user", "content": "我发送的消息", "timestamp": "符合ISO 8601格式的近期时间"},
+      {"role": "assistant", "content": "对方的回复", "timestamp": "符合ISO 8601格式的近期时间"}
     ]
   }
 ]`;
@@ -3956,6 +3978,15 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
+      let reqBody = {
+          model: model,
+          messages: messagesForApi,
+          temperature: 0.8
+      };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
@@ -3964,11 +3995,7 @@ ${recentHistory}
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            model: model,
-            messages: messagesForApi,
-            temperature: 0.8
-          })
+          body: JSON.stringify(reqBody)
         });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
@@ -4031,20 +4058,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4087,6 +4119,9 @@ ${recentHistory}
 
     const prompt = `你现在要扮演"${userDisplayNameForAI}"（也就是我），基于我与"${chat.name}"的对话历史，推测我的兴趣和关注点，然后生成我的浏览器历史记录。
 
+# 核心规则
+1. **【时间铁律 (最高优先级)】**: 今天的日期是 **${new Date().toLocaleDateString('zh-CN')}**。绝对禁止生成任何未来的日期！
+
 ## 我与"${chat.name}"的最近对话：
 ${recentHistory}
 
@@ -4107,20 +4142,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4163,6 +4203,9 @@ ${recentHistory}
 
     const prompt = `你现在要扮演"${userDisplayNameForAI}"（也就是我），基于我与"${chat.name}"的对话历史，推测我的生活需求和消费习惯，然后生成我的淘宝购物记录。
 
+# 核心规则
+1. **【时间铁律 (最高优先级)】**: 今天的日期是 **${new Date().toLocaleDateString('zh-CN')}**。绝对禁止生成任何未来的日期！购买日期必须是今天或最近的过去。
+
 ## 我与"${chat.name}"的最近对话：
 ${recentHistory}
 
@@ -4174,7 +4217,7 @@ ${recentHistory}
   {
     "name": "商品名称",
     "price": "价格（数字）",
-    "date": "购买日期",
+    "date": "购买日期（例如：${new Date().toLocaleDateString('zh-CN')}）",
     "reason": "购买理由（简短描述为什么买这个商品）"
   }
 ]`;
@@ -4184,20 +4227,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4240,6 +4288,9 @@ ${recentHistory}
 
     const prompt = `你现在要扮演"${userDisplayNameForAI}"（也就是我），基于我与"${chat.name}"的对话历史，推测我的生活状态和待办事项，然后生成我的备忘录。
 
+# 核心规则
+1. **【时间铁律 (最高优先级)】**: 今天的日期是 **${new Date().toLocaleDateString('zh-CN')}**。绝对禁止生成任何未来的日期！记录日期必须是今天或最近的过去。
+
 ## 我与"${chat.name}"的最近对话：
 ${recentHistory}
 
@@ -4251,7 +4302,7 @@ ${recentHistory}
   {
     "title": "备忘录标题",
     "content": "备忘录内容",
-    "date": "日期"
+    "date": "日期（例如：${new Date().toLocaleDateString('zh-CN')}）"
   }
 ]`;
 
@@ -4260,20 +4311,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4316,6 +4372,9 @@ ${recentHistory}
 
     const prompt = `你现在要扮演"${userDisplayNameForAI}"（也就是我），基于我与"${chat.name}"的对话历史，推测我的内心世界和生活感受，然后生成我的日记。
 
+# 核心规则
+1. **【时间铁律 (最高优先级)】**: 今天的日期是 **${new Date().toLocaleDateString('zh-CN')}**。绝对禁止生成任何未来的日期！日记日期必须是今天或最近的过去。
+
 ## 我与"${chat.name}"的最近对话：
 ${recentHistory}
 
@@ -4327,7 +4386,7 @@ ${recentHistory}
   {
     "title": "日记标题",
     "content": "日记内容（100-200字，第一人称）",
-    "date": "日期"
+    "date": "日期（例如：${new Date().toLocaleDateString('zh-CN')}）"
   }
 ]`;
 
@@ -4336,20 +4395,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4392,6 +4456,9 @@ ${recentHistory}
 
     const prompt = `你现在要扮演"${userDisplayNameForAI}"（也就是我），基于我与"${chat.name}"的对话历史，推测我的活动范围和生活轨迹，然后生成我的足迹记录。
 
+# 核心规则
+1. **【时间铁律 (最高优先级)】**: 今天的日期是 **${new Date().toLocaleDateString('zh-CN')}**。绝对禁止生成任何未来的日期！访问时间必须是今天或最近的过去。
+
 ## 我与"${chat.name}"的最近对话：
 ${recentHistory}
 
@@ -4403,7 +4470,7 @@ ${recentHistory}
   {
     "name": "地点名称",
     "address": "详细地址",
-    "time": "访问时间"
+    "time": "访问时间（例如：${new Date().toLocaleDateString('zh-CN')} 14:30）"
   }
 ]`;
 
@@ -4412,20 +4479,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4525,20 +4597,25 @@ ${recentHistory}
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, '', messagesForApi);
 
-      const response = isGemini ?
-        await fetch(geminiConfig.url, geminiConfig.data) :
-        await fetch(`${proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
+        let reqBody = {
             model: model,
             messages: messagesForApi,
             temperature: 0.8
-          })
-        });
+        };
+        if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+        if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+        if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+        if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
+        const response = isGemini ?
+          await fetch(geminiConfig.url, geminiConfig.data) :
+          await fetch(`${proxyUrl}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(reqBody)
+          });
 
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
 
@@ -4975,8 +5052,18 @@ ${recentHistory}
     videoEl.play().catch(e => console.log("Autoplay blocked", e));
   }
 
+  function closeCharBilibiliPlayer() {
+    const videoEl = document.getElementById('char-bilibili-video');
+    if (videoEl) {
+      videoEl.pause();
+      videoEl.src = '';
+    }
+    switchToCharScreen('char-bilibili-screen');
+  }
+
   window.handleCharBilibiliSearch = handleCharBilibiliSearch;
   window.playCharBilibiliVideo = playCharBilibiliVideo;
+  window.closeCharBilibiliPlayer = closeCharBilibiliPlayer;
 
   // ========== 从 script.js 迁移：handleEditText, handleEditImage ==========
 
@@ -5491,12 +5578,17 @@ ${recentHistoryWithUser}
       const messagesForApi = [{ role: 'user', content: "请生成Reddit关键词列表。" }];
       let isGemini = proxyUrl.includes('generativelanguage');
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
+      let reqBody = { model: model, messages: [{ role: 'system', content: systemPrompt }, ...messagesForApi], temperature: state.globalSettings.apiTemperature || 1.0 };
+      if (state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined) reqBody.top_p = state.globalSettings.apiTopP;
+      if (state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens > 0) reqBody.max_tokens = state.globalSettings.apiMaxTokens;
+      if (state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined) reqBody.presence_penalty = state.globalSettings.apiPresencePenalty;
+      if (state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined) reqBody.frequency_penalty = state.globalSettings.apiFrequencyPenalty;
       const response = isGemini ?
         await fetch(geminiConfig.url, geminiConfig.data) :
         await fetch(`${proxyUrl}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: model, messages: [{ role: 'system', content: systemPrompt }, ...messagesForApi], temperature: state.globalSettings.apiTemperature || 1.0, top_p: state.globalSettings.apiTopP !== undefined ? state.globalSettings.apiTopP : 1.0, presence_penalty: state.globalSettings.apiPresencePenalty !== undefined ? state.globalSettings.apiPresencePenalty : 0.0, frequency_penalty: state.globalSettings.apiFrequencyPenalty !== undefined ? state.globalSettings.apiFrequencyPenalty : 0.0 })
+          body: JSON.stringify(reqBody)
         });
       if (!response.ok) throw new Error(`API 错误: ${response.statusText}`);
       const data = await response.json();
