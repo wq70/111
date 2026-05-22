@@ -3424,14 +3424,15 @@ ${memoryContent}
             const rewriteBtn = document.getElementById('custom-modal-rewrite');
             const cancelBtn = document.getElementById('custom-modal-cancel');
 
-            confirmBtn.onclick = () => { hideCustomModal(); resolve({action: 'confirm'}); };
-            cancelBtn.onclick = () => { hideCustomModal(); resolve({action: 'cancel'}); };
+            confirmBtn.onclick = () => { window._modalResolve = null; hideCustomModal(); resolve({action: 'confirm'}); };
+            cancelBtn.onclick = () => { window._modalResolve = null; hideCustomModal(); resolve({action: 'cancel'}); };
             rewriteBtn.onclick = () => { 
                 const fb = document.getElementById('refine-feedback-input').value;
                 if (!fb.trim()) {
                     showToast('请先输入反馈意见再重写', 'info');
                     return;
                 }
+                window._modalResolve = null; 
                 hideCustomModal(); 
                 resolve({action: 'rewrite', feedback: fb}); 
             };

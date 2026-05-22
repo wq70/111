@@ -795,7 +795,7 @@
 
         case 'naiimag': {
           const originalMsg = chat.history[messageIndex];
-          let newPrompt = parsedResult.prompt;
+          let newPrompt = parsedResult.prompt || parsedResult.image_prompt || parsedResult.description;
 
 
           let newImageUrl = parsedResult.imageUrl;
@@ -838,7 +838,7 @@
 
         case 'googleimag': {
           const originalGoogleMsg = chat.history[messageIndex];
-          let googlePrompt = parsedResult.prompt;
+          let googlePrompt = parsedResult.prompt || parsedResult.image_prompt || parsedResult.description;
           let googleImageUrl = parsedResult.imageUrl;
           let googleFullPrompt = parsedResult.fullPrompt;
           let googlePromptChanged = false;
@@ -1499,7 +1499,7 @@
           break;
 
         case 'naiimag': {
-          const newPrompt = msgData.prompt;
+          const newPrompt = msgData.prompt || msgData.image_prompt || msgData.description;
           let newImageUrl = null;
           let newFullPrompt = null;
 
@@ -1565,7 +1565,7 @@
         }
 
         case 'googleimag': {
-          const googlePrompt = msgData.prompt || 'a beautiful scene';
+          const googlePrompt = msgData.prompt || msgData.image_prompt || msgData.description || 'a beautiful scene';
           let googleImageUrl = null;
           let googleFullPrompt = null;
 

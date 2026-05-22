@@ -916,6 +916,15 @@ ${linkedContents}
           timestamp: currentMessageTimestamp
         };
 
+        if (msgData.type === 'ai_image') {
+          if (localStorage.getItem('novelai-enabled') === 'true') {
+            msgData.type = 'naiimag';
+            msgData.prompt = msgData.image_prompt || msgData.description || 'a beautiful scene';
+          } else if (localStorage.getItem('google-imagen-enabled') === 'true') {
+            msgData.type = 'googleimag';
+            msgData.prompt = msgData.image_prompt || msgData.description || 'a beautiful scene';
+          }
+        }
 
         switch (msgData.type) {
           case 'text':
@@ -3951,6 +3960,16 @@ ${getActiveThoughtsPrompt()}
         };
 
         lastResponseTimestamps.push(currentMessageTimestamp);
+
+        if (msgData.type === 'ai_image') {
+          if (localStorage.getItem('novelai-enabled') === 'true') {
+            msgData.type = 'naiimag';
+            msgData.prompt = msgData.image_prompt || msgData.description || 'a beautiful scene';
+          } else if (localStorage.getItem('google-imagen-enabled') === 'true') {
+            msgData.type = 'googleimag';
+            msgData.prompt = msgData.image_prompt || msgData.description || 'a beautiful scene';
+          }
+        }
 
         switch (msgData.type) {
           case 'add_todo': {

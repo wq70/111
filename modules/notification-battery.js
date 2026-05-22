@@ -330,19 +330,38 @@
       }
 
       // 优先使用 Service Worker（Android/桌面端/iOS PWA）
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        const registration = await navigator.serviceWorker.ready;
-        console.log('[系统通知调试] Service Worker 已就绪');
+      let usedSW = false;
+      if ('serviceWorker' in navigator) {
+        try {
+          // 取消对 navigator.serviceWorker.controller 的强依赖，因为首次加载或更新时可能为 null
+          const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.getRegistration();
+          if (registration && typeof registration.showNotification === 'function') {
+            console.log('[系统通知调试] Service Worker 已就绪，使用 registration.showNotification');
+            await registration.showNotification(title, notifyOptions);
+            usedSW = true;
+            console.log('[系统通知调试] 通知创建成功（通过ServiceWorker）');
+          }
+        } catch (swError) {
+          console.warn('[系统通知调试] Service Worker 方式创建通知失败:', swError);
+        }
+      }
 
-        await registration.showNotification(title, notifyOptions);
-        console.log('[系统通知调试] 通知创建成功（通过ServiceWorker）');
-      } else if ('Notification' in window && Notification.permission === 'granted') {
-        // Fallback 到 Notification API（iOS Safari可能需要）
-        console.log('[系统通知调试] 使用 Notification API fallback');
-        new Notification(title, notifyOptions);
-      } else {
-        console.warn('[系统通知调试] 无可用的通知方式');
-        return;
+      if (!usedSW) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // Fallback 到 Notification API（iOS Safari可能需要）
+          console.log('[系统通知调试] 尝试使用 Notification API fallback');
+          try {
+            new Notification(title, notifyOptions);
+          } catch (error) {
+            console.error('[系统通知调试] Notification 构造函数调用失败:', error);
+            if (error.message && error.message.includes('Illegal constructor')) {
+              console.warn('[系统通知调试] 当前浏览器环境不支持直接 new Notification()');
+            }
+          }
+        } else {
+          console.warn('[系统通知调试] 无可用的通知方式');
+          return;
+        }
       }
 
       // 播放提示音
@@ -431,20 +450,41 @@
       };
 
       // 优先使用 Service Worker（Android/桌面端/iOS PWA）
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        const registration = await navigator.serviceWorker.ready;
-        console.log('[系统通知调试] Service Worker 已就绪');
+      let usedSW = false;
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready || await navigator.serviceWorker.getRegistration();
+          if (registration && typeof registration.showNotification === 'function') {
+            console.log('[系统通知调试] Service Worker 已就绪，使用 registration.showNotification');
+            await registration.showNotification(appName, testNotifyOptions);
+            usedSW = true;
+          }
+        } catch (swError) {
+          console.warn('[系统通知调试] Service Worker 方式创建通知失败:', swError);
+        }
+      }
 
-        await registration.showNotification(appName, testNotifyOptions);
-      } else if ('Notification' in window && Notification.permission === 'granted') {
-        // Fallback 到 Notification API（iOS Safari可能需要）
-        console.log('[系统通知调试] 使用 Notification API fallback');
-        new Notification(appName, testNotifyOptions);
-      } else {
-        alert(isIOS ?
-          '请确保已将网页添加到主屏幕，并在系统设置中允许通知' :
-          '您的浏览器不支持系统通知功能');
-        return;
+      if (!usedSW) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          // Fallback 到 Notification API（iOS Safari可能需要）
+          console.log('[系统通知调试] 尝试使用 Notification API fallback');
+          try {
+            new Notification(appName, testNotifyOptions);
+          } catch (error) {
+            console.error('[系统通知调试] Notification 构造函数调用失败:', error);
+            if (error.message && error.message.includes('Illegal constructor')) {
+              alert('当前浏览器环境限制直接弹出通知，请确保服务正常加载。');
+              return;
+            } else {
+              throw error;
+            }
+          }
+        } else {
+          alert(isIOS ?
+            '请确保已将网页添加到主屏幕，并在系统设置中允许通知' :
+            '您的浏览器不支持系统通知功能');
+          return;
+        }
       }
 
       console.log('[系统通知调试] 测试通知创建成功');
