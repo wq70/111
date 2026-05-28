@@ -30,7 +30,7 @@ class UpdateNotification {
       <div class="update-item">6. 新增可以多图发送识别</div>
       <div class="update-item">7. 新增转换向量可以智能分类与精炼（需要配置向量模型）</div>
       <div class="update-item">8. 新增可以多选删除向量记忆</div>
-      <div class="update-item">9. 新增群聊多人群聊</div>
+      <div class="update-item">9. 新增群聊多人线下</div>
       <div class="update-item">10. 新增收藏可以全选删除</div>
       <div class="update-item">11. 新增后台保活无声。尝试的</div>
       <div class="update-item">12. 新增紧急跳过锁屏</div>
