@@ -113,7 +113,25 @@ document.addEventListener('DOMContentLoaded', () => {
       deviceIdDisplay.value = EPHONE_DEVICE_ID;
       pinInput.value = '';
 
-
+      if (!deviceIdDisplay.dataset.copyListenerAdded) {
+        deviceIdDisplay.addEventListener('dblclick', async () => {
+          try {
+            await navigator.clipboard.writeText(deviceIdDisplay.value);
+            showCustomAlert('复制成功', '设备码已复制到剪贴板');
+          } catch (err) {
+            console.error('复制失败:', err);
+            // 兼容性备用方案
+            deviceIdDisplay.select();
+            try {
+              document.execCommand('copy');
+              showCustomAlert('复制成功', '设备码已复制到剪贴板');
+            } catch (e) {
+              showCustomAlert('复制失败', '请手动复制设备码');
+            }
+          }
+        });
+        deviceIdDisplay.dataset.copyListenerAdded = 'true';
+      }
 
       const onConfirmClick = async () => {
         const userPin = pinInput.value;

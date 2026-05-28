@@ -260,6 +260,7 @@ window.initFeatures = function(state, db) {
       state.globalSettings.showSeconds = document.getElementById('global-show-seconds-switch').checked;
       state.globalSettings.dropdownPopupMode = document.getElementById('dropdown-popup-mode-switch').checked;
       state.globalSettings.lockScreenEnabled = document.getElementById('lock-screen-toggle').checked;
+      state.globalSettings.lockScreenBypassEnabled = document.getElementById('lock-screen-bypass-toggle').checked;
       state.globalSettings.lockScreenPassword = document.getElementById('lock-screen-password-input').value.trim();
 
       const lockPreview = document.getElementById('lock-wallpaper-preview');

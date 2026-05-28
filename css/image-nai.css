@@ -130,6 +130,20 @@
                z-index: 1;
            }
 
+           /* 自定义主题支持 */
+           #chat-messages[data-theme^="custom_"] .message-bubble.user .content {
+               background-color: var(--custom-user-bg) !important;
+           }
+           #chat-messages[data-theme^="custom_"] .message-bubble.ai .content {
+               background-color: var(--custom-ai-bg) !important;
+           }
+           #settings-preview-area[data-theme^="custom_"] .message-bubble.user .content {
+               background-color: var(--custom-user-bg) !important;
+           }
+           #settings-preview-area[data-theme^="custom_"] .message-bubble.ai .content {
+               background-color: var(--custom-ai-bg) !important;
+           }
+
            #chat-messages[data-theme="pink_blue"] .message-bubble.user .content {
                background-color: #fff0f6;
                color: #432531;
@@ -229,4 +243,3 @@
                background-color: #f8f9fa;
                color: #383d41;
            }
-

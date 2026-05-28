@@ -732,7 +732,7 @@
       switch (message.status) {
         case 'paid':
           const payerName = message.paidBy || '对方';
-          const payerDisplayName = getDisplayNameInGroup(chat, payerName);
+          const payerDisplayName = typeof getDisplayNameInGroup === 'function' ? getDisplayNameInGroup(chat, payerName) : payerName;
           statusText = `由 ${payerDisplayName} 为您代付成功`;
           break;
         case 'rejected':
@@ -756,8 +756,8 @@
 
       if (chat.isGroup) {
 
-        senderDisplayName = getDisplayNameInGroup(chat, message.senderName);
-        recipientDisplayName = getDisplayNameInGroup(chat, message.recipientName);
+        senderDisplayName = typeof getDisplayNameInGroup === 'function' ? getDisplayNameInGroup(chat, message.senderName) : message.senderName;
+        recipientDisplayName = typeof getDisplayNameInGroup === 'function' ? getDisplayNameInGroup(chat, message.recipientName) : message.recipientName;
       } else {
 
         if (message.role === 'user') {
@@ -783,7 +783,11 @@
         `;
     }
 
-    await showCustomAlert("订单详情", detailsHtml);
+    if (typeof showCustomAlert === 'function') {
+      await showCustomAlert("订单详情", detailsHtml);
+    } else {
+      alert("订单详情:\n" + detailsHtml.replace(/<br>/g, '\n').replace(/<[^>]+>/g, ''));
+    }
   }
 
 
@@ -796,16 +800,16 @@
 
 
     const originalMessage = chat.history[messageIndex];
-    originalMessage.status = choice;
 
 
     let systemContent;
     const myNickname = chat.isGroup ? (chat.settings.myNickname || '我') : '我';
 
     if (choice === 'paid') {
-      const success = await processTransaction(originalMessage.amount, 'expense', `帮付外卖-${originalMessage.senderName}`);
-
-      if (!success) return; // 余额不足，不改变状态，直接返回
+      if (typeof processTransaction === 'function') {
+        const success = await processTransaction(originalMessage.amount, 'expense', `帮付外卖-${originalMessage.senderName}`);
+        if (!success) return; // 余额不足，不改变状态，直接返回
+      }
 
       originalMessage.status = choice;
       originalMessage.paidBy = myNickname;
@@ -827,7 +831,35 @@
 
 
     await db.chats.put(chat);
-    renderChatInterface(state.activeChatId);
+    
+    // 即时局部更新 DOM
+    const bubble = document.querySelector(`.message-bubble[data-timestamp="${originalTimestamp}"]`);
+    if (bubble) {
+      bubble.classList.add(`status-${choice}`);
+      // 更新标题避免显示不全
+      const requestTitleEl = bubble.querySelector('.request-title');
+      if (requestTitleEl && choice === 'paid') {
+          // 局部更新一下
+          const payerDisplayName = typeof getDisplayNameInGroup === 'function' ? getDisplayNameInGroup(chat, myNickname) : myNickname;
+      }
+      
+      const buttonsBox = bubble.querySelector('.waimai-user-actions');
+      if (buttonsBox) buttonsBox.style.display = 'none';
+      
+      const paymentBox = bubble.querySelector('.payment-box');
+      if (paymentBox) paymentBox.style.display = 'none';
+      
+      const detailsBtn = bubble.querySelector('.waimai-details-btn');
+      if (detailsBtn && choice === 'paid') {
+          detailsBtn.style.backgroundColor = '#28a745';
+      } else if (detailsBtn && choice === 'rejected') {
+          detailsBtn.style.display = 'none';
+      }
+    }
+    
+    if (typeof window.renderChatInterface === 'function') {
+      window.renderChatInterface(state.activeChatId);
+    }
   }
 
 
@@ -1185,12 +1217,19 @@
     const modal = document.getElementById('forward-target-modal');
     const listEl = document.getElementById('forward-target-list');
     listEl.innerHTML = '';
+    
+    // 清空搜索框
+    const searchInput = document.getElementById('forward-target-search-input');
+    if (searchInput) {
+      searchInput.value = '';
+    }
 
     const chats = Object.values(state.chats);
 
     chats.forEach(chat => {
       const item = document.createElement('div');
       item.className = 'contact-picker-item';
+      item.dataset.searchName = (chat.name || '').toLowerCase();
       item.innerHTML = `
                     <input type="checkbox" class="forward-target-checkbox" data-chat-id="${chat.id}" style="margin-right: 15px;">
                     <img src="${chat.isGroup ? chat.settings.groupAvatar : chat.settings.aiAvatar || defaultAvatar}" class="avatar">
@@ -1198,6 +1237,22 @@
                 `;
       listEl.appendChild(item);
     });
+    
+    if (searchInput && !searchInput.dataset.bound) {
+      searchInput.addEventListener('input', (e) => {
+        const keyword = e.target.value.trim().toLowerCase();
+        const items = listEl.querySelectorAll('.contact-picker-item');
+        items.forEach(item => {
+          const name = item.dataset.searchName || '';
+          if (name.includes(keyword)) {
+            item.style.display = 'flex';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+      searchInput.dataset.bound = 'true';
+    }
 
     modal.classList.add('visible');
   }

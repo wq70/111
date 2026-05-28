@@ -834,6 +834,13 @@ ${linkedContents}
 
       systemPrompt = processPromptWithSettings(systemPrompt, 'spectator');
 
+      if (chat.settings.isOfflineMode) {
+        const participantNames = chat.members.map(m => m.groupNickname || m.originalName).join('、');
+        const minLength = chat.settings.offlineMinLength || 100;
+        const maxLength = chat.settings.offlineMaxLength || 300;
+        systemPrompt += `\n# 【【【线下聚会模式 (最高优先级)】】】\n- **当前情景**: 你们现在正处于【线下现实聚会】状态，不在网络群聊中！大家正面对面聚在一起。\n- **现场人员**: 现场有【${participantNames}】（注意：本次聚会用户不在场）。\n- **行为规范**: \n  - 你们可以产生互相的肢体接触、观察对方的神态、注意周围的环境。\n  - 请在发言的文本内容中，像小说一样自然地加入动作、神态、环境描写（建议将动作描写用括号或星号包裹，比如：*喝了一口咖啡*）。\n  - 绝不能表现出"正在用手机打字群聊"的状态！\n  - **【重要字数要求】**: 每个角色的单次回复文本长度必须在 ${minLength} 到 ${maxLength} 字之间。\n  - **绝对注意**: 这个字数限制是针对【每一个发言的角色】单独计算的，绝不是所有人的字数总和！请确保每个人的描写都足够充实。\n`;
+      }
+
       const messagesPayload = filteredHistory.map(msg => ({
         role: 'user',
         content: `${getDisplayNameInGroup(chat, msg.senderName)}: ${msg.content}`
@@ -1024,7 +1031,7 @@ ${linkedContents}
     const chatId = state.activeChatId;
     const chat = state.chats[state.activeChatId];
 
-    const isViewingThisChat = document.getElementById('chat-interface-screen').classList.contains('active') && state.activeChatId === chatId;
+    let isViewingThisChat = document.getElementById('chat-interface-screen').classList.contains('active') && state.activeChatId === chatId;
 
     setAvatarActingState(chatId, true);
     const chatHeaderTitle = document.getElementById('chat-header-title');
@@ -1991,7 +1998,7 @@ ${linkedContents}
 - 位置: 可以放在对话前作为铺垫，也可以放在对话后作为留白。
 `;
         }
-        let systemPromptTemplate = window.getActiveChatPrompt ? window.getActiveChatPrompt('group') : '';
+        let systemPromptTemplate = window.getActiveChatPrompt ? window.getActiveChatPrompt(chat.settings.isOfflineMode ? 'group_offline' : 'group') : '';
         
         let bilingualModeGroupContext = chat.settings.enableBilingualMode ? `
 # 【双语输出铁律 - 最高优先级】
@@ -2105,7 +2112,7 @@ ${linkedContents}
 
         systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMap);
 
-        systemPrompt = processPromptWithSettings(systemPrompt, 'group');
+        systemPrompt = processPromptWithSettings(systemPrompt, chat.settings.isOfflineMode ? 'group_offline' : 'group');
 
         messagesPayload = filteredHistory.map(msg => {
           // 处理系统消息（旁白和系统通知）
@@ -3616,24 +3623,10 @@ ${getActiveThoughtsPrompt()}
       }
 
       function updateTemporaryStreamMessage(content) {
-        if (!isViewingThisChat) return;
-
-        const streamContent = content || '...';
-        if (!temporaryStreamMessage) {
-          temporaryStreamMessage = {
-            timestamp: Date.now(),
-            role: 'assistant',
-            senderName: chat.name,
-            type: 'text',
-            content: streamContent,
-            isTemporary: true
-          };
-          chat.history.push(temporaryStreamMessage);
-        } else {
-          temporaryStreamMessage.content = streamContent;
-        }
-
-        scheduleStreamRender();
+        // 关闭视觉上的流式逐字渲染，防止将 JSON 暴露给用户
+        // 仅保留底层的流式 API 调用兼容
+        // 如果以后需要开启，可以配合 JSON 内容提取器一起使用
+        return;
       }
 
       try {
@@ -3694,10 +3687,7 @@ ${getActiveThoughtsPrompt()}
           stream: true,
           content: aiResponseContent
         };
-        if (temporaryStreamMessage) {
-          temporaryStreamMessage.content = aiResponseContent || temporaryStreamMessage.content;
-          scheduleStreamRender(true);
-        }
+        // 临时消息已关闭，不需要再强行覆盖
       } else {
         const data = await response.json();
         aiResponseContent = getGeminiResponseText(data);
@@ -3836,7 +3826,7 @@ ${getActiveThoughtsPrompt()}
         }
       }
 
-      const isViewingThisChat = document.getElementById('chat-interface-screen').classList.contains('active') && state.activeChatId === chatId;
+      isViewingThisChat = document.getElementById('chat-interface-screen').classList.contains('active') && state.activeChatId === chatId;
       let callHasBeenHandled = false;
       let messageTimestamp = Date.now();
       let newMessagesToRender = [];
@@ -4792,6 +4782,15 @@ ${getActiveThoughtsPrompt()}
               const originalMsg = chat.history[requestMessageIndex];
               originalMsg.status = msgData.status;
               originalMsg.paidBy = msgData.status === 'paid' ? msgData.name : null;
+              if (isViewingThisChat) {
+                const bubble = document.querySelector(`.message-bubble[data-timestamp="${msgData.for_timestamp}"]`);
+                if (bubble) {
+                  bubble.classList.remove('status-pending');
+                  bubble.classList.add(`status-${msgData.status}`);
+                  const userActions = bubble.querySelector('.waimai-user-actions');
+                  if (userActions) userActions.remove();
+                }
+              }
             }
             continue;
 
@@ -5659,6 +5658,14 @@ ${getActiveThoughtsPrompt()}
                 note: '已收款',
                 timestamp: messageTimestamp++
               };
+              
+              if (isViewingThisChat) {
+                const bubble = document.querySelector(`.message-bubble[data-timestamp="${msgData.for_timestamp}"]`);
+                if (bubble) {
+                  const noteEl = bubble.querySelector('.transfer-note');
+                  if (noteEl) noteEl.textContent = '对方已收款';
+                }
+              }
               // 去掉 continue，让它流转到下方的统一推送逻辑(if aiMessage...)
               break;
             }
@@ -5691,8 +5698,12 @@ ${getActiveThoughtsPrompt()}
               };
               chat.history.push(refundMessage);
               if (isViewingThisChat) {
+                const bubble = document.querySelector(`.message-bubble[data-timestamp="${msgData.for_timestamp}"]`);
+                if (bubble) {
+                  const noteEl = bubble.querySelector('.transfer-note');
+                  if (noteEl) noteEl.textContent = '对方已拒收';
+                }
                 appendMessage(refundMessage, chat);
-                renderChatInterface(chatId);
               }
             }
             continue;
@@ -6715,7 +6726,7 @@ ${linkedContents}
       let aiAgeContext = getDynamicAgeContext(chat);
       let currencyExchangeContext = chat.settings.enableDynamicCurrency ? getCurrencyExchangeContext() : '';
 
-      let systemPromptTemplate = window.getActiveChatPrompt ? window.getActiveChatPrompt('single') : '';
+      let systemPromptTemplate = window.getActiveChatPrompt ? window.getActiveChatPrompt(chat.isGroup && chat.settings.isOfflineMode ? 'group_offline' : 'single') : '';
       
       const contextMapPropel = {
         'aiAgeContext': aiAgeContext,
@@ -6772,7 +6783,7 @@ ${linkedContents}
 
       let systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMapPropel);
 
-      systemPrompt = processPromptWithSettings(systemPrompt, 'single');
+      systemPrompt = processPromptWithSettings(systemPrompt, chat.isGroup && chat.settings.isOfflineMode ? 'group_offline' : 'single');
 
       const messagesForApi = historySlice.map(msg => ({
         role: msg.role,

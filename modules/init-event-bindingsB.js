@@ -793,10 +793,30 @@ window.initEventBindingsB = function(state, db) {
         confirmButtonClass: 'btn-danger'
       });
       if (confirmed) {
+        // 判断是否需要一并清除长期记忆
+        let shouldClearMemory = false;
+        
+        const chatSetting = chat.settings?.promptClearMemoryOnChatClear;
+        const isPromptClearMemoryEnabled = chatSetting === 'true' || (chatSetting !== 'false' && state.globalSettings.promptClearMemoryOnChatClear);
+
+        if (isPromptClearMemoryEnabled) {
+           const confirmClearMemory = await showCustomConfirm('清空长期记忆', '检测到相关设置开启，是否要一并清除对应的长期记忆？', {
+               confirmButtonClass: 'btn-danger',
+               confirmText: '一并清除',
+               cancelText: '保留长期记忆'
+           });
+           shouldClearMemory = confirmClearMemory;
+        }
+
         chat.history = [];
         chat.heartfeltVoice = '...';
         chat.randomJottings = '...';
         chat.customThoughts = {};
+        
+        if (shouldClearMemory) {
+           chat.longTermMemory = [];
+        }
+
         // 重置角色状态为默认的"在线"
         if (!chat.isGroup && chat.status) {
           chat.status.text = '在线';
@@ -937,29 +957,42 @@ window.initEventBindingsB = function(state, db) {
 
     document.getElementById('upload-image-btn').addEventListener('click', () => document.getElementById('image-upload-input').click());
     document.getElementById('image-upload-input').addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file || !state.activeChatId) return;
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64Url = e.target.result;
-        const chat = state.chats[state.activeChatId];
+      const files = event.target.files;
+      if (!files || files.length === 0 || !state.activeChatId) return;
+
+      const chat = state.chats[state.activeChatId];
+      
+      // 并发读取所有图片
+      const readPromises = Array.from(files).map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const base64Urls = await Promise.all(readPromises);
+
+      // 为每张图片创建一条消息
+      for (let i = 0; i < base64Urls.length; i++) {
         const msg = {
           role: 'user',
           content: [{
             type: 'image_url',
             image_url: {
-              url: base64Url
+              url: base64Urls[i]
             }
           }],
-          timestamp: Date.now()
+          timestamp: Date.now() + i // 确保时间戳不重复
         };
         chat.history.push(msg);
-        await db.chats.put(chat);
         appendMessage(msg, chat);
-        renderChatList();
-      };
-      reader.readAsDataURL(file);
-      event.target.value = null;
+      }
+      
+      await db.chats.put(chat);
+      renderChatList();
+      
+      event.target.value = '';
     });
 
     // 拍照按钮事件处理
@@ -2231,6 +2264,8 @@ window.initEventBindingsB = function(state, db) {
     const mainBottomNav = document.getElementById('chat-list-bottom-nav');
     const favoritesList = document.getElementById('favorites-list');
 
+    const selectAllFavoritesCheckbox = document.getElementById('select-all-favorites-checkbox');
+
     favoritesEditBtn.addEventListener('click', () => {
       isFavoritesSelectionMode = !isFavoritesSelectionMode;
       favoritesView.classList.toggle('selection-mode', isFavoritesSelectionMode);
@@ -2238,9 +2273,10 @@ window.initEventBindingsB = function(state, db) {
       if (isFavoritesSelectionMode) {
 
         favoritesEditBtn.textContent = '完成';
-        favoritesActionBar.style.display = 'block';
+        favoritesActionBar.style.display = 'flex';
         mainBottomNav.style.display = 'none';
         favoritesList.style.paddingBottom = '80px';
+        if (selectAllFavoritesCheckbox) selectAllFavoritesCheckbox.checked = false;
       } else {
 
         favoritesEditBtn.textContent = '编辑';
@@ -2252,10 +2288,31 @@ window.initEventBindingsB = function(state, db) {
         selectedFavorites.clear();
         document.querySelectorAll('.favorite-item-card.selected').forEach(card => card.classList.remove('selected'));
         document.getElementById('favorites-delete-selected-btn').textContent = `删除 (0)`;
+        if (selectAllFavoritesCheckbox) selectAllFavoritesCheckbox.checked = false;
       }
     });
 
-
+    if (selectAllFavoritesCheckbox) {
+      selectAllFavoritesCheckbox.addEventListener('change', (e) => {
+        const isChecked = e.target.checked;
+        const allCards = document.querySelectorAll('.favorite-item-card');
+        
+        allCards.forEach(card => {
+          const favId = parseInt(card.dataset.favid);
+          if (isNaN(favId)) return;
+          
+          if (isChecked) {
+            selectedFavorites.add(favId);
+            card.classList.add('selected');
+          } else {
+            selectedFavorites.delete(favId);
+            card.classList.remove('selected');
+          }
+        });
+        
+        document.getElementById('favorites-delete-selected-btn').textContent = `删除 (${selectedFavorites.size})`;
+      });
+    }
 
     document.getElementById('favorites-list').addEventListener('click', (e) => {
       const target = e.target;
@@ -2286,6 +2343,10 @@ window.initEventBindingsB = function(state, db) {
         card.classList.add('selected');
       }
 
+      if (selectAllFavoritesCheckbox) {
+        const allCardsCount = document.querySelectorAll('.favorite-item-card').length;
+        selectAllFavoritesCheckbox.checked = (selectedFavorites.size === allCardsCount && allCardsCount > 0);
+      }
 
       document.getElementById('favorites-delete-selected-btn').textContent = `删除 (${selectedFavorites.size})`;
     });
@@ -3862,6 +3923,8 @@ window.initEventBindingsB = function(state, db) {
 
     document.getElementById('add-manual-memory-btn-header').addEventListener('click', handleAddManualMemory);
 
+    const exportBtn = document.getElementById('export-original-memory-btn');
+    if(exportBtn) exportBtn.addEventListener('click', handleExportLongTermMemory);
 
     document.getElementById('summarize-recent-btn-header').addEventListener('click', handleManualSummary);
 

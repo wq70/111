@@ -166,6 +166,182 @@ window.refreshTokenBreakdown = async function() {
 
 // ==================== 长期记忆管理（原始行范围约 28811~30930）====================
 
+function initExportMemoryButton() {
+  const btn = document.getElementById('export-original-memory-btn');
+  if (!btn) return;
+  
+  // 1. 读取保存的位置并应用
+  const savedState = localStorage.getItem('export-memory-btn-state');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      if (state.position) {
+        btn.style.left = state.position.x + 'px';
+        btn.style.top = state.position.y + 'px';
+      }
+      if (state.hidden) {
+        btn.classList.add('hidden');
+      }
+    } catch (e) {
+      console.error('Failed to parse export button state', e);
+    }
+  } else {
+    // 默认位置：右下角
+    btn.style.left = (window.innerWidth - 80) + 'px';
+    btn.style.top = (window.innerHeight - 80) + 'px';
+  }
+
+  // 2. 拖拽逻辑（直接复用 floating-ball.js 的逻辑）
+  let isDragging = false;
+  let hasMoved = false;
+  let dragStart = { x: 0, y: 0 };
+  let currentPos = { 
+    x: parseInt(btn.style.left) || window.innerWidth - 80, 
+    y: parseInt(btn.style.top) || window.innerHeight - 80 
+  };
+  let longPressTimer = null;
+
+  btn.addEventListener('mousedown', handleMouseDown);
+  btn.addEventListener('touchstart', handleTouchStart, { passive: false });
+
+  function handleMouseDown(e) {
+    if (e.button !== 0) return; // 只响应左键
+    e.preventDefault();
+    hasMoved = false;
+    
+    longPressTimer = setTimeout(() => {
+      startDrag(e.clientX, e.clientY);
+    }, 200);
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }
+
+  function handleTouchStart(e) {
+    e.preventDefault();
+    hasMoved = false;
+    const touch = e.touches[0];
+    
+    longPressTimer = setTimeout(() => {
+      startDrag(touch.clientX, touch.clientY);
+    }, 200);
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  }
+
+  function startDrag(x, y) {
+    isDragging = true;
+    dragStart = {
+      x: x - currentPos.x,
+      y: y - currentPos.y
+    };
+    btn.classList.add('dragging');
+  }
+
+  function handleMouseMove(e) {
+    if (isDragging) {
+      hasMoved = true;
+      moveBtn(e.clientX, e.clientY);
+    }
+  }
+
+  function handleTouchMove(e) {
+    if (isDragging) {
+      e.preventDefault();
+      hasMoved = true;
+      const touch = e.touches[0];
+      moveBtn(touch.clientX, touch.clientY);
+    }
+  }
+
+  function moveBtn(x, y) {
+    currentPos.x = x - dragStart.x;
+    currentPos.y = y - dragStart.y;
+    
+    // 限制在屏幕内
+    const maxX = window.innerWidth - 50;
+    const maxY = window.innerHeight - 50;
+    currentPos.x = Math.max(0, Math.min(maxX, currentPos.x));
+    currentPos.y = Math.max(0, Math.min(maxY, currentPos.y));
+    
+    btn.style.left = currentPos.x + 'px';
+    btn.style.top = currentPos.y + 'px';
+  }
+
+  function handleMouseUp() {
+    clearTimeout(longPressTimer);
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+    
+    if (isDragging) {
+      endDrag();
+    } else if (!hasMoved) {
+      // 点击事件
+      handleExportLongTermMemory();
+    }
+  }
+
+  function handleTouchEnd() {
+    clearTimeout(longPressTimer);
+    document.removeEventListener('touchmove', handleTouchMove);
+    document.removeEventListener('touchend', handleTouchEnd);
+    
+    if (isDragging) {
+      endDrag();
+    } else if (!hasMoved) {
+      // 点击事件
+      handleExportLongTermMemory();
+    }
+  }
+
+  function endDrag() {
+    isDragging = false;
+    btn.classList.remove('dragging');
+    // 保存位置
+    const state = JSON.parse(localStorage.getItem('export-memory-btn-state') || '{}');
+    state.position = currentPos;
+    localStorage.setItem('export-memory-btn-state', JSON.stringify(state));
+  }
+
+  // 3. 三击唤醒逻辑
+  let tapCount = 0;
+  let tapTimer = null;
+  const container = document.getElementById('long-term-memory-screen');
+  if (container) {
+    container.addEventListener('click', (e) => {
+      // 忽略按钮本身的点击
+      if (e.target.closest('#export-original-memory-btn')) return;
+      
+      tapCount++;
+      if (tapCount === 1) {
+        tapTimer = setTimeout(() => {
+          tapCount = 0;
+        }, 500);
+      }
+      
+      if (tapCount === 3) {
+        clearTimeout(tapTimer);
+        tapCount = 0;
+        if (btn.classList.contains('hidden')) {
+          btn.classList.remove('hidden');
+          const state = JSON.parse(localStorage.getItem('export-memory-btn-state') || '{}');
+          state.hidden = false;
+          localStorage.setItem('export-memory-btn-state', JSON.stringify(state));
+          if (typeof showToast === 'function') showToast('导出记忆按钮已唤醒');
+        }
+      }
+    });
+  }
+}
+
+// 在页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', () => {
+    // 延迟初始化以确保DOM已就绪
+    setTimeout(initExportMemoryButton, 500);
+});
+
+
 function openLongTermMemoryScreen() {
   if (!state.activeChatId) return;
   const chat = state.chats[state.activeChatId];
@@ -192,7 +368,7 @@ function openLongTermMemoryScreen() {
 
 // 切换记忆 Tab
 function switchMemoryTab(tabName) {
-  const originalList = document.getElementById('original-memory-list');
+  const originalContainer = document.getElementById('original-memory-container') || document.getElementById('original-memory-list'); // 兼容旧版
   const structuredContainer = document.getElementById('structured-memory-container');
   const vectorContainer = document.getElementById('vector-memory-container');
   const tabs = document.querySelectorAll('#memory-tab-bar .sm-tab');
@@ -200,17 +376,17 @@ function switchMemoryTab(tabName) {
   tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
   
   if (tabName === 'original') {
-    originalList.style.display = 'block';
+    originalContainer.style.display = 'block';
     structuredContainer.style.display = 'none';
     if (vectorContainer) vectorContainer.style.display = 'none';
     renderLongTermMemoryList();
   } else if (tabName === 'structured') {
-    originalList.style.display = 'none';
+    originalContainer.style.display = 'none';
     structuredContainer.style.display = 'block';
     if (vectorContainer) vectorContainer.style.display = 'none';
     renderStructuredMemoryView();
   } else if (tabName === 'vector') {
-    originalList.style.display = 'none';
+    originalContainer.style.display = 'none';
     structuredContainer.style.display = 'none';
     if (vectorContainer) vectorContainer.style.display = 'block';
     renderVectorMemoryView();
@@ -1698,6 +1874,197 @@ async function handleManualSummary() {
 }
 
 // ==================== 向量记忆 - 旧记忆转换 (支持多选及结构化记忆) ====================
+
+async function doSmartConvertWithAI(chat, allItems, selectedIndices, keepOriginal) {
+  const BATCH_SIZE = 50;
+  const totalItems = selectedIndices.length;
+  const totalBatches = Math.ceil(totalItems / BATCH_SIZE);
+  
+  const userNickname = chat.settings.myNickname || '用户';
+  const apiConfig = window.state.apiConfig;
+  const useSecondary = apiConfig.secondaryProxyUrl && apiConfig.secondaryApiKey && apiConfig.secondaryModel;
+  const proxyUrl = useSecondary ? apiConfig.secondaryProxyUrl : apiConfig.proxyUrl;
+  const apiKey = useSecondary ? apiConfig.secondaryApiKey : apiConfig.apiKey;
+  const model = useSecondary ? apiConfig.secondaryModel : apiConfig.model;
+  
+  if (!proxyUrl || !apiKey || !model) {
+    showToast('API未配置，无法进行智能转换', 'error');
+    return;
+  }
+
+  let progressToast = showToast(`智能转换中... 0/${totalBatches}批`, 'info', 0);
+  let successCount = 0;
+  let failCount = 0;
+  let structuredToDelete = {};
+  let longTermToDelete = [];
+
+  for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+    const startIdx = batchIdx * BATCH_SIZE;
+    const endIdx = Math.min(startIdx + BATCH_SIZE, totalItems);
+    const batchIndices = selectedIndices.slice(startIdx, endIdx);
+    
+    // 构造当前批次的文本
+    const formattedMemories = batchIndices.map((idx, i) => {
+      const item = allItems[idx];
+      const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleString('zh-CN') : '过去';
+      return `[编号${i}] (${timeStr}) ${item.content}`;
+    }).join('\n');
+
+    const prompt = `
+你是一个专业的记忆整理专家。请将以下来自用户和AI角色"${chat.originalName || chat.name}"的【杂乱旧记忆】，重新精炼、合并重复项，并分配到最合适的分类中。
+
+# 输出格式（严格遵守JSON数组）
+\`\`\`json
+[
+  {
+    "content": "记忆内容（第一人称，简短清晰，如：我发现用户讨厌吃香菜）",
+    "tags": ["香菜", "讨厌", "饮食"],
+    "category": "U/A/R/E/I/L/P/T/M/C",
+    "importance": 1-10,
+    "emotionalWeight": 1-10,
+    "memoryTime": 1700000000000
+  }
+]
+\`\`\`
+
+# 10大精细分类说明
+- U = 用户设定 (用户的外貌/性格/喜好/身份等)
+- A = 角色设定 (你自己发生的改变)
+- R = 关系发展 (表白/吵架/亲密举动等里程碑)
+- E = 经历/事件 (共同经历的事情)
+- I = 物品/礼物 (送礼/买东西)
+- L = 地点/场景 (去过的重要地方)
+- P = 承诺/计划 (约定的未来事项)
+- T = 禁忌/规则 (雷区/规矩)
+- M = 情绪/心理 (强烈的情感流露/阴影)
+- C = 核心灵魂 (极其罕见，必须永远铭记的生死攸关的事/绝对底线)
+
+# 评分规则 (1-10)
+- importance: 8-10(极其重要)，5-7(值得记住)，1-4(日常琐碎)
+- emotionalWeight: 情感的强烈程度。
+
+# 待处理的旧记忆
+${formattedMemories}
+
+注意：你可以将意思重复的几条记忆合并为一条更精炼的记忆。如果没有意义的内容可以直接丢弃。请直接输出JSON数组。`;
+
+    try {
+      const isGemini = proxyUrl === window.GEMINI_API_URL;
+      let response;
+      if (isGemini && typeof toGeminiRequestData === 'function') {
+        const geminiConfig = toGeminiRequestData(model, apiKey, prompt, [{ role: 'user', content: '请开始智能转换。' }]);
+        response = await fetch(geminiConfig.url, geminiConfig.data);
+      } else {
+        response = await fetch(`${proxyUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, messages: [{ role: 'system', content: prompt }, { role: 'user', content: '请开始智能转换。' }], temperature: 0.3 })
+        });
+      }
+
+      if (!response.ok) throw new Error(`API返回 ${response.status}`);
+      const data = await response.json();
+      const rawText = typeof getGeminiResponseText === 'function' ? getGeminiResponseText(data) : (data.choices?.[0]?.message?.content || '');
+
+      const extracted = window.vectorMemoryManager.parseExtractionResult(rawText);
+      
+      for (const item of extracted) {
+        const embedding = await window.vectorMemoryManager.getEmbedding(item.content, chat);
+        window.vectorMemoryManager.createFragment(chat, {
+          ...item,
+          embedding,
+          memoryTime: item.memoryTime || Date.now(),
+          source: 'smart_convert'
+        });
+        successCount++;
+      }
+
+      // 记录要删除的原条目
+      if (!keepOriginal) {
+        batchIndices.forEach(idx => {
+          const item = allItems[idx];
+          if (item.type === 'longTerm') {
+            longTermToDelete.push(item.id);
+          } else if (item.type === 'structured') {
+            if (!structuredToDelete[item.categoryCode]) structuredToDelete[item.categoryCode] = [];
+            structuredToDelete[item.categoryCode].push(item.id);
+          }
+        });
+      }
+
+    } catch (e) {
+      console.error(`智能转换批次 ${batchIdx+1} 失败:`, e);
+      failCount += batchIndices.length;
+    }
+    
+    if (progressToast) {
+      const el = document.querySelector('.toast:last-child');
+      if (el) el.textContent = `智能转换中... ${batchIdx+1}/${totalBatches}批 (精炼出: ${successCount}条)`;
+    }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  // 删除逻辑
+  if (!keepOriginal) {
+    if (longTermToDelete.length > 0) {
+      longTermToDelete.sort((a, b) => b - a);
+      longTermToDelete.forEach(idx => chat.longTermMemory.splice(idx, 1));
+    }
+    if (Object.keys(structuredToDelete).length > 0 && window.structuredMemoryManager) {
+      const mem = window.structuredMemoryManager.getStructuredMemory(chat);
+      if (structuredToDelete['F']) {
+         structuredToDelete['F'].forEach(strId => { const k = strId.substring(2); delete mem.facts[k]; });
+      }
+      if (structuredToDelete['R']) mem.relationship = '';
+      if (structuredToDelete['E']) {
+         let eventMap = {}; 
+         for (const ym of Object.keys(mem.events)) {
+           eventMap[ym] = mem.events[ym].split('|');
+         }
+         const eIds = structuredToDelete['E'].map(id => id.split('_'));
+         eIds.sort((a, b) => parseInt(b[2]) - parseInt(a[2]));
+         eIds.forEach(parts => {
+           const ym = parts[1];
+           const idx = parseInt(parts[2]);
+           if (eventMap[ym]) eventMap[ym].splice(idx, 1);
+         });
+         mem.events = {};
+         for (const ym of Object.keys(eventMap)) {
+           if (eventMap[ym].length > 0) mem.events[ym] = eventMap[ym].join('|');
+         }
+      }
+      if (structuredToDelete['P']) {
+         const pIds = structuredToDelete['P'].map(id => parseInt(id.substring(2))).sort((a, b) => b - a);
+         pIds.forEach(idx => mem.plans.splice(idx, 1));
+      }
+      if (structuredToDelete['D']) {
+         const dIds = structuredToDelete['D'].map(id => parseInt(id.substring(2))).sort((a, b) => b - a);
+         dIds.forEach(idx => mem.decisions.splice(idx, 1));
+      }
+      if (structuredToDelete['M']) {
+         const mIds = structuredToDelete['M'].map(id => parseInt(id.substring(2))).sort((a, b) => b - a);
+         mIds.forEach(idx => mem.emotions.splice(idx, 1));
+      }
+      for (const [code, cat] of Object.entries(mem._customCategories || {})) {
+        if (structuredToDelete[code]) {
+          const cIds = structuredToDelete[code].map(id => parseInt(id.split('_')[2])).sort((a, b) => b - a);
+          cIds.forEach(idx => {
+            if (mem._custom[code]) mem._custom[code].splice(idx, 1);
+          });
+        }
+      }
+    }
+  }
+
+  await db.chats.put(chat);
+  if (progressToast) document.querySelectorAll('.toast').forEach(el => el.remove());
+  showToast(`智能转换完成！\n- 精炼提取：${successCount} 条高质量记忆`, 'success', 5000);
+  
+  if (document.getElementById('vector-memory-container')?.style.display !== 'none') {
+    if (typeof renderVectorMemoryView === 'function') renderVectorMemoryView();
+  }
+}
+
 async function convertLongTermMemoryToVector(chatId) {
   const chat = state.chats[chatId];
   if (!chat || !window.vectorMemoryManager) {
@@ -1799,6 +2166,13 @@ async function convertLongTermMemoryToVector(chatId) {
             <span style="font-size: 11px; color: var(--text-secondary, #666);">防止误操作。若取消勾选，则转换后将从原记忆库中删除。</span>
           </span>
         </label>
+        <label style="display: flex; align-items: flex-start; cursor: pointer; margin-top: 10px; padding: 12px; background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.2); border-radius: 8px; font-size: 13px; color: var(--text-color, #333); line-height: 1.5; box-sizing: border-box; width: 100%;">
+          <input type="checkbox" id="ai-smart-convert" style="margin-right: 8px; margin-top: 2px; flex-shrink: 0; width: 16px; height: 16px;">
+          <span style="flex: 1; min-width: 0; word-break: break-word;">
+            <strong>启用 AI 智能分类与精炼 (消耗 API)</strong><br>
+            <span style="font-size: 11px; color: var(--text-secondary, #666);">自动精简长记忆，并精准分类到核心灵魂/情绪等类别，显著提升检索质量！由于需发给AI，大量记忆时可能需要几分钟。</span>
+          </span>
+        </label>
       </div>
     `;
 
@@ -1834,6 +2208,7 @@ async function convertLongTermMemoryToVector(chatId) {
     confirmBtn.onclick = async () => {
       const selectedIndices = Array.from(document.querySelectorAll('.memory-convert-checkbox:checked')).map(cb => parseInt(cb.dataset.index));
       const keepOriginal = document.getElementById('keep-original-memory').checked;
+      const smartConvert = document.getElementById('ai-smart-convert') ? document.getElementById('ai-smart-convert').checked : false;
       
       if (selectedIndices.length === 0) {
         showToast('请至少选择一条记忆', 'info');
@@ -1841,6 +2216,11 @@ async function convertLongTermMemoryToVector(chatId) {
       }
       
       hideCustomModal();
+
+      if (smartConvert) {
+        await doSmartConvertWithAI(chat, items, selectedIndices, keepOriginal);
+        return;
+      }
       
       let progressToast = showToast(`转换中... 0/${selectedIndices.length}`, 'info', 0);
       let successCount = 0;
@@ -2685,11 +3065,81 @@ async function executeManualSummary() {
 }
 
 
+async function handleExportLongTermMemory() {
+  const chat = state.chats[state.activeChatId];
+  if (!chat || !chat.longTermMemory || chat.longTermMemory.length === 0) {
+    showToast('当前没有可以导出的记忆', 'warning');
+    return;
+  }
+
+  const format = await showChoiceModal('导出记忆', [
+    { text: '导出为 JSON', value: 'json' },
+    { text: '导出为纯文字 (TXT)', value: 'txt' },
+    { text: '隐藏此按钮 (三击屏幕唤醒)', value: 'hide' }
+  ]);
+
+  if (format === 'hide') {
+    const btn = document.getElementById('export-original-memory-btn');
+    if (btn) {
+      btn.classList.add('hidden');
+      const state = JSON.parse(localStorage.getItem('export-memory-btn-state') || '{}');
+      state.hidden = true;
+      localStorage.setItem('export-memory-btn-state', JSON.stringify(state));
+      showToast('按钮已隐藏，在屏幕上快速点击三次即可唤醒');
+    }
+    return;
+  }
+
+  if (!format) return;
+
+  let contentStr = '';
+  let filename = '';
+  let type = '';
+
+  const dateStr = new Date().toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  }).replace(/[/:]/g, '-').replace(' ', '_');
+
+  if (format === 'json') {
+    contentStr = JSON.stringify(chat.longTermMemory, null, 2);
+    filename = `memory_${chat.name || chat.originalName}_${dateStr}.json`;
+    type = 'application/json';
+  } else if (format === 'txt') {
+    contentStr = chat.longTermMemory.map(mem => {
+      const time = new Date(mem.timestamp).toLocaleString('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+      return `[${time}] ${mem.content}`;
+    }).join('\n\n');
+    filename = `memory_${chat.name || chat.originalName}_${dateStr}.txt`;
+    type = 'text/plain';
+  }
+
+  try {
+    const blob = new Blob([contentStr], { type: `${type};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('导出成功', 'success');
+  } catch (error) {
+    console.error('导出长期记忆失败:', error);
+    showToast('导出失败', 'error');
+  }
+}
+
 // 全局暴露手动总结相关函数
 window.openManualSummaryModal = openManualSummaryModal;
 window.closeManualSummaryModal = closeManualSummaryModal;
 window.executeManualSummary = executeManualSummary;
 window.convertLongTermMemoryToVector = convertLongTermMemoryToVector;
+window.handleExportLongTermMemory = handleExportLongTermMemory;
 
 async function checkAndTriggerAutoSummary(chatId) {
   const chat = state.chats[chatId];

@@ -213,8 +213,10 @@
 
       // 询问导出格式
       const formatOptions = [
-        { text: 'PNG 角色卡 (带头像图片)', value: 'png' },
-        { text: ' JSON 文件', value: 'json' }
+        { text: '小手机专属 PNG 角色卡', value: 'ephone_png' },
+        { text: '小手机专属 JSON 文件', value: 'ephone_json' },
+        { text: '酒馆格式(Tavern) PNG', value: 'tavern_png' },
+        { text: '酒馆格式(Tavern) JSON', value: 'tavern_json' }
       ];
       const format = await showChoiceModal('选择导出格式', formatOptions);
       if (format === null) return;
@@ -222,7 +224,7 @@
       const safeName = chat.name.replace(/[\\/:*?"<>|]/g, '_');
       const dateStr = new Date().toISOString().split('T')[0];
 
-      if (format === 'json') {
+      if (format === 'ephone_json') {
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -230,7 +232,7 @@
         link.download = `EPhone-Char-${safeName}-${dateStr}.json`;
         link.click();
         URL.revokeObjectURL(url);
-      } else if (format === 'png') {
+      } else if (format === 'ephone_png') {
         // 获取角色头像作为PNG底图
         let avatarSrc = chat.settings.aiAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
 
@@ -247,12 +249,105 @@
         link.download = `EPhone-Char-${safeName}-${dateStr}.png`;
         link.click();
         URL.revokeObjectURL(url);
+      } else if (format === 'tavern_json' || format === 'tavern_png') {
+        // 构建 Tavern V2 格式角色卡
+        let tavernBookEntries = [];
+        if (linkedWorldBooks.length > 0) {
+          let entryId = 1;
+          for (const wb of linkedWorldBooks) {
+            if (wb.content && Array.isArray(wb.content)) {
+              for (const entry of wb.content) {
+                if (entry.enabled) {
+                  tavernBookEntries.push({
+                    keys: entry.keys || [],
+                    content: entry.content || '',
+                    extensions: {},
+                    enabled: true,
+                    insertion_order: 50,
+                    case_sensitive: false,
+                    name: `entry_${entryId}`,
+                    priority: 10,
+                    id: entryId,
+                    comment: entry.comment || '',
+                    selective: true,
+                    secondary_keys: [],
+                    constant: false,
+                    position: "before_char"
+                  });
+                  entryId++;
+                }
+              }
+            }
+          }
+        }
+
+        const tavernData = {
+          spec: "chara_card_v2",
+          spec_version: "2.0",
+          data: {
+            name: chat.name || '',
+            description: chat.settings?.aiPersona || '',
+            personality: "",
+            scenario: "",
+            first_mes: "",
+            mes_example: "",
+            creator_notes: "",
+            system_prompt: "",
+            post_history_instructions: "",
+            tags: [],
+            creator: "",
+            character_version: "",
+            alternate_greetings: [],
+            extensions: {}
+          }
+        };
+
+        if (tavernBookEntries.length > 0) {
+          tavernData.data.character_book = {
+            name: `${chat.name}的设定集`,
+            description: "",
+            scan_depth: 50,
+            token_budget: 500,
+            recursive_scanning: false,
+            extensions: {},
+            entries: tavernBookEntries
+          };
+        }
+
+        if (format === 'tavern_json') {
+          const blob = new Blob([JSON.stringify(tavernData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${safeName}.json`;
+          link.click();
+          URL.revokeObjectURL(url);
+        } else if (format === 'tavern_png') {
+          let avatarSrc = chat.settings.aiAvatar || 'https://i.postimg.cc/y8xWzCqj/anime-boy.jpg';
+          const pngBlob = await avatarToPngBlob(avatarSrc);
+          
+          const jsonStr = JSON.stringify(tavernData);
+          // 嵌入chara数据到PNG（酒馆格式）
+          const finalBlob = await embedDataInPng(pngBlob, 'chara', jsonStr);
+
+          const url = URL.createObjectURL(finalBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${safeName}.png`;
+          link.click();
+          URL.revokeObjectURL(url);
+        }
       }
 
       let msg = `角色 "${chat.name}" 已成功导出！`;
-      if (linkedWorldBooks.length > 0) msg += `\n包含 ${linkedWorldBooks.length} 个关联世界书。`;
-      if (includeHistory) msg += `\n包含 ${chatDataCopy.history.length} 条聊天记录。`;
-      if (charMemories.length > 0) msg += `\n包含 ${charMemories.length} 条记忆数据。`;
+      if (format.startsWith('ephone_')) {
+        if (linkedWorldBooks.length > 0) msg += `\n包含 ${linkedWorldBooks.length} 个关联世界书。`;
+        if (includeHistory) msg += `\n包含 ${chatDataCopy.history.length} 条聊天记录。`;
+        if (charMemories.length > 0) msg += `\n包含 ${charMemories.length} 条记忆数据。`;
+      } else {
+        msg += `\n已导出为兼容酒馆(Tavern)格式的角色卡。`;
+        if (linkedWorldBooks.length > 0) msg += `\n包含 ${linkedWorldBooks.length} 个关联世界书的设定。`;
+      }
       await showCustomAlert('导出成功', msg);
 
     } catch (error) {

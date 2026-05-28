@@ -1866,6 +1866,7 @@ window.initEventBindingsA = async function(state, db) {
       state.globalSettings.apiStyleBeautify = document.getElementById('api-style-beautify-switch').checked;
       state.globalSettings.dropdownPopupMode = document.getElementById('dropdown-popup-mode-switch').checked;
       state.globalSettings.lockScreenEnabled = document.getElementById('lock-screen-toggle').checked;
+      state.globalSettings.lockScreenBypassEnabled = document.getElementById('lock-screen-bypass-toggle').checked;
       state.globalSettings.lockScreenPassword = document.getElementById('lock-screen-password-input').value.trim();
 
       const lockPreview = document.getElementById('lock-wallpaper-preview');
@@ -2068,9 +2069,11 @@ window.initEventBindingsA = async function(state, db) {
       state.globalSettings.customChatPromptSingle = document.getElementById('custom-chat-prompt-single-textarea').value;
       state.globalSettings.customChatPromptGroup = document.getElementById('custom-chat-prompt-group-textarea').value;
       state.globalSettings.customChatPromptOffline = document.getElementById('custom-chat-prompt-offline-textarea').value;
+      state.globalSettings.customChatPromptGroupOffline = document.getElementById('custom-chat-prompt-group-offline-textarea').value;
       state.globalSettings.enableQzoneActions = document.getElementById('global-enable-qzone-actions-switch').checked;
       state.globalSettings.enableViewMyPhone = document.getElementById('global-enable-view-myphone-switch').checked;
       state.globalSettings.enableCrossChat = document.getElementById('global-enable-cross-chat-switch').checked;
+      state.globalSettings.promptClearMemoryOnChatClear = document.getElementById('global-prompt-clear-memory-switch').checked;
       
       // 新增：保存后台查看用户手机设置
       state.globalSettings.enableViewMyPhoneInBackground = document.getElementById('global-enable-view-myphone-bg-switch').checked;
@@ -2699,7 +2702,9 @@ window.initEventBindingsA = async function(state, db) {
         if (bubble) {
           const timestamp = parseInt(bubble.dataset.timestamp);
           if (!isNaN(timestamp)) {
-            showWaimaiDetails(timestamp);
+            if (typeof showWaimaiDetails === 'function') {
+              showWaimaiDetails(timestamp);
+            }
             return;
           }
         }
@@ -2707,14 +2712,16 @@ window.initEventBindingsA = async function(state, db) {
 
 
 
-      const choiceBtn = e.target.closest('.waimai-user-actions button');
+      const choiceBtn = e.target.closest('.waimai-user-actions button') || e.target.closest('.waimai-decline-btn') || e.target.closest('.waimai-pay-btn');
       if (choiceBtn) {
         const bubble = choiceBtn.closest('.message-bubble');
         if (bubble) {
           const timestamp = parseInt(bubble.dataset.timestamp);
-          const choice = choiceBtn.dataset.choice;
+          const choice = choiceBtn.dataset.choice || (choiceBtn.classList.contains('waimai-decline-btn') ? 'rejected' : (choiceBtn.classList.contains('waimai-pay-btn') ? 'paid' : null));
           if (!isNaN(timestamp) && choice) {
-            await handleWaimaiResponse(timestamp, choice);
+            if (typeof handleWaimaiResponse === 'function') {
+               await handleWaimaiResponse(timestamp, choice);
+            }
             return;
           }
         }
@@ -2939,6 +2946,9 @@ window.initEventBindingsA = async function(state, db) {
 
     document.getElementById('chat-settings-btn').addEventListener('click', async () => {
       loadThemePresetsDropdown();
+      if (typeof loadCustomBubbleThemes === 'function') {
+        loadCustomBubbleThemes();
+      }
       if (!state.activeChatId) return;
       const chat = state.chats[state.activeChatId];
       const isGroup = chat.isGroup;
@@ -3022,7 +3032,7 @@ window.initEventBindingsA = async function(state, db) {
       document.getElementById('ai-voice-id-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('inject-thought-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('todo-list-setting-group').style.display = isGroup ? 'none' : 'flex';
-      document.getElementById('offline-mode-group').style.display = isGroup ? 'none' : 'block';
+      document.getElementById('offline-mode-group').style.display = 'block'; // 群聊和单聊都显示线下模式
       document.getElementById('ai-cooldown-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('group-cooldown-group').style.display = isGroup ? 'block' : 'none';
       // 记忆存档功能现在支持群聊
@@ -3180,6 +3190,18 @@ window.initEventBindingsA = async function(state, db) {
         }
         document.getElementById('char-view-myphone-chance-input').value = chat.settings.viewMyPhoneChance !== null && chat.settings.viewMyPhoneChance !== undefined ? chat.settings.viewMyPhoneChance : '';
 
+        // 读取回复条数范围设置（仅单聊）
+        const replyCountRangeGroup = document.getElementById('reply-count-range-group');
+        const replyCountRangeConfig = document.getElementById('reply-count-range-config');
+        const enableReplyCountRangeToggle = document.getElementById('enable-reply-count-range-toggle');
+        
+        replyCountRangeGroup.style.display = 'flex';
+        enableReplyCountRangeToggle.checked = chat.settings.enableMultiReply || false;
+        replyCountRangeConfig.style.display = enableReplyCountRangeToggle.checked ? 'block' : 'none';
+        
+        document.getElementById('min-reply-count-input').value = chat.settings.minReplyCount || 2;
+        document.getElementById('max-reply-count-input').value = chat.settings.maxReplyCount || 5;
+
         // 新增：读取AI行为控制设置
         const thoughtsSelect = document.getElementById('chat-enable-thoughts-select');
         if (chat.settings.enableThoughts === null || chat.settings.enableThoughts === undefined) {
@@ -3214,35 +3236,6 @@ window.initEventBindingsA = async function(state, db) {
         document.getElementById('global-qzone-status').textContent = state.globalSettings.enableQzoneActions ? '开启' : '关闭';
         document.getElementById('global-view-myphone-status').textContent = state.globalSettings.enableViewMyPhone ? '开启' : '关闭';
         document.getElementById('global-cross-chat-status').textContent = state.globalSettings.enableCrossChat !== false ? '开启' : '关闭';
-
-        // 读取回复条数范围设置（仅单聊）
-        if (!isGroup) {
-          const replyCountRangeGroup = document.getElementById('reply-count-range-group');
-          const replyCountRangeConfig = document.getElementById('reply-count-range-config');
-          const enableReplyCountRangeToggle = document.getElementById('enable-reply-count-range-toggle');
-          
-          replyCountRangeGroup.style.display = 'flex';
-          enableReplyCountRangeToggle.checked = chat.settings.enableMultiReply || false;
-          replyCountRangeConfig.style.display = enableReplyCountRangeToggle.checked ? 'block' : 'none';
-          
-          document.getElementById('min-reply-count-input').value = chat.settings.minReplyCount || 2;
-          document.getElementById('max-reply-count-input').value = chat.settings.maxReplyCount || 5;
-        } else {
-          document.getElementById('reply-count-range-group').style.display = 'none';
-          document.getElementById('reply-count-range-config').style.display = 'none';
-        }
-
-        const offlineModeToggle = document.getElementById('offline-mode-toggle');
-        const offlineModeOptions = document.getElementById('offline-mode-options');
-        const offlineMinInput = document.getElementById('offline-min-length-input');
-        const offlineMaxInput = document.getElementById('offline-max-length-input');
-        offlineModeToggle.checked = chat.settings.isOfflineMode || false;
-        offlineModeOptions.style.display = offlineModeToggle.checked ? 'block' : 'none';
-        offlineMinInput.value = chat.settings.offlineMinLength || 100;
-        offlineMaxInput.value = chat.settings.offlineMaxLength || 300;
-        const offlineContinuousToggle = document.getElementById('offline-continuous-layout-toggle');
-        if (offlineContinuousToggle) offlineContinuousToggle.checked = chat.settings.offlineContinuousLayout || false;
-        await renderOfflinePresetSelector(chat);
 
         // 加载表情包识图设置
         document.getElementById('enable-sticker-vision-checkbox').checked = chat.settings.enableStickerVision || false;
@@ -3294,6 +3287,19 @@ window.initEventBindingsA = async function(state, db) {
         document.getElementById('lyrics-horizontal-pos').value = lyricsPos.horizontal;
         document.getElementById('lyrics-offset-input').value = lyricsPos.offset;
       }
+
+      // 群聊和单聊都加载线下模式设置
+      const offlineModeToggle = document.getElementById('offline-mode-toggle');
+      const offlineModeOptions = document.getElementById('offline-mode-options');
+      const offlineMinInput = document.getElementById('offline-min-length-input');
+      const offlineMaxInput = document.getElementById('offline-max-length-input');
+      offlineModeToggle.checked = chat.settings.isOfflineMode || false;
+      offlineModeOptions.style.display = offlineModeToggle.checked ? 'block' : 'none';
+      offlineMinInput.value = chat.settings.offlineMinLength || 100;
+      offlineMaxInput.value = chat.settings.offlineMaxLength || 300;
+      const offlineContinuousToggle = document.getElementById('offline-continuous-layout-toggle');
+      if (offlineContinuousToggle) offlineContinuousToggle.checked = chat.settings.offlineContinuousLayout || false;
+      await renderOfflinePresetSelector(chat);
 
 
 
@@ -3626,6 +3632,198 @@ window.initEventBindingsA = async function(state, db) {
       document.getElementById('theme-default').checked = true;
     });
 
+    // --- 自定义主题按钮事件绑定 ---
+    const addCustomThemeBtn = document.getElementById('add-custom-theme-btn');
+    if (addCustomThemeBtn) {
+        addCustomThemeBtn.addEventListener('click', () => {
+            const nameInput = document.getElementById('custom-theme-name');
+            const userColor = document.getElementById('custom-user-bubble-color').value;
+            const aiColor = document.getElementById('custom-ai-bubble-color').value;
+            const themeName = nameInput.value.trim();
+
+            if (!themeName) {
+                alert('请输入自定义颜色名称！');
+                return;
+            }
+
+            // 获取现有主题
+            let customThemes = [];
+            try {
+                const saved = localStorage.getItem('custom_bubble_themes');
+                if (saved) customThemes = JSON.parse(saved);
+            } catch (e) {
+                console.error("读取自定义主题失败", e);
+            }
+
+            // 创建新主题
+            const newTheme = {
+                id: 'custom_' + Date.now() + Math.floor(Math.random() * 1000),
+                name: themeName,
+                userColor: userColor,
+                aiColor: aiColor
+            };
+
+            customThemes.push(newTheme);
+            localStorage.setItem('custom_bubble_themes', JSON.stringify(customThemes));
+
+            // 清空输入框并重新加载列表
+            nameInput.value = '';
+            if (typeof loadCustomBubbleThemes === 'function') {
+                loadCustomBubbleThemes();
+            }
+
+            // 自动选中新添加的主题
+            setTimeout(() => {
+                const newRadio = document.getElementById(`theme-${newTheme.id}`);
+                if (newRadio) {
+                    newRadio.checked = true;
+                    // 触发 change 事件以更新预览
+                    newRadio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, 50);
+
+            showToast('自定义颜色预设已保存');
+        });
+    }
+
+    const manageCustomThemesBtn = document.getElementById('manage-custom-themes-btn');
+    if (manageCustomThemesBtn) {
+        manageCustomThemesBtn.addEventListener('click', () => {
+            renderCustomThemeManager();
+            document.getElementById('custom-theme-manager-modal').classList.add('visible');
+        });
+    }
+
+    const closeCustomThemeManagerBtn = document.getElementById('close-custom-theme-manager-btn');
+    if (closeCustomThemeManagerBtn) {
+        closeCustomThemeManagerBtn.addEventListener('click', () => {
+            document.getElementById('custom-theme-manager-modal').classList.remove('visible');
+        });
+    }
+
+    const deleteCustomThemeBtn = document.getElementById('delete-custom-theme-btn');
+    if (deleteCustomThemeBtn) {
+        deleteCustomThemeBtn.addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.custom-theme-delete-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('请先选择要删除的预设');
+                return;
+            }
+
+            const confirmed = await showCustomConfirm('删除自定义颜色', `确定要删除选中的 ${checkboxes.length} 个颜色预设吗？`, {
+                confirmButtonClass: 'btn-danger'
+            });
+
+            if (confirmed) {
+                const idsToDelete = Array.from(checkboxes).map(cb => cb.dataset.id);
+                
+                let customThemes = [];
+                try {
+                    const saved = localStorage.getItem('custom_bubble_themes');
+                    if (saved) customThemes = JSON.parse(saved);
+                } catch (e) {}
+
+                customThemes = customThemes.filter(theme => !idsToDelete.includes(theme.id));
+                localStorage.setItem('custom_bubble_themes', JSON.stringify(customThemes));
+
+                // 重新加载管理列表
+                renderCustomThemeManager();
+                
+                // 重新加载设置面板里的选择列表
+                if (typeof loadCustomBubbleThemes === 'function') {
+                    loadCustomBubbleThemes();
+                }
+
+                // 如果当前选中的主题被删除了，重置为 default
+                const currentChecked = document.querySelector('input[name="theme-select"]:checked');
+                if (currentChecked && idsToDelete.includes(currentChecked.value)) {
+                    document.getElementById('theme-default').checked = true;
+                    document.getElementById('theme-default').dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                showToast('已删除选中颜色预设');
+            }
+        });
+    }
+
+    const selectAllCustomThemesCheckbox = document.getElementById('select-all-custom-themes');
+    if (selectAllCustomThemesCheckbox) {
+        selectAllCustomThemesCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.custom-theme-delete-checkbox').forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateCustomThemeDeleteBtnText();
+        });
+    }
+
+    function renderCustomThemeManager() {
+        const listContainer = document.getElementById('custom-theme-list');
+        if (!listContainer) return;
+
+        let customThemes = [];
+        try {
+            const saved = localStorage.getItem('custom_bubble_themes');
+            if (saved) customThemes = JSON.parse(saved);
+        } catch (e) {}
+
+        if (customThemes.length === 0) {
+            listContainer.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px 0;">暂无自定义颜色预设</p>';
+            document.getElementById('select-all-custom-themes').checked = false;
+            updateCustomThemeDeleteBtnText();
+            return;
+        }
+
+        listContainer.innerHTML = customThemes.map(theme => `
+            <div style="display: flex; align-items: center; padding: 10px; border-bottom: 1px solid var(--border-color);">
+                <input type="checkbox" class="custom-theme-delete-checkbox" data-id="${theme.id}" style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, ${theme.userColor} 50%, ${theme.aiColor} 50%); border: 1px solid #ccc;"></div>
+                    <span>${escapeHTML(theme.name)}</span>
+                </div>
+            </div>
+        `).join('');
+
+        // 重新绑定列表里的 checkbox 事件
+        document.querySelectorAll('.custom-theme-delete-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateCustomThemeDeleteBtnText();
+                // 同步全选框状态
+                const allChecked = document.querySelectorAll('.custom-theme-delete-checkbox:not(:checked)').length === 0;
+                document.getElementById('select-all-custom-themes').checked = allChecked;
+            });
+        });
+
+        document.getElementById('select-all-custom-themes').checked = false;
+        updateCustomThemeDeleteBtnText();
+    }
+
+    function updateCustomThemeDeleteBtnText() {
+        const count = document.querySelectorAll('.custom-theme-delete-checkbox:checked').length;
+        const btn = document.getElementById('delete-custom-theme-btn');
+        if (btn) {
+            btn.textContent = `删除 (${count})`;
+        }
+    }
+    
+    // 自定义颜色选择器实时预览
+    const customUserColorInput = document.getElementById('custom-user-bubble-color');
+    const customAiColorInput = document.getElementById('custom-ai-bubble-color');
+    
+    function previewCustomColorWhileSelecting() {
+        const previewArea = document.getElementById('settings-preview-area');
+        if (previewArea) {
+            previewArea.style.setProperty('--custom-user-bg', customUserColorInput.value);
+            previewArea.style.setProperty('--custom-ai-bg', customAiColorInput.value);
+            // 强制将预览区的主题设为一个 custom 开头的值，以触发 CSS 变量应用
+            previewArea.dataset.theme = 'custom_preview';
+        }
+    }
+
+    if (customUserColorInput) customUserColorInput.addEventListener('input', previewCustomColorWhileSelecting);
+    if (customAiColorInput) customAiColorInput.addEventListener('input', previewCustomColorWhileSelecting);
+
+
 
 
     document.getElementById('save-chat-settings-btn').addEventListener('click', async () => {
@@ -3734,6 +3932,26 @@ window.initEventBindingsA = async function(state, db) {
         // 群聊也保存表情包识图与智能匹配，与单聊一致
         chat.settings.enableStickerVision = document.getElementById('enable-sticker-vision-checkbox').checked;
         chat.settings.enableStickerSmartMatch = document.getElementById('enable-sticker-smart-match-checkbox').checked;
+        
+        // 保存群聊线下模式设置
+        const newOfflineModeState = document.getElementById('offline-mode-toggle').checked;
+        chat.settings.isOfflineMode = newOfflineModeState;
+        chat.settings.offlineMinLength = parseInt(document.getElementById('offline-min-length-input').value) || 100;
+        chat.settings.offlineMaxLength = parseInt(document.getElementById('offline-max-length-input').value) || 300;
+        chat.settings.offlinePresetId = document.getElementById('offline-preset-select').value || null;
+        const offlineContinuousEl = document.getElementById('offline-continuous-layout-toggle');
+        if (offlineContinuousEl) chat.settings.offlineContinuousLayout = offlineContinuousEl.checked;
+        
+        if (oldOfflineModeState === true && newOfflineModeState === false) {
+          const switchInstruction = {
+            role: 'system',
+            content: '[系统指令：模式已切换！你现在回到了线上聊天模式。你的回复【必须】严格遵守线上模式的JSON数组格式，例如 [{"type": "text", "content": "你好"}]]',
+            timestamp: Date.now(),
+            isHidden: true
+          };
+          chat.history.push(switchInstruction);
+          console.log("已成功注入“切换到线上模式”的系统指令。");
+        }
       } else {
         chat.settings.enableBackgroundActivity = document.getElementById('char-background-activity-switch').checked;
         chat.settings.enableAutoCartClear = document.getElementById('char-auto-cart-clear-switch').checked;
@@ -3816,6 +4034,13 @@ window.initEventBindingsA = async function(state, db) {
           chat.settings.enableCrossChat = null;
         } else {
           chat.settings.enableCrossChat = crossChatValue === 'true';
+        }
+
+        const promptClearMemoryValue = document.getElementById('chat-prompt-clear-memory-select').value;
+        if (promptClearMemoryValue === 'null') {
+          chat.settings.promptClearMemoryOnChatClear = null;
+        } else {
+          chat.settings.promptClearMemoryOnChatClear = promptClearMemoryValue === 'true';
         }
 
         // 保存回复条数范围设置（仅单聊）

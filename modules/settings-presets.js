@@ -454,6 +454,36 @@
 -   **外卖代付**: 仅当【你扮演的角色】想让【别人】付钱时才能发起。当订单被支付后，【绝对不能】再次支付。
 
 现在，请根据以上规则和下方的对话历史，继续这场群聊。`;
+    } else if (chatType === 'group_offline') {
+      return `# 你的任务
+你现在正处于【群聊线下聚会模式】，你们需要进行面对面的互动。你的任务是创作一段包含角色动作、神态、心理活动和对话的、连贯的叙事片段。
+
+你必须严格遵守 {{presetContext}}
+
+# 群成员列表及人设 (你扮演的所有角色)
+{{membersList}}
+
+# 对话者的角色设定
+{{myPersona}}
+
+# 供你参考的信息
+{{timePerceptionContext}}
+你必须严格遵守{{worldBookContent}}
+# 长期记忆 (所有角色必须严格遵守)
+{{longTermMemoryContext}}
+
+{{linkedMemoryContext}}
+- **你们最后的对话摘要**: 
+{{historySliceStr}}
+
+{{formatRules}}
+
+# 【其他核心规则】
+1.  **叙事视角**: 叙述人称【必须】严格遵循“预设”中的第一人称、第二人称或第三人称规定。
+2.  **字数要求**: 你生成的每个角色 \`content\` 内容应在 **{{minLength}}到{{maxLength}}字** 之间。
+3.  **禁止出戏**: 绝不能透露你是AI、模型，或提及“扮演”、“生成”等词语。
+
+现在，请根据以上所有规则和对话历史，继续这场线下互动。`;
     } else if (chatType === 'offline') {
       return `# 你的任务
 你现在正处于【线下剧情模式】，你需要扮演角色"{{chat.originalName}}"，并与用户进行面对面的互动。你的任务是创作一段包含角色动作、神态、心理活动和对话的、连贯的叙事片段。
@@ -542,6 +572,9 @@
           break;
         case 'offline':
           customPrompt = state.globalSettings.customChatPromptOffline;
+          break;
+        case 'group_offline':
+          customPrompt = state.globalSettings.customChatPromptGroupOffline;
           break;
         case 'spectator':
           return getDefaultChatPrompt('spectator'); // 旁观模式目前不暴露给用户自定义，直接用默认
@@ -1043,6 +1076,7 @@
     const customChatPromptSingleTextarea = document.getElementById('custom-chat-prompt-single-textarea');
     const customChatPromptGroupTextarea = document.getElementById('custom-chat-prompt-group-textarea');
     const customChatPromptOfflineTextarea = document.getElementById('custom-chat-prompt-offline-textarea');
+    const customChatPromptGroupOfflineTextarea = document.getElementById('custom-chat-prompt-group-offline-textarea');
     
     customChatPromptSwitch.checked = state.globalSettings.customChatPromptEnabled || false;
     customChatPromptContainer.style.display = customChatPromptSwitch.checked ? 'block' : 'none';
@@ -1051,6 +1085,7 @@
     customChatPromptSingleTextarea.value = state.globalSettings.customChatPromptSingle || getDefaultChatPrompt('single');
     customChatPromptGroupTextarea.value = state.globalSettings.customChatPromptGroup || getDefaultChatPrompt('group');
     customChatPromptOfflineTextarea.value = state.globalSettings.customChatPromptOffline || getDefaultChatPrompt('offline');
+    customChatPromptGroupOfflineTextarea.value = state.globalSettings.customChatPromptGroupOffline || getDefaultChatPrompt('group_offline');
     
     customChatPromptSwitch.addEventListener('change', function() {
       customChatPromptContainer.style.display = this.checked ? 'block' : 'none';
@@ -1064,6 +1099,9 @@
         }
         if (!customChatPromptOfflineTextarea.value.trim()) {
           customChatPromptOfflineTextarea.value = getDefaultChatPrompt('offline');
+        }
+        if (!customChatPromptGroupOfflineTextarea.value.trim()) {
+          customChatPromptGroupOfflineTextarea.value = getDefaultChatPrompt('group_offline');
         }
       }
     });
@@ -1087,13 +1125,20 @@
       showToast('已清空线下模式提示词，将使用默认提示词');
     });
     
-    // 聊天提示词 - 导出（导出所有三种）
+    // 群聊线下模式提示词 - 恢复默认
+    document.getElementById('reset-chat-prompt-group-offline-btn').addEventListener('click', function() {
+      customChatPromptGroupOfflineTextarea.value = getDefaultChatPrompt('group_offline');
+      showToast('已恢复群聊线下模式默认提示词');
+    });
+    
+    // 聊天提示词 - 导出
     document.getElementById('export-chat-prompt-btn').addEventListener('click', function() {
       const data = {
         type: 'chat_prompts',
         single: customChatPromptSingleTextarea.value || '',
         group: customChatPromptGroupTextarea.value || '',
-        offline: customChatPromptOfflineTextarea.value || ''
+        offline: customChatPromptOfflineTextarea.value || '',
+        group_offline: customChatPromptGroupOfflineTextarea.value || ''
       };
       const dataStr = JSON.stringify(data, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
@@ -1120,6 +1165,7 @@
             if (data.single !== undefined) customChatPromptSingleTextarea.value = data.single;
             if (data.group !== undefined) customChatPromptGroupTextarea.value = data.group;
             if (data.offline !== undefined) customChatPromptOfflineTextarea.value = data.offline;
+            if (data.group_offline !== undefined) customChatPromptGroupOfflineTextarea.value = data.group_offline;
             showToast('聊天提示词导入成功');
           } else {
             showToast('文件格式不正确');
@@ -1160,6 +1206,7 @@
 
     document.getElementById('global-enable-view-myphone-switch').checked = state.globalSettings.enableViewMyPhone || false;
     document.getElementById('global-enable-cross-chat-switch').checked = state.globalSettings.enableCrossChat !== false; // 默认开启
+    document.getElementById('global-prompt-clear-memory-switch').checked = state.globalSettings.promptClearMemoryOnChatClear || false;
 
     document.getElementById('chat-render-window-input').value = state.globalSettings.chatRenderWindow || 50;
     document.getElementById('chat-list-render-window-input').value = state.globalSettings.chatListRenderWindow || 30;
@@ -1697,6 +1744,7 @@
     document.getElementById('api-style-beautify-switch').checked = state.globalSettings.apiStyleBeautify || false;
     document.getElementById('dropdown-popup-mode-switch').checked = state.globalSettings.dropdownPopupMode || false;
     document.getElementById('lock-screen-toggle').checked = state.globalSettings.lockScreenEnabled || false; // 锁屏回显
+    document.getElementById('lock-screen-bypass-toggle').checked = state.globalSettings.lockScreenBypassEnabled || false; // 锁屏跳过回显
     document.getElementById('lock-screen-password-input').value = state.globalSettings.lockScreenPassword || ''; // 密码回显
 
     // 锁屏壁纸回显
@@ -2091,6 +2139,82 @@
 
 
 // ========== 主题预设管理 ==========
+
+  // 加载自定义气泡颜色预设
+  async function loadCustomBubbleThemes() {
+      const container = document.getElementById('theme-selector-container');
+      if (!container) return;
+
+      // 移除之前动态添加的自定义主题单选按钮
+      const existingCustoms = container.querySelectorAll('label[data-custom="true"]');
+      existingCustoms.forEach(el => el.remove());
+
+      // 找到重置按钮
+      const resetBtn = document.getElementById('reset-theme-btn');
+      
+      try {
+          // 从 localStorage 读取保存的自定义主题
+          const savedThemesStr = localStorage.getItem('custom_bubble_themes');
+          let customThemes = [];
+          if (savedThemesStr) {
+              customThemes = JSON.parse(savedThemesStr);
+          }
+
+          // 如果是从旧版本数据结构恢复（如果没有id）
+          let hasMigration = false;
+          customThemes.forEach(theme => {
+              if (!theme.id) {
+                  theme.id = 'custom_' + Date.now() + Math.floor(Math.random() * 1000);
+                  hasMigration = true;
+              }
+          });
+          if (hasMigration) {
+              localStorage.setItem('custom_bubble_themes', JSON.stringify(customThemes));
+          }
+
+          // 重新生成单选按钮
+          customThemes.forEach(theme => {
+              const label = document.createElement('label');
+              label.setAttribute('data-custom', 'true');
+              label.style.display = 'inline-flex';
+              label.style.alignItems = 'center';
+              label.innerHTML = `<input type="radio" name="theme-select" value="${theme.id}" id="theme-${theme.id}"> <span style="display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:4px; background: linear-gradient(135deg, ${theme.userColor} 50%, ${theme.aiColor} 50%); border: 1px solid #ddd;"></span> ${theme.name}`;
+              
+              // 绑定事件，点击时应用 CSS 变量并保存配置
+              const radio = label.querySelector('input');
+              radio.addEventListener('change', () => {
+                  applyCustomBubbleTheme(theme.id, theme.userColor, theme.aiColor);
+                  updateSettingsPreview();
+              });
+
+              // 插入到重置按钮之前
+              container.insertBefore(label, resetBtn);
+          });
+      } catch (e) {
+          console.error("加载自定义气泡主题失败", e);
+      }
+  }
+
+  // 应用自定义气泡主题到 CSS 变量
+  function applyCustomBubbleTheme(themeId, userColor, aiColor) {
+      if (themeId && themeId.startsWith('custom_')) {
+          const chatMessages = document.getElementById('chat-messages');
+          const settingsPreview = document.getElementById('settings-preview-area');
+          
+          if (chatMessages) {
+              chatMessages.style.setProperty('--custom-user-bg', userColor);
+              chatMessages.style.setProperty('--custom-ai-bg', aiColor);
+          }
+          if (settingsPreview) {
+              settingsPreview.style.setProperty('--custom-user-bg', userColor);
+              settingsPreview.style.setProperty('--custom-ai-bg', aiColor);
+          }
+      }
+  }
+  
+  // 确保全局挂载
+  window.loadCustomBubbleThemes = loadCustomBubbleThemes;
+  window.applyCustomBubbleTheme = applyCustomBubbleTheme;
 
   async function loadThemePresetsDropdown() {
     const selectEl = document.getElementById('theme-preset-select');

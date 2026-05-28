@@ -371,6 +371,9 @@ ${tasksString}
   let keepAliveMultiTimers = [];
   let keepAliveWebRTC = null;
   let keepAliveAudioPlayer = null; // 用于显示的音频播放器
+  let smartKeepAliveWorker = null; // 用于无声智能保活的 Web Worker
+  let smartKeepAliveWakeLock = null; // 用于无声智能保活的 WakeLock
+  let smartKeepAliveEnabled = false;
 
   // 初始化后台保活
   async function initializeBackgroundKeepAlive() {
@@ -379,9 +382,140 @@ ${tasksString}
         enabled: false
       };
     }
+    if (!state.globalSettings.smartKeepAlive) {
+      state.globalSettings.smartKeepAlive = {
+        enabled: false
+      };
+    }
   }
 
-  // 启动后台保活
+  // ==== 无声智能保活策略开始 ====
+
+  // 启动无声智能保活
+  async function startSmartKeepAlive() {
+    console.log('[无声保活] 启动无声智能保活...');
+    smartKeepAliveEnabled = true;
+    
+    // 1. Android WakeLock 策略
+    if ('wakeLock' in navigator) {
+      try {
+        smartKeepAliveWakeLock = await navigator.wakeLock.request('screen');
+        console.log('[无声保活] WakeLock (屏幕唤醒锁) 获取成功');
+        smartKeepAliveWakeLock.addEventListener('release', () => {
+          console.log('[无声保活] WakeLock 被释放，尝试在下次可见时重新获取');
+        });
+      } catch (err) {
+        console.warn('[无声保活] WakeLock 获取失败:', err);
+      }
+    }
+
+    // 2. Web Worker 心跳策略 (防止 JS 挂起)
+    if (!smartKeepAliveWorker) {
+      const workerCode = `
+        let intervalId;
+        self.addEventListener('message', function(e) {
+          if (e.data === 'start') {
+            intervalId = setInterval(() => {
+              self.postMessage('tick');
+            }, 5000); // 每 5 秒发送一次心跳
+          } else if (e.data === 'stop') {
+            clearInterval(intervalId);
+          }
+        });
+      `;
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      smartKeepAliveWorker = new Worker(URL.createObjectURL(blob));
+      smartKeepAliveWorker.onmessage = (e) => {
+        if (e.data === 'tick' && smartKeepAliveEnabled) {
+          // 在此保持主线程略微活跃
+          if (Math.random() < 0.01) console.log('[无声保活] Web Worker 心跳...');
+        }
+      };
+      smartKeepAliveWorker.postMessage('start');
+    }
+
+    // 3. 监听生命周期事件 (iOS 恢复策略)
+    document.addEventListener('visibilitychange', handleSmartVisibilityChange);
+    window.addEventListener('pagehide', handleSmartPageHide);
+    window.addEventListener('resume', handleSmartResume); // PWA/Cordova resume 事件
+
+    updateSmartKeepAliveUI();
+    console.log('[无声保活] ✅ 无声智能保活已启动');
+  }
+
+  // 停止无声智能保活
+  function stopSmartKeepAlive() {
+    console.log('[无声保活] 停止无声智能保活...');
+    smartKeepAliveEnabled = false;
+
+    // 释放 WakeLock
+    if (smartKeepAliveWakeLock !== null) {
+      smartKeepAliveWakeLock.release()
+        .then(() => {
+          smartKeepAliveWakeLock = null;
+        });
+    }
+
+    // 停止并销毁 Worker
+    if (smartKeepAliveWorker) {
+      smartKeepAliveWorker.postMessage('stop');
+      smartKeepAliveWorker.terminate();
+      smartKeepAliveWorker = null;
+    }
+
+    // 移除事件监听
+    document.removeEventListener('visibilitychange', handleSmartVisibilityChange);
+    window.removeEventListener('pagehide', handleSmartPageHide);
+    window.removeEventListener('resume', handleSmartResume);
+
+    updateSmartKeepAliveUI();
+    console.log('[无声保活] ✅ 无声智能保活已停止');
+  }
+
+  // 智能保活：可见性变化处理 (JIT 预热与 WakeLock 恢复)
+  async function handleSmartVisibilityChange() {
+    if (document.visibilityState === 'visible' && smartKeepAliveEnabled) {
+      console.log('[无声保活] 🔄 页面恢复可见，执行 JIT 预热与 WakeLock 恢复');
+      // 恢复 WakeLock
+      if ('wakeLock' in navigator && smartKeepAliveWakeLock === null) {
+        try {
+          smartKeepAliveWakeLock = await navigator.wakeLock.request('screen');
+          console.log('[无声保活] 重新获取 WakeLock 成功');
+        } catch (err) {
+          console.warn('[无声保活] 重新获取 WakeLock 失败:', err);
+        }
+      }
+      // JIT 预热（执行极短的无害计算，帮助 iOS WebKit 快速恢复执行上下文）
+      for (let i = 0; i < 1000; i++) {
+        Math.sqrt(i);
+      }
+    }
+  }
+
+  // 智能保活：即将进入后台/冻结前的处理
+  function handleSmartPageHide(event) {
+    if (smartKeepAliveEnabled) {
+      console.log('[无声保活] ❄️ 页面即将冻结/隐藏，进行状态快照 (如果需要)...');
+      // 可以在此处保存滚动位置、当前活跃输入等状态到 IndexedDB，本处暂作日志记录
+    }
+  }
+
+  // 智能保活：从 PWA 冻结状态恢复
+  function handleSmartResume() {
+    if (smartKeepAliveEnabled) {
+      console.log('[无声保活] 🚀 PWA 触发 resume 事件，快速复原环境');
+      // 可在此处读取 IndexedDB 快照恢复状态
+    }
+  }
+
+  // 更新智能保活相关的 UI 状态（如果有专属的 UI 元素可以放这里）
+  function updateSmartKeepAliveUI() {
+    // 视需求更新，暂时无专门文字显示
+  }
+
+  // ==== 无声智能保活策略结束 ====
+
+  // 启动音频后台保活
   async function startBackgroundKeepAlive() {
     console.log('[后台保活] 启动后台保活（音频播放器模式）...');
 
@@ -483,6 +617,7 @@ ${tasksString}
 
   // 绑定后台保活开关事件
   function bindBackgroundKeepAliveEvents() {
+    const smartKeepAliveSwitch = document.getElementById('smart-keep-alive-switch');
     const keepAliveSwitch = document.getElementById('background-keep-alive-switch');
     const statusDiv = document.getElementById('keep-alive-status');
     const audioBtnContainer = document.getElementById('keep-alive-audio-btn-container');
@@ -494,6 +629,20 @@ ${tasksString}
     const audioUrl = document.getElementById('keep-alive-audio-url');
     const audioLoadUrl = document.getElementById('keep-alive-audio-load-url');
     const audioPlayer = document.getElementById('keep-alive-audio-player');
+
+    if (smartKeepAliveSwitch) {
+      smartKeepAliveSwitch.addEventListener('change', async (e) => {
+        const enabled = e.target.checked;
+        state.globalSettings.smartKeepAlive.enabled = enabled;
+        await db.globalSettings.put(state.globalSettings);
+
+        if (enabled) {
+          await startSmartKeepAlive();
+        } else {
+          stopSmartKeepAlive();
+        }
+      });
+    }
 
     if (keepAliveSwitch) {
       keepAliveSwitch.addEventListener('change', async (e) => {
@@ -650,14 +799,22 @@ ${tasksString}
 
   // 加载后台保活设置到UI
   function loadBackgroundKeepAliveSettings() {
+    const smartConfig = state.globalSettings.smartKeepAlive;
     const config = state.globalSettings.backgroundKeepAlive;
-    if (!config) return;
 
+    const smartKeepAliveSwitch = document.getElementById('smart-keep-alive-switch');
     const keepAliveSwitch = document.getElementById('background-keep-alive-switch');
     const statusDiv = document.getElementById('keep-alive-status');
     const audioBtnContainer = document.getElementById('keep-alive-audio-btn-container');
 
-    if (keepAliveSwitch) {
+    if (smartKeepAliveSwitch && smartConfig) {
+      smartKeepAliveSwitch.checked = smartConfig.enabled || false;
+      if (smartConfig.enabled) {
+        startSmartKeepAlive();
+      }
+    }
+
+    if (keepAliveSwitch && config) {
       keepAliveSwitch.checked = config.enabled || false;
 
       if (statusDiv) {

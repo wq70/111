@@ -117,9 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
       customChatPromptSingle: '',          // 自定义单聊提示词内容
       customChatPromptGroup: '',           // 自定义群聊提示词内容
       customChatPromptOffline: '',         // 自定义线下模式提示词内容
+      customChatPromptGroupOffline: '',    // 自定义群聊线下模式提示词内容
       enableQzoneActions: false,          // 新增：全局动态开关，默认关闭
       enableViewMyPhone: false,           // 新增：全局查看User手机开关，默认关闭
       enableCrossChat: true,              // 新增：全局跨聊天消息开关（群聊↔私聊），默认开启
+      promptClearMemoryOnChatClear: false, // 新增：全局清空聊天记录时是否弹窗询问一并清除长期记忆，默认关闭
       enableBackgroundActivity: false,
       backgroundActivityInterval: 60,
       enableViewMyPhoneInBackground: false,  // 新增：后台查看用户手机开关，默认关闭
@@ -389,6 +391,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (typeof chat.settings.enableCrossChat === 'undefined') {
           chat.settings.enableCrossChat = null; // null表示使用全局设置
+        }
+        if (typeof chat.settings.promptClearMemoryOnChatClear === 'undefined') {
+          chat.settings.promptClearMemoryOnChatClear = null; // null表示使用全局设置
         }
         
         // 新增：初始化后台查看用户手机设置

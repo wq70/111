@@ -1167,11 +1167,12 @@
                box-sizing: border-box;
                z-index: 5;
                display: none;
+               justify-content: space-between;
+               align-items: center;
            }
 
            #favorites-action-bar .action-bar-btn {
-               width: 100%;
-               padding: 12px;
+               padding: 12px 20px;
                border-radius: 8px;
                border: none;
                font-size: 16px;
@@ -1179,6 +1180,7 @@
                cursor: pointer;
                background-color: #ff3b30;
                color: white;
+               min-width: 120px;
            }
 
            #chat-interface-screen .header .selection-controls {
@@ -1964,4 +1966,3 @@
                box-shadow: 0 0 20px rgba(76, 217, 100, 0.6);
                transform: scale(1.05);
            }
-

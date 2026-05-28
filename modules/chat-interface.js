@@ -103,6 +103,24 @@
     const lockContent = document.getElementById('chat-lock-content');
 
     messagesContainer.dataset.theme = chat.settings.theme || 'default';
+    
+    // 如果是自定义主题，动态注入自定义颜色的 CSS 变量
+    if (chat.settings.theme && chat.settings.theme.startsWith('custom_')) {
+      try {
+        const savedThemesStr = localStorage.getItem('custom_bubble_themes');
+        if (savedThemesStr) {
+          const customThemes = JSON.parse(savedThemesStr);
+          const currentCustomTheme = customThemes.find(t => t.id === chat.settings.theme);
+          if (currentCustomTheme) {
+            messagesContainer.style.setProperty('--custom-user-bg', currentCustomTheme.userColor);
+            messagesContainer.style.setProperty('--custom-ai-bg', currentCustomTheme.aiColor);
+          }
+        }
+      } catch (e) {
+        console.error("加载自定义气泡主题颜色失败", e);
+      }
+    }
+    
     const fontSize = chat.settings.fontSize || 13;
     messagesContainer.style.setProperty('--chat-font-size', `${fontSize}px`);
     applyScopedCss(chat.settings.customCss || '', '#chat-messages', 'custom-bubble-style');
@@ -1485,6 +1503,24 @@
     const customCss = document.getElementById('custom-css-input').value;
     const background = chat.settings.background;
     previewArea.dataset.theme = selectedTheme;
+    
+    // 预览区：如果是自定义主题，也动态注入 CSS 变量
+    if (selectedTheme && selectedTheme.startsWith('custom_')) {
+      try {
+        const savedThemesStr = localStorage.getItem('custom_bubble_themes');
+        if (savedThemesStr) {
+          const customThemes = JSON.parse(savedThemesStr);
+          const currentCustomTheme = customThemes.find(t => t.id === selectedTheme);
+          if (currentCustomTheme) {
+            previewArea.style.setProperty('--custom-user-bg', currentCustomTheme.userColor);
+            previewArea.style.setProperty('--custom-ai-bg', currentCustomTheme.aiColor);
+          }
+        }
+      } catch (e) {
+        console.error("加载自定义气泡主题颜色预览失败", e);
+      }
+    }
+
     previewArea.style.setProperty('--chat-font-size', `${fontSize}px`);
     if (background && background.startsWith('data:image')) {
       previewArea.style.backgroundImage = `url(${background})`;

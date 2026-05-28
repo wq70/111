@@ -584,6 +584,7 @@ ${formattedHistory}
     toolbar.innerHTML = `
       <button class="vm-toolbar-btn" id="vm-add-fragment-btn">添加记忆</button>
       <button class="vm-toolbar-btn" id="vm-add-core-btn">添加核心</button>
+      <button class="vm-toolbar-btn" id="vm-batch-toggle-btn">批量操作</button>
       <div style="flex:1"></div>
       <button class="vm-toolbar-btn vm-primary" id="vm-summary-btn" title="剩余 ${stats.remainingToAuto} 条消息后自动触发">
         提取记忆 (${stats.unextractedMessages}/${stats.autoInterval})
@@ -592,6 +593,22 @@ ${formattedHistory}
       <button class="vm-toolbar-btn" id="vm-guide-btn">便携教程</button>
     `;
     container.appendChild(toolbar);
+
+    // 批量操作工具栏 (默认隐藏)
+    const batchToolbar = document.createElement('div');
+    batchToolbar.className = 'vm-toolbar';
+    batchToolbar.id = 'vm-batch-toolbar';
+    batchToolbar.style.display = 'none';
+    batchToolbar.innerHTML = `
+      <button class="vm-toolbar-btn" id="vm-batch-select-all-btn">全选</button>
+      <span style="font-size:13px;color:#666;margin:0 10px;">已选 <span id="vm-batch-selected-count">0</span> 项</span>
+      <button class="vm-toolbar-btn" id="vm-batch-copy-btn">复制</button>
+      <button class="vm-toolbar-btn" id="vm-batch-export-btn">导出</button>
+      <button class="vm-toolbar-btn" id="vm-batch-delete-btn" style="color:#ff3b30">删除</button>
+      <div style="flex:1"></div>
+      <button class="vm-toolbar-btn" id="vm-batch-cancel-btn">取消</button>
+    `;
+    container.appendChild(batchToolbar);
 
     // 记忆列表区
     const listContainer = document.createElement('div');
@@ -613,6 +630,7 @@ ${formattedHistory}
       
       section.innerHTML = `
         <div class="vm-section-header">
+          <input type="checkbox" class="vm-batch-element vm-section-select-all" style="display:none; margin-right:8px;" data-category="${code}">
           <span class="vm-section-tag" style="background:${catInfo.color}">${code}</span>
           <span class="vm-section-title">${catInfo.name}</span>
           <span class="vm-section-count">${frags.length}</span>
@@ -633,6 +651,7 @@ ${formattedHistory}
         const localISOTime = (new Date(dateObj - tzOffset)).toISOString().slice(0,16);
 
         row.innerHTML = `
+          <input type="checkbox" class="vm-batch-element vm-item-checkbox" style="display:none; margin-right:10px; width: 16px; height: 16px; flex-shrink: 0; align-self: flex-start; margin-top: 4px;" data-id="${frag.id}" data-type="${code === 'C' ? 'core' : 'fragment'}">
           <div class="vm-item-main">
             <span class="vm-item-content">${this._escapeHtml(frag.content)}</span>
             <div class="vm-item-meta">

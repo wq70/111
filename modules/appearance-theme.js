@@ -750,12 +750,39 @@
     }
   }
 
+  let unlockClickCount = 0;
+  let unlockClickTimer = null;
+
   function handleUnlockTrigger() {
     const lockScreen = document.getElementById('lock-screen');
     // 如果已经在输入密码模式，就不重复触发
     if (lockScreen.classList.contains('input-mode')) return;
 
     const isMyPhoneMode = lockScreen.classList.contains('myphone-lock-mode');
+
+    // 处理三连击跳过逻辑
+    if (!isMyPhoneMode && state.globalSettings.lockScreenBypassEnabled) {
+      unlockClickCount++;
+      if (unlockClickCount >= 3) {
+        unlockClickCount = 0;
+        clearTimeout(unlockClickTimer);
+        
+        if (confirm('是否确定跳过锁屏？')) {
+           lockScreen.classList.add('unlocking');
+           lockScreenState.isLocked = false;
+           setTimeout(() => {
+             lockScreen.classList.remove('active');
+             lockScreen.classList.remove('unlocking');
+             hidePasswordInput();
+           }, 500);
+           return;
+        }
+      }
+      clearTimeout(unlockClickTimer);
+      unlockClickTimer = setTimeout(() => {
+        unlockClickCount = 0;
+      }, 500);
+    }
 
     if (isMyPhoneMode) {
       const characterId = myPhoneLockScreenState.pendingCharacterId;

@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.32'; // 当前更新版本号
+    this.currentVersion = '0.0.33'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,25 +22,19 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item tips">主要是优化，可能马上还有一次更新，因为有些新功能还没做完，但是速度不保证<br>祝大家521快乐！</div>
-      <div class="update-item">1. 新增流式输出</div>
-      <div class="update-item">2. 优化MYPHONE的生成日期</div>
-      <div class="update-item">3. 优化MYPHONE移动端按钮</div>
-      <div class="update-item">4. 修复结构化表格不读日期的BUG</div>
-      <div class="update-item">5. 修复内存BUG</div>
-      <div class="update-item">6. 修复自定义提示词BUG</div>
-      <div class="update-item">7. 修复向量转换失败的BUG，需要配置向量模型</div>
-      <div class="update-item">8. 修复开场白切换问题</div>
-      <div class="update-item">9. 修复向量每轮提取的BUG</div>
-      <div class="update-item">10. 新增API可以自己选择参数开关</div>
-      <div class="update-item">11. 新增GEMINI生图参数</div>
-      <div class="update-item">12. 修复一下移动端保存情侣空间可能失效的BUG</div>
-      <div class="update-item">13. 新增心声可以多选/全选删除</div>
-      <div class="update-item">14. 新增情侣空间提醒弹窗</div>
-      <div class="update-item">15. 修复B站返回键的问题</div>
-      <div class="update-item">16. 修复简洁模式卡顿的问题</div>
-      <div class="update-item">17. 新增长期记忆精简的时候可以同时保存原本的记忆和精简后的，不会读取原本的，如果选择了还原，能一下恢复之前的记忆</div>
-      <div class="update-item">18. 新增长期总结的精简有个反馈渠道，可以进行多轮反馈，直到你满意为止</div>
+      <div class="update-item">1. 修复精炼记忆的BUG</div>
+      <div class="update-item">2. 修复谷歌生图</div>
+      <div class="update-item">3. 修复代付BUG</div>
+      <div class="update-item">4. 新增导出长期记忆，可以选择导出JSON和TXT</div>
+      <div class="update-item">5. 新增可以用酒馆兼容模式导出角色卡</div>
+      <div class="update-item">6. 新增可以多图发送识别</div>
+      <div class="update-item">7. 新增转换向量可以智能分类与精炼（需要配置向量模型）</div>
+      <div class="update-item">8. 新增可以多选删除向量记忆</div>
+      <div class="update-item">9. 新增群聊多人群聊</div>
+      <div class="update-item">10. 新增收藏可以全选删除</div>
+      <div class="update-item">11. 新增后台保活无声。尝试的</div>
+      <div class="update-item">12. 新增紧急跳过锁屏</div>
+      <div class="update-item">13. 新增清除聊天记忆一并清除长期记忆的按钮</div>
     `;
 
     return `
@@ -48,7 +42,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">5.21更新</div>
+            <div class="update-title">5.28更新</div>
           </div>
           
           <div class="update-notification-body">
