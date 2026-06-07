@@ -225,39 +225,41 @@ window.initEventBindingsA = async function(state, db) {
         modal.className = 'modal';
         modal.style.display = 'flex';
         modal.innerHTML = `
-          <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
-            <h2 style="margin-top: 0;">确认导入TXT文件</h2>
-            <p style="color: #666; margin-bottom: 15px;">
-              找到 ${fileContents.length} 个TXT文件，请选择要导入的文件：
+          <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; border-radius: 16px; padding: 24px; background: var(--secondary-bg, #ffffff); box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: var(--text-color, #333);">确认导入TXT文件</h2>
+            <p style="color: var(--text-secondary, #666); margin-bottom: 20px; font-size: 14px;">
+              找到 <span style="color: var(--accent-color, #007aff); font-weight: bold;">${fileContents.length}</span> 个TXT文件，请选择要导入的文件：
             </p>
-            <div style="flex: 1; overflow-y: auto; margin-bottom: 20px;">
+            <div style="flex: 1; overflow-y: auto; margin-bottom: 24px; padding-right: 5px; border-radius: 8px;">
               ${fileContents.map((file, index) => `
-                <div style="margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-                  <label style="display: flex; align-items: start; cursor: pointer;">
+                <div style="margin-bottom: 12px; padding: 16px; background: var(--hover-bg, #f8f9fa); border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; transition: all 0.2s;">
+                  <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0; width: 100%;">
                     <input type="checkbox" class="txt-import-checkbox" data-index="${index}" 
-                           style="margin-right: 10px; margin-top: 3px;" checked>
-                    <div style="flex: 1;">
-                      <div style="font-weight: bold; margin-bottom: 8px;">${escapeHTML(file.name)}</div>
-                      <div style="font-size: 12px; color: #666; max-height: 100px; overflow: auto; 
+                           style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-color, #007aff);" checked>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-color, #333); font-size: 15px; word-break: break-all;">${escapeHTML(file.name)}</div>
+                      <div style="font-size: 13px; color: var(--text-secondary, #666); max-height: 120px; overflow-y: auto; 
                                   white-space: pre-wrap; word-break: break-word; 
-                                  background: white; padding: 8px; border-radius: 4px;">
+                                  background: var(--bg-color, #ffffff); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color, #f0f0f0); line-height: 1.5;">
                         ${escapeHTML(file.content.substring(0, 200))}${file.content.length > 200 ? '...' : ''}
                       </div>
-                      <div style="font-size: 11px; color: #999; margin-top: 5px;">
-                        文件大小: ${(file.content.length / 1024).toFixed(2)} KB
+                      <div style="font-size: 12px; color: #999; margin-top: 8px; display: flex; align-items: center;">
+                        <span style="display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #ccc; margin-right: 6px;"></span>
+                        大小: ${(file.content.length / 1024).toFixed(2)} KB
                       </div>
                     </div>
                   </label>
                 </div>
               `).join('')}
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-              <button id="txt-import-select-all" style="padding: 10px 20px; background: #666; color: white; 
-                      border: none; border-radius: 5px; cursor: pointer;">全选</button>
-              <button id="txt-import-cancel" style="padding: 10px 20px; background: #ccc; color: #333; 
-                      border: none; border-radius: 5px; cursor: pointer;">取消</button>
-              <button id="txt-import-confirm" style="padding: 10px 20px; background: #007aff; color: white; 
-                      border: none; border-radius: 5px; cursor: pointer;">确认导入</button>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border-color, #f0f0f0);">
+              <button id="txt-import-select-all" style="padding: 10px 16px; background: var(--hover-bg, #f0f0f0); color: var(--text-color, #333); 
+                      border: 1px solid var(--border-color, #dcdcdc); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s;">全选</button>
+              <div style="flex: 1;"></div>
+              <button id="txt-import-cancel" style="padding: 10px 20px; background: var(--hover-bg, #f0f0f0); color: var(--text-color, #333); 
+                      border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s;">取消</button>
+              <button id="txt-import-confirm" style="padding: 10px 24px; background: var(--accent-color, #007aff); color: white; 
+                      border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,122,255,0.3); transition: transform 0.1s, box-shadow 0.2s;">确认导入</button>
             </div>
           </div>
         `;
@@ -392,39 +394,41 @@ window.initEventBindingsA = async function(state, db) {
         modal.className = 'modal';
         modal.style.display = 'flex';
         modal.innerHTML = `
-          <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
-            <h2 style="margin-top: 0;">确认导入DOCX文件</h2>
-            <p style="color: #666; margin-bottom: 15px;">
-              找到 ${fileContents.length} 个DOCX文件，请选择要导入的文件：
+          <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; border-radius: 16px; padding: 24px; background: var(--secondary-bg, #ffffff); box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: var(--text-color, #333);">确认导入DOCX文件</h2>
+            <p style="color: var(--text-secondary, #666); margin-bottom: 20px; font-size: 14px;">
+              找到 <span style="color: var(--accent-color, #007aff); font-weight: bold;">${fileContents.length}</span> 个DOCX文件，请选择要导入的文件：
             </p>
-            <div style="flex: 1; overflow-y: auto; margin-bottom: 20px;">
+            <div style="flex: 1; overflow-y: auto; margin-bottom: 24px; padding-right: 5px; border-radius: 8px;">
               ${fileContents.map((file, index) => `
-                <div style="margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-                  <label style="display: flex; align-items: start; cursor: pointer;">
+                <div style="margin-bottom: 12px; padding: 16px; background: var(--hover-bg, #f8f9fa); border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; transition: all 0.2s;">
+                  <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0; width: 100%;">
                     <input type="checkbox" class="docx-import-checkbox" data-index="${index}" 
-                           style="margin-right: 10px; margin-top: 3px;" checked>
-                    <div style="flex: 1;">
-                      <div style="font-weight: bold; margin-bottom: 8px;">${escapeHTML(file.name)}</div>
-                      <div style="font-size: 12px; color: #666; max-height: 100px; overflow: auto; 
+                           style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-color, #007aff);" checked>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-color, #333); font-size: 15px; word-break: break-all;">${escapeHTML(file.name)}</div>
+                      <div style="font-size: 13px; color: var(--text-secondary, #666); max-height: 120px; overflow-y: auto; 
                                   white-space: pre-wrap; word-break: break-word; 
-                                  background: white; padding: 8px; border-radius: 4px;">
+                                  background: var(--bg-color, #ffffff); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color, #f0f0f0); line-height: 1.5;">
                         ${escapeHTML(file.content.substring(0, 200))}${file.content.length > 200 ? '...' : ''}
                       </div>
-                      <div style="font-size: 11px; color: #999; margin-top: 5px;">
-                        文件大小: ${(file.content.length / 1024).toFixed(2)} KB
+                      <div style="font-size: 12px; color: #999; margin-top: 8px; display: flex; align-items: center;">
+                        <span style="display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #ccc; margin-right: 6px;"></span>
+                        大小: ${(file.content.length / 1024).toFixed(2)} KB
                       </div>
                     </div>
                   </label>
                 </div>
               `).join('')}
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-              <button id="docx-import-select-all" style="padding: 10px 20px; background: #666; color: white; 
-                      border: none; border-radius: 5px; cursor: pointer;">全选</button>
-              <button id="docx-import-cancel" style="padding: 10px 20px; background: #ccc; color: #333; 
-                      border: none; border-radius: 5px; cursor: pointer;">取消</button>
-              <button id="docx-import-confirm" style="padding: 10px 20px; background: #007aff; color: white; 
-                      border: none; border-radius: 5px; cursor: pointer;">确认导入</button>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border-color, #f0f0f0);">
+              <button id="docx-import-select-all" style="padding: 10px 16px; background: var(--hover-bg, #f0f0f0); color: var(--text-color, #333); 
+                      border: 1px solid var(--border-color, #dcdcdc); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s;">全选</button>
+              <div style="flex: 1;"></div>
+              <button id="docx-import-cancel" style="padding: 10px 20px; background: var(--hover-bg, #f0f0f0); color: var(--text-color, #333); 
+                      border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s;">取消</button>
+              <button id="docx-import-confirm" style="padding: 10px 24px; background: var(--accent-color, #007aff); color: white; 
+                      border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,122,255,0.3); transition: transform 0.1s, box-shadow 0.2s;">确认导入</button>
             </div>
           </div>
         `;
@@ -599,46 +603,49 @@ window.initEventBindingsA = async function(state, db) {
         modal.className = 'modal';
         modal.style.display = 'flex';
         modal.innerHTML = `
-          <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column;">
-            <h2 style="margin-top: 0;">确认从ZIP导入文件</h2>
-            <p style="color: #666; margin-bottom: 15px;">
-              从ZIP文件中找到 ${fileContents.length} 个可导入文件（TXT/DOCX），请选择要导入的文件：
+          <div class="modal-content" style="max-width: 600px; max-height: 80vh; display: flex; flex-direction: column; border-radius: 16px; padding: 24px; background: var(--secondary-bg, #ffffff); box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+            <h2 style="margin-top: 0; margin-bottom: 8px; font-size: 20px; color: var(--text-color, #333);">确认从ZIP导入文件</h2>
+            <p style="color: var(--text-secondary, #666); margin-bottom: 20px; font-size: 14px;">
+              从ZIP文件中找到 <span style="color: var(--accent-color, #007aff); font-weight: bold;">${fileContents.length}</span> 个可导入文件（TXT/DOCX），请选择要导入的文件：
             </p>
-            <div style="flex: 1; overflow-y: auto; margin-bottom: 20px;">
+            <div style="flex: 1; overflow-y: auto; margin-bottom: 24px; padding-right: 5px; border-radius: 8px;">
               ${fileContents.map((file, index) => `
-                <div style="margin-bottom: 15px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
-                  <label style="display: flex; align-items: start; cursor: pointer;">
+                <div style="margin-bottom: 12px; padding: 16px; background: var(--hover-bg, #f8f9fa); border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; transition: all 0.2s;">
+                  <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0; width: 100%;">
                     <input type="checkbox" class="zip-import-checkbox" data-index="${index}" 
-                           style="margin-right: 10px; margin-top: 3px;" checked>
-                    <div style="flex: 1;">
-                      <div style="font-weight: bold; margin-bottom: 8px;">
+                           style="margin-right: 12px; margin-top: 4px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-color, #007aff);" checked>
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="font-weight: 600; margin-bottom: 6px; color: var(--text-color, #333); font-size: 15px; word-break: break-all; display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                         ${escapeHTML(file.name)}
-                        <span style="background: #007aff; color: white; padding: 2px 6px; border-radius: 3px; 
-                                     font-size: 10px; margin-left: 8px;">${file.type.toUpperCase()}</span>
+                        <span style="background: var(--accent-color, #007aff); color: white; padding: 2px 8px; border-radius: 4px; 
+                                     font-size: 11px; font-weight: normal;">${file.type.toUpperCase()}</span>
                       </div>
-                      <div style="font-size: 11px; color: #999; margin-bottom: 5px;">
+                      <div style="font-size: 12px; color: var(--text-secondary, #888); margin-bottom: 10px; display: flex; align-items: center;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         来自: ${escapeHTML(file.zipName)}.zip
                       </div>
-                      <div style="font-size: 12px; color: #666; max-height: 100px; overflow: auto; 
+                      <div style="font-size: 13px; color: var(--text-secondary, #666); max-height: 120px; overflow-y: auto; 
                                   white-space: pre-wrap; word-break: break-word; 
-                                  background: white; padding: 8px; border-radius: 4px;">
+                                  background: var(--bg-color, #ffffff); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color, #f0f0f0); line-height: 1.5;">
                         ${escapeHTML(file.content.substring(0, 200))}${file.content.length > 200 ? '...' : ''}
                       </div>
-                      <div style="font-size: 11px; color: #999; margin-top: 5px;">
-                        文件大小: ${(file.content.length / 1024).toFixed(2)} KB
+                      <div style="font-size: 12px; color: #999; margin-top: 8px; display: flex; align-items: center;">
+                        <span style="display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #ccc; margin-right: 6px;"></span>
+                        大小: ${(file.content.length / 1024).toFixed(2)} KB
                       </div>
                     </div>
                   </label>
                 </div>
               `).join('')}
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-              <button id="zip-import-select-all" style="padding: 10px 20px; background: #666; color: white; 
-                      border: none; border-radius: 5px; cursor: pointer;">全选</button>
-              <button id="zip-import-cancel" style="padding: 10px 20px; background: #ccc; color: #333; 
-                      border: none; border-radius: 5px; cursor: pointer;">取消</button>
-              <button id="zip-import-confirm" style="padding: 10px 20px; background: #007aff; color: white; 
-                      border: none; border-radius: 5px; cursor: pointer;">确认导入</button>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; padding-top: 16px; border-top: 1px solid var(--border-color, #f0f0f0);">
+              <button id="zip-import-select-all" style="padding: 10px 16px; background: var(--hover-bg, #f0f0f0); color: var(--text-color, #333); 
+                      border: 1px solid var(--border-color, #dcdcdc); border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s;">全选</button>
+              <div style="flex: 1;"></div>
+              <button id="zip-import-cancel" style="padding: 10px 20px; background: var(--hover-bg, #f0f0f0); color: var(--text-color, #333); 
+                      border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.2s;">取消</button>
+              <button id="zip-import-confirm" style="padding: 10px 24px; background: var(--accent-color, #007aff); color: white; 
+                      border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,122,255,0.3); transition: transform 0.1s, box-shadow 0.2s;">确认导入</button>
             </div>
           </div>
         `;

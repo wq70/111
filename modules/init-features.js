@@ -1698,6 +1698,10 @@ window.initFeatures = function(state, db) {
     if (emergencyResetBtn) {
       emergencyResetBtn.addEventListener('click', handleEmergencyAppearanceReset);
     }
+    const appearanceResetBtn = document.getElementById('appearance-reset-btn');
+    if (appearanceResetBtn) {
+      appearanceResetBtn.addEventListener('click', handleResetVisualResources);
+    }
     const factoryResetBtn = document.getElementById('factory-reset-btn');
     if (factoryResetBtn) {
       factoryResetBtn.addEventListener('click', handleFactoryReset);

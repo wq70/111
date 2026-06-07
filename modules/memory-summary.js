@@ -1984,7 +1984,7 @@ ${formattedMemories}
         batchIndices.forEach(idx => {
           const item = allItems[idx];
           if (item.type === 'longTerm') {
-            longTermToDelete.push(item.id);
+            longTermToDelete.push({ authorId: item.authorId, id: item.id });
           } else if (item.type === 'structured') {
             if (!structuredToDelete[item.categoryCode]) structuredToDelete[item.categoryCode] = [];
             structuredToDelete[item.categoryCode].push(item.id);
@@ -2007,8 +2007,21 @@ ${formattedMemories}
   // 删除逻辑
   if (!keepOriginal) {
     if (longTermToDelete.length > 0) {
-      longTermToDelete.sort((a, b) => b - a);
-      longTermToDelete.forEach(idx => chat.longTermMemory.splice(idx, 1));
+      const delByAuthor = {};
+      longTermToDelete.forEach(info => {
+        if (!delByAuthor[info.authorId]) delByAuthor[info.authorId] = [];
+        delByAuthor[info.authorId].push(info.id);
+      });
+      for (const authorId in delByAuthor) {
+        const authorChat = state.chats[authorId];
+        if (authorChat && authorChat.longTermMemory) {
+          delByAuthor[authorId].sort((a, b) => b - a);
+          delByAuthor[authorId].forEach(idx => authorChat.longTermMemory.splice(idx, 1));
+          if (authorId !== chat.id) {
+            db.chats.put(authorChat);
+          }
+        }
+      }
     }
     if (Object.keys(structuredToDelete).length > 0 && window.structuredMemoryManager) {
       const mem = window.structuredMemoryManager.getStructuredMemory(chat);
@@ -2073,18 +2086,43 @@ async function convertLongTermMemoryToVector(chatId) {
   }
 
   let items = [];
+  const formatDate = (ts) => {
+    if (!ts) return '未知时间';
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  };
 
   // 1. 提取旧的长期记忆
+  if (chat.isGroup) {
+    chat.members.forEach(member => {
+      const memberChat = state.chats[member.id];
+      if (memberChat && memberChat.longTermMemory && memberChat.longTermMemory.length > 0) {
+        memberChat.longTermMemory.forEach((mem, idx) => {
+          items.push({
+            type: 'longTerm',
+            authorId: member.id,
+            content: mem.content,
+            timestamp: mem.timestamp || Date.now(),
+            categoryCode: 'E',
+            mappedCategory: 'E',
+            id: idx,
+            displayLabel: `[${formatDate(mem.timestamp)}] [长期记忆] (${member.groupNickname}) ` + mem.content
+          });
+        });
+      }
+    });
+  }
   if (chat.longTermMemory && chat.longTermMemory.length > 0) {
     chat.longTermMemory.forEach((mem, idx) => {
       items.push({
         type: 'longTerm',
+        authorId: chat.id,
         content: mem.content,
         timestamp: mem.timestamp || Date.now(),
         categoryCode: 'E',
         mappedCategory: 'E',
         id: idx,
-        displayLabel: '[长期记忆] ' + mem.content
+        displayLabel: `[${formatDate(mem.timestamp)}] [长期记忆] ` + mem.content
       });
     });
   }
@@ -2121,6 +2159,13 @@ async function convertLongTermMemoryToVector(chatId) {
       });
     }
   }
+
+  // 按时间降序排序
+  items.sort((a, b) => {
+    const tA = a.timestamp || 0;
+    const tB = b.timestamp || 0;
+    return tB - tA;
+  });
 
   if (items.length === 0) {
     showToast('没有可转换的旧版记忆或结构化记忆', 'warning');
@@ -2253,7 +2298,7 @@ async function convertLongTermMemoryToVector(chatId) {
             // 记录要删除的条目
             if (!keepOriginal) {
               if (item.type === 'longTerm') {
-                longTermToDelete.push(item.id);
+                longTermToDelete.push({ authorId: item.authorId, id: item.id });
               } else if (item.type === 'structured') {
                 if (!structuredToDelete[item.categoryCode]) structuredToDelete[item.categoryCode] = [];
                 // 这里存放的是字符串形式的 id，解析出它原来的数据索引/key
@@ -2277,9 +2322,21 @@ async function convertLongTermMemoryToVector(chatId) {
         // 如果不需要保留原记忆，执行删除
         if (!keepOriginal) {
           if (longTermToDelete.length > 0) {
-            // 降序删除
-            longTermToDelete.sort((a, b) => b - a);
-            longTermToDelete.forEach(idx => chat.longTermMemory.splice(idx, 1));
+            const delByAuthor = {};
+            longTermToDelete.forEach(info => {
+              if (!delByAuthor[info.authorId]) delByAuthor[info.authorId] = [];
+              delByAuthor[info.authorId].push(info.id);
+            });
+            for (const authorId in delByAuthor) {
+              const authorChat = state.chats[authorId];
+              if (authorChat && authorChat.longTermMemory) {
+                delByAuthor[authorId].sort((a, b) => b - a);
+                delByAuthor[authorId].forEach(idx => authorChat.longTermMemory.splice(idx, 1));
+                if (authorId !== chat.id) {
+                  db.chats.put(authorChat);
+                }
+              }
+            }
           }
           if (Object.keys(structuredToDelete).length > 0 && window.structuredMemoryManager) {
             const mem = window.structuredMemoryManager.getStructuredMemory(chat);
@@ -3005,12 +3062,17 @@ async function handleDiaryModeSummary() {
   const unsummarizedMessages = chat.history.filter(m => m.timestamp > lastSummaryTimestamp && (!m.isHidden || (m.role === 'system' && m.content.includes('内心独白'))));
 
   if (unsummarizedMessages.length < 5) {
-    await showCustomAlert('消息太少', `上次总结之后只有 ${unsummarizedMessages.length} 条新消息，至少需要5条才能进行有意义的总结。`);
-    return;
+    const confirmed = await showCustomConfirm(
+      '新消息较少', 
+      `上次总结之后只有 ${unsummarizedMessages.length} 条新消息。如果您是对刚生成的总结不满意（或误删）想要重新生成，请点击"继续"，系统将自动提取最近的历史消息进行重写。\n\n确定要继续吗？`
+    );
+    if (!confirmed) return;
+  } else {
+    const confirmed = await showCustomConfirm('日记模式总结', `将总结上次总结之后的所有消息（共 ${unsummarizedMessages.length} 条），会消耗API额度。确定要继续吗？`);
+    if (!confirmed) return;
   }
 
-  const confirmed = await showCustomConfirm('日记模式总结', `将总结上次总结之后的所有消息（共 ${unsummarizedMessages.length} 条），会消耗API额度。确定要继续吗？`);
-  if (confirmed) {
+  if (true) {
     const memoryMode = chat.settings.memoryMode || 'diary';
     if (memoryMode === 'vector' && window.vectorMemoryManager) {
       await triggerVectorMemorySummary(state.activeChatId, true);
@@ -3961,6 +4023,9 @@ async function triggerAutoSummary(chatId, force = false, customRange = null) {
   } else if (force && chat.settings.enableDiaryMode) {
     // 日记模式：总结上次总结之后的所有消息，不受 autoMemoryInterval 限制
     messagesToSummarize = chat.history.filter(m => m.timestamp > lastSummaryTimestamp && (!m.isHidden || (m.role === 'system' && m.content.includes('内心独白'))));
+    if (messagesToSummarize.length < 5) {
+      messagesToSummarize = chat.history.filter(m => !m.isHidden || (m.role === 'system' && m.content.includes('内心独白'))).slice(-(chat.settings.autoMemoryInterval || 20));
+    }
   } else {
     // 原有逻辑
     messagesToSummarize = force ?

@@ -908,6 +908,56 @@
   }
   window.handleEmergencyAppearanceReset = handleEmergencyAppearanceReset;
 
+  async function handleResetVisualResources() {
+    const confirmed = await showCustomConfirm(
+      "重置壁纸和组件资源？",
+      "此操作将仅重置以下内容为默认状态：\n\n- 主屏幕/CPhone/MYPhone的壁纸\n- 全局聊天背景\n- 锁屏壁纸\n- 小组件的自定义内容（头像/文案等）\n- 所有APP自定义图标\n\n✅ 你的 CSS代码、字体、主题颜色等排版设置将被保留。\n\n确定要执行吗？",
+      { confirmButtonClass: 'btn-danger', confirmText: '重置资源' }
+    );
+
+    if (!confirmed) return;
+
+    await showCustomAlert("处理中...", "正在清理资源...");
+
+    try {
+      const defaultAppIcons = { ...DEFAULT_APP_ICONS };
+      const defaultCPhoneIcons = { ...DEFAULT_CPHONE_ICONS };
+      const defaultMyPhoneIcons = { ...DEFAULT_MYPHONE_ICONS };
+
+      state.globalSettings.wallpaper = 'linear-gradient(135deg, #89f7fe, #66a6ff)';
+      state.globalSettings.cphoneWallpaper = 'linear-gradient(135deg, #f6d365, #fda085)';
+      state.globalSettings.myphoneWallpaper = 'linear-gradient(135deg, #a8edea, #fed6e3)';
+      state.globalSettings.globalChatBackground = '';
+      state.globalSettings.lockScreenWallpaper = '';
+      
+      state.globalSettings.appIcons = defaultAppIcons;
+      state.globalSettings.cphoneAppIcons = defaultCPhoneIcons;
+      state.globalSettings.myphoneAppIcons = defaultMyPhoneIcons;
+      
+      // 清空小组件数据
+      state.globalSettings.widgetData = {};
+
+      await db.globalSettings.put(state.globalSettings);
+
+      applyGlobalWallpaper();
+      applyCPhoneWallpaper();
+      applyMyPhoneWallpaper();
+
+      applyAppIcons();
+      applyCPhoneAppIcons();
+      applyMyPhoneAppIconsGlobal();
+      
+      // 重新加载页面刷新组件的DOM结构至默认
+      await showCustomAlert("重置成功", "壁纸、图标和小组件资源已恢复默认！即将刷新页面以应用更改。");
+      window.location.reload();
+
+    } catch (error) {
+      console.error("重置资源失败:", error);
+      await showCustomAlert("错误", `重置失败: ${error.message}`);
+    }
+  }
+  window.handleResetVisualResources = handleResetVisualResources;
+
   // ========== 从 script.js 迁移：uploadImageLocally ==========
   function uploadImageLocally() {
     return new Promise(resolve => {

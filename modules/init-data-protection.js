@@ -200,13 +200,34 @@ document.addEventListener('DOMContentLoaded', () => {
     _compress(data) {
       if (!data || typeof data !== 'object') return data;
       
-      // 对于大对象，只保留关键信息
-      if (JSON.stringify(data).length > 5000) {
+      // 优化：针对聊天等可能包含庞大数组的对象，直接跳过全量序列化判定，防止主线程阻塞和内存溢出
+      if (data.history || data.apiHistory || data.longTermMemory) {
+        return {
+          _compressed: true,
+          id: data.id,
+          name: data.name,
+          timestamp: data.timestamp || Date.now(),
+          _note: '包含庞大数组对象，为防止卡顿和闪退已直接跳过全量序列化'
+        };
+      }
+      
+      // 对于其他对象，保留长度限制
+      try {
+        const str = JSON.stringify(data);
+        if (str && str.length > 5000) {
+          return {
+            _compressed: true,
+            id: data.id,
+            timestamp: data.timestamp || Date.now(),
+            _note: '数据过大，已省略详细内容'
+          };
+        }
+      } catch (e) {
         return {
           _compressed: true,
           id: data.id,
           timestamp: data.timestamp || Date.now(),
-          _note: '数据过大，已省略详细内容'
+          _note: '序列化异常，已省略详细内容'
         };
       }
       return data;

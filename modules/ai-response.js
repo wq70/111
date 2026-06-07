@@ -6599,6 +6599,7 @@ ${getActiveThoughtsPrompt()}
   async function handlePropelAction() {
     const chat = state.chats[state.activeChatId];
     if (!chat) return;
+    const chatId = state.activeChatId;
 
     setAvatarActingState(chat.id, true);
     const chatHeaderTitle = document.getElementById('chat-header-title');
@@ -6622,7 +6623,8 @@ ${getActiveThoughtsPrompt()}
       }
 
       const maxMemory = parseInt(chat.settings.maxMemory) || 10;
-      const historySlice = chat.history.slice(-maxMemory);
+      const historySlice = chat.history.filter(m => !m.isExcluded).slice(-maxMemory);
+      const filteredHistory = await filterHistoryWithDoNotSendRules(historySlice, chatId);
 
       const now = new Date();
       const chinaTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (3600000 * 8));
