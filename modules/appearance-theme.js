@@ -556,6 +556,9 @@
   };
   window.lockScreenState = lockScreenState;
 
+  let isLockScreenEventsBound = false;
+  let lockScreenClockInterval = null;
+
   function initLockScreen() {
     const lockScreen = document.getElementById('lock-screen');
 
@@ -573,7 +576,8 @@
       updateLockScreenClock();
 
       // 启动锁屏时钟更新
-      setInterval(updateLockScreenClock, 1000);
+      if (lockScreenClockInterval) clearInterval(lockScreenClockInterval);
+      lockScreenClockInterval = setInterval(updateLockScreenClock, 1000);
     }
 
     // 绑定设置界面的事件
@@ -602,43 +606,47 @@
     }
 
     // ===== 绑定解锁事件（从 script.js 迁移时遗漏） =====
-    const lockSwipeArea = document.getElementById('lock-swipe-area');
+    if (!isLockScreenEventsBound) {
+      const lockSwipeArea = document.getElementById('lock-swipe-area');
 
-    // 1. 点击底部横条解锁（兼容鼠标点击）
-    if (lockSwipeArea) {
-      lockSwipeArea.addEventListener('click', handleUnlockTrigger);
-    }
+      // 1. 点击底部横条解锁（兼容鼠标点击）
+      if (lockSwipeArea) {
+        lockSwipeArea.addEventListener('click', handleUnlockTrigger);
+      }
 
-    // 2. 全屏上滑解锁监听
-    if (lockScreen) {
-      let touchStartY = 0;
+      // 2. 全屏上滑解锁监听
+      if (lockScreen) {
+        let touchStartY = 0;
 
-      lockScreen.addEventListener('touchstart', (e) => {
-        touchStartY = e.changedTouches[0].screenY;
-      }, { passive: true });
+        lockScreen.addEventListener('touchstart', (e) => {
+          touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
 
-      lockScreen.addEventListener('touchend', (e) => {
-        const touchEndY = e.changedTouches[0].screenY;
-        const swipeDistance = touchStartY - touchEndY;
-        // 向上滑动超过 50px 触发解锁
-        if (swipeDistance > 50) {
-          handleUnlockTrigger();
-        }
+        lockScreen.addEventListener('touchend', (e) => {
+          const touchEndY = e.changedTouches[0].screenY;
+          const swipeDistance = touchStartY - touchEndY;
+          // 向上滑动超过 50px 触发解锁
+          if (swipeDistance > 50) {
+            handleUnlockTrigger();
+          }
+        });
+      }
+
+      // 3. 锁屏键盘按键事件
+      document.querySelectorAll('.lock-keypad .key').forEach(key => {
+        key.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = key.dataset.action;
+          if (action === 'delete') {
+            deleteKeypadInput();
+          } else if (key.dataset.num) {
+            handleKeypadInput(key.dataset.num);
+          }
+        });
       });
+      
+      isLockScreenEventsBound = true;
     }
-
-    // 3. 锁屏键盘按键事件
-    document.querySelectorAll('.lock-keypad .key').forEach(key => {
-      key.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const action = key.dataset.action;
-        if (action === 'delete') {
-          deleteKeypadInput();
-        } else if (key.dataset.num) {
-          handleKeypadInput(key.dataset.num);
-        }
-      });
-    });
   }
 
   function updateLockScreenClock() {

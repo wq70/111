@@ -1804,6 +1804,96 @@ window.initEventBindingsA = async function(state, db) {
     // ========================================
 
 
+    // --- 锁屏壁纸上传处理开始 ---
+    const lockWallpaperInput = document.getElementById('lock-wallpaper-input');
+    if (lockWallpaperInput) {
+      lockWallpaperInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const base64Url = await new Promise((res, rej) => {
+            const reader = new FileReader();
+            reader.onload = () => res(reader.result);
+            reader.onerror = () => rej(reader.error);
+            reader.readAsDataURL(file);
+          });
+          const preview = document.getElementById('lock-wallpaper-preview');
+          preview.style.backgroundImage = `url(${base64Url})`;
+          preview.textContent = '';
+          preview.dataset.tempUrl = base64Url;
+          event.target.value = null;
+        }
+      });
+    }
+
+    const uploadLockWallpaperUrlBtn = document.getElementById('upload-lock-wallpaper-url-btn');
+    if (uploadLockWallpaperUrlBtn) {
+      uploadLockWallpaperUrlBtn.addEventListener('click', async () => {
+        const url = await showCustomPrompt("网络图片", "请输入锁屏壁纸的URL", "", "url");
+        if (url && url.trim()) {
+          const preview = document.getElementById('lock-wallpaper-preview');
+          preview.style.backgroundImage = `url(${url})`;
+          preview.textContent = '';
+          preview.dataset.tempUrl = url;
+        }
+      });
+    }
+    
+    // 全局锁屏壁纸重置按钮
+    const resetLockWallpaperBtn = document.getElementById('reset-lock-wallpaper-btn');
+    if (resetLockWallpaperBtn) {
+      resetLockWallpaperBtn.addEventListener('click', () => {
+        const preview = document.getElementById('lock-wallpaper-preview');
+        preview.style.backgroundImage = '';
+        preview.textContent = '无';
+        preview.dataset.tempUrl = 'reset';
+      });
+    }
+
+    const myphoneLockWallpaperInput = document.getElementById('myphone-lock-wallpaper-input');
+    if (myphoneLockWallpaperInput) {
+      myphoneLockWallpaperInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          const base64Url = await new Promise((res, rej) => {
+            const reader = new FileReader();
+            reader.onload = () => res(reader.result);
+            reader.onerror = () => rej(reader.error);
+            reader.readAsDataURL(file);
+          });
+          const preview = document.getElementById('myphone-lock-wallpaper-preview');
+          preview.style.backgroundImage = `url(${base64Url})`;
+          preview.textContent = '';
+          preview.dataset.tempUrl = base64Url;
+          event.target.value = null;
+        }
+      });
+    }
+
+    const myphoneUploadLockWallpaperUrlBtn = document.getElementById('myphone-upload-lock-wallpaper-url-btn');
+    if (myphoneUploadLockWallpaperUrlBtn) {
+      myphoneUploadLockWallpaperUrlBtn.addEventListener('click', async () => {
+        const url = await showCustomPrompt("网络图片", "请输入MyPhone锁屏壁纸的URL", "", "url");
+        if (url && url.trim()) {
+          const preview = document.getElementById('myphone-lock-wallpaper-preview');
+          preview.style.backgroundImage = `url(${url})`;
+          preview.textContent = '';
+          preview.dataset.tempUrl = url;
+        }
+      });
+    }
+    
+    // MyPhone锁屏壁纸重置按钮
+    const myphoneResetLockWallpaperBtn = document.getElementById('myphone-reset-lock-wallpaper-btn');
+    if (myphoneResetLockWallpaperBtn) {
+      myphoneResetLockWallpaperBtn.addEventListener('click', () => {
+        const preview = document.getElementById('myphone-lock-wallpaper-preview');
+        preview.style.backgroundImage = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        preview.textContent = '默认壁纸';
+        preview.dataset.tempUrl = 'reset';
+      });
+    }
+    // --- 锁屏壁纸上传处理结束 ---
+
     document.getElementById('wallpaper-upload-input').addEventListener('change', async (event) => {
       const file = event.target.files[0];
       if (file) {
@@ -1878,7 +1968,11 @@ window.initEventBindingsA = async function(state, db) {
 
       const lockPreview = document.getElementById('lock-wallpaper-preview');
       if (lockPreview.dataset.tempUrl) {
-        state.globalSettings.lockScreenWallpaper = lockPreview.dataset.tempUrl;
+        if (lockPreview.dataset.tempUrl === 'reset') {
+            state.globalSettings.lockScreenWallpaper = '';
+        } else {
+            state.globalSettings.lockScreenWallpaper = lockPreview.dataset.tempUrl;
+        }
       }
       await db.globalSettings.put(state.globalSettings);
 

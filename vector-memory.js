@@ -544,6 +544,128 @@ ${formattedHistory}
     return newIds;
   }
 
+  // ==================== 批量操作与导入导出 ====================
+
+  batchDelete(chat, items) {
+    const vm = this.getVariableMemory(chat);
+    const idsToDelete = new Set(items.map(i => i.id));
+    vm.fragments = vm.fragments.filter(f => !idsToDelete.has(f.id));
+    // 清理关联引用
+    vm.fragments.forEach(f => {
+      f.linkedMemories = (f.linkedMemories || []).filter(lid => !idsToDelete.has(lid));
+    });
+    vm.stats.totalFragments = vm.fragments.length;
+    vm.stats.lastUpdated = Date.now();
+  }
+
+  getSelectedItemsText(chat, items) {
+    const vm = this.getVariableMemory(chat);
+    const idsToGet = new Set(items.map(i => i.id));
+    const selectedFrags = vm.fragments.filter(f => idsToGet.has(f.id));
+    return selectedFrags.map(f => {
+      const dateStr = new Date(f.memoryTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      return `[${dateStr}] ${f.content}`;
+    }).join('\n');
+  }
+
+  exportSelected(chat, items) {
+    const vm = this.getVariableMemory(chat);
+    const idsToGet = new Set(items.map(i => i.id));
+    const selectedFrags = vm.fragments.filter(f => idsToGet.has(f.id));
+    return JSON.stringify({
+      type: 'variable-memory-partial',
+      version: 2,
+      fragments: selectedFrags
+    }, null, 2);
+  }
+
+  exportMemory(chat) {
+    const vm = this.getVariableMemory(chat);
+    return JSON.stringify({
+      type: 'variable-memory-full',
+      version: 2,
+      settings: vm.settings,
+      fragments: vm.fragments,
+      _customCategories: vm._customCategories,
+      stats: vm.stats
+    }, null, 2);
+  }
+
+  async importMemory(chat, jsonString, mode = 'merge') {
+    const data = JSON.parse(jsonString);
+    const vm = this.getVariableMemory(chat);
+    let count = 0;
+    
+    if (mode === 'replace' && data.type !== 'variable-memory-partial') {
+      vm.fragments = [];
+      vm.stats = { totalFragments: 0, totalRecalls: 0, lastUpdated: Date.now() };
+    }
+
+    const frags = data.fragments || [];
+    for (const frag of frags) {
+      if (mode === 'merge') {
+        const isDuplicate = vm.fragments.some(f => f.id === frag.id || this.bm25Match(this.tokenize(frag.content), f.content) > 0.9);
+        if (isDuplicate) continue;
+      }
+      
+      const newId = 'mem_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      vm.fragments.push({
+        ...frag,
+        id: newId
+      });
+      count++;
+    }
+    
+    if (data.type === 'variable-memory-full' && mode === 'replace') {
+      if (data.settings) vm.settings = { ...vm.settings, ...data.settings };
+      if (data._customCategories) vm._customCategories = data._customCategories;
+    }
+    
+    vm.stats.totalFragments = vm.fragments.length;
+    vm.stats.lastUpdated = Date.now();
+    return count;
+  }
+
+  getDefaultExtractionPrompt() {
+    return `
+# 你的任务
+你是"{{角色名}}"。请阅读下面的最新对话记录，提取【值得长期记忆】的增量信息，输出为JSON数组格式。
+
+# 输出格式（严格遵守JSON数组）
+\`\`\`json
+[
+  {
+    "content": "记忆内容（第一人称，简短清晰，如：用户告诉我她今天升职了）",
+    "tags": ["升职", "开心", "工作"],
+    "category": "U/A/R/E/I/L/P/T/M/C",
+    "importance": 1-10,
+    "emotionalWeight": 1-10
+  }
+]
+\`\`\`
+
+# 10大精细分类说明
+- U = 用户设定 (用户的外貌/性格/喜好/身份等)
+- A = 角色设定 (你自己发生的改变)
+- R = 关系发展 (表白/吵架/亲密举动等里程碑)
+- E = 经历/事件 (共同经历的事情)
+- I = 物品/礼物 (送礼/买东西)
+- L = 地点/场景 (去过的重要地方)
+- P = 承诺/计划 (约定的未来事项)
+- T = 禁忌/规则 (雷区/规矩)
+- M = 情绪/心理 (强烈的情感流露/阴影)
+- C = 核心灵魂 (必须永远铭记的生死攸关的事)
+
+# 评分规则 (1-10)
+- importance: 8-10(极其重要/转折点)，5-7(值得记住)，1-4(日常琐事，尽量别记)
+- emotionalWeight: 情感的强烈程度。
+
+# 待提取对话
+{{对话记录}}
+
+请直接输出JSON数组，如果没有值得记录的内容，输出空数组 []。`.trim();
+  }
+
   // 获取状态和待提取信息
   getStats(chat) {
     const vm = this.getVariableMemory(chat);
