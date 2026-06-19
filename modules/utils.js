@@ -524,8 +524,16 @@ function isImage(content) {
 function getGeminiResponseText(data) {
 
 
-  if (data.choices && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0].message && data.choices[0].message.content) {
-    return data.choices[0].message.content;
+  if (data.choices && Array.isArray(data.choices) && data.choices.length > 0 && data.choices[0].message) {
+    const msg = data.choices[0].message;
+    // 优先使用 content，为空时回退到 reasoning_content（某些"假流式"模型会把全部输出放在 reasoning_content）
+    if (msg.content) {
+      return msg.content;
+    }
+    if (msg.reasoning_content) {
+      console.warn("[警告] message.content 为空，回退使用 reasoning_content 作为回复内容。");
+      return msg.reasoning_content;
+    }
   }
 
 
