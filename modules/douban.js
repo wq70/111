@@ -12,6 +12,88 @@
 //       handleConfirmDeleteDoubanPosts
 // ========================================
 
+  // ========== 豆瓣多选相关状态 ==========
+  let isDoubanSelectMode = false;
+  let selectedDoubanPosts = new Set();
+  
+  let isDoubanDetailSelectMode = false;
+  let selectedDoubanComments = new Set();
+
+  function toggleDoubanSelectMode() {
+    isDoubanSelectMode = !isDoubanSelectMode;
+    const listEl = document.getElementById('douban-posts-list');
+    const actionBar = document.getElementById('douban-action-bar');
+    const selectBtn = document.getElementById('douban-select-btn');
+    
+    if (isDoubanSelectMode) {
+      listEl.classList.add('selection-mode');
+      actionBar.style.display = 'flex';
+      selectBtn.style.display = 'none';
+      selectedDoubanPosts.clear();
+      const selectAllCb = document.getElementById('select-all-douban-checkbox');
+      if (selectAllCb) selectAllCb.checked = false;
+      updateDoubanForwardButton();
+    } else {
+      listEl.classList.remove('selection-mode');
+      actionBar.style.display = 'none';
+      selectBtn.style.display = 'block';
+      selectedDoubanPosts.clear();
+      document.querySelectorAll('.douban-post-item.selected').forEach(el => el.classList.remove('selected'));
+    }
+  }
+
+  function toggleDoubanDetailSelectMode() {
+    isDoubanDetailSelectMode = !isDoubanDetailSelectMode;
+    const commentsListEl = document.getElementById('douban-detail-comments-list');
+    const actionBar = document.getElementById('douban-detail-action-bar');
+    const selectBtn = document.getElementById('douban-detail-select-btn');
+    const postBody = document.getElementById('douban-post-detail-body');
+    
+    if (isDoubanDetailSelectMode) {
+      if(commentsListEl) commentsListEl.classList.add('selection-mode');
+      if(postBody) postBody.classList.add('selection-mode');
+      actionBar.style.display = 'flex';
+      selectBtn.style.display = 'none';
+      selectedDoubanComments.clear();
+      const selectAllCb = document.getElementById('select-all-douban-detail-checkbox');
+      if (selectAllCb) selectAllCb.checked = false;
+      updateDoubanDetailForwardButton();
+    } else {
+      if(commentsListEl) commentsListEl.classList.remove('selection-mode');
+      if(postBody) postBody.classList.remove('selection-mode');
+      actionBar.style.display = 'none';
+      selectBtn.style.display = 'block';
+      selectedDoubanComments.clear();
+      document.querySelectorAll('.douban-comment-item.selected, #douban-post-detail-body.selected').forEach(el => el.classList.remove('selected'));
+    }
+  }
+
+  function updateDoubanForwardButton() {
+    const btn = document.getElementById('forward-selected-douban-btn');
+    const deleteBtn = document.getElementById('delete-selected-douban-btn');
+    if (btn) {
+      btn.textContent = `转发 (${selectedDoubanPosts.size})`;
+      btn.disabled = selectedDoubanPosts.size === 0;
+    }
+    if (deleteBtn) {
+      deleteBtn.textContent = `删除 (${selectedDoubanPosts.size})`;
+      deleteBtn.disabled = selectedDoubanPosts.size === 0;
+    }
+  }
+  
+  function updateDoubanDetailForwardButton() {
+    const btn = document.getElementById('forward-selected-douban-detail-btn');
+    const deleteBtn = document.getElementById('delete-selected-douban-detail-btn');
+    if (btn) {
+      btn.textContent = `转发 (${selectedDoubanComments.size})`;
+      btn.disabled = selectedDoubanComments.size === 0;
+    }
+    if (deleteBtn) {
+      deleteBtn.textContent = `删除 (${selectedDoubanComments.size})`;
+      deleteBtn.disabled = selectedDoubanComments.size === 0;
+    }
+  }
+
   async function renderDoubanScreen() {
     const listEl = document.getElementById('douban-posts-list');
     listEl.innerHTML = '';
@@ -55,11 +137,37 @@
 
       const itemEl = document.createElement('div');
       itemEl.className = 'douban-post-item';
-      itemEl.onclick = () => openDoubanPostDetail(post.id);
+      itemEl.dataset.postId = post.id;
+      itemEl.onclick = (e) => {
+        if (isDoubanSelectMode) {
+          e.preventDefault();
+          e.stopPropagation();
+          const checkbox = itemEl.querySelector('.douban-checkbox');
+          if (checkbox) {
+             const isSelected = itemEl.classList.contains('selected');
+             if (isSelected) {
+               itemEl.classList.remove('selected');
+               selectedDoubanPosts.delete(post.id);
+             } else {
+               itemEl.classList.add('selected');
+               selectedDoubanPosts.add(post.id);
+             }
+             updateDoubanForwardButton();
+             const selectAllCb = document.getElementById('select-all-douban-checkbox');
+             if (selectAllCb) {
+                selectAllCb.checked = document.querySelectorAll('.douban-post-item').length === selectedDoubanPosts.size;
+             }
+          }
+        } else {
+          openDoubanPostDetail(post.id);
+        }
+      };
 
       itemEl.innerHTML = `
+            <div class="douban-checkbox" style="display: none;"></div>
+            <div style="flex: 1; min-width: 0;">
             <div class="douban-post-header">
-                <img src="${avatarUrl}" class="douban-post-avatar">
+                <img src="${avatarUrl}" class="douban-post-avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
                 <div class="douban-author-info">
                     <div class="douban-author-name">${post.authorName}</div>
                     <div class="douban-group-name">来自 ${post.groupName}</div>
@@ -74,6 +182,7 @@
                 </div>
                 <span class="douban-post-timestamp">${formatTimeAgo(post.timestamp)}</span>
             </div>
+            </div>
         `;
       listEl.appendChild(itemEl);
     });
@@ -81,7 +190,7 @@
 
 
 
-  async function handleGenerateDoubanPosts() {
+  async function handleGenerateDoubanPosts(isIncremental = false) {
     const activeCharacterIds = state.globalSettings.doubanActiveCharacterIds || [];
 
     if (activeCharacterIds.length === 0) {
@@ -92,7 +201,8 @@
     // 重置当前批次的头像分配
     resetDoubanAvatarAssignments();
 
-    await showCustomAlert("请稍候...", `正在为您选择的 ${activeCharacterIds.length} 位角色生成豆瓣动态...`);
+    const loadingMsg = isIncremental ? `正在为您选择的 ${activeCharacterIds.length} 位角色追加生成豆瓣动态...` : `正在为您选择的 ${activeCharacterIds.length} 位角色生成豆瓣动态...`;
+    await showCustomAlert("请稍候...", loadingMsg);
 
     const {
       proxyUrl,
@@ -117,6 +227,12 @@
       if (wb.isGlobal) {
         allLinkedBookIds.add(wb.id);
       }
+    });
+    
+    // 添加豆瓣专属关联的世界书
+    const doubanActiveWorldBookIds = state.globalSettings.doubanActiveWorldBookIds || [];
+    doubanActiveWorldBookIds.forEach(wbId => {
+        allLinkedBookIds.add(wbId);
     });
 
     let sharedWorldBookContext = '';
@@ -159,10 +275,20 @@
       });
     }
 
-    const userNickname = state.qzoneSettings.nickname || '我';
-    const userPersona = activeCharacterIds.length > 0 && state.chats[activeCharacterIds[0]] ?
-      state.chats[activeCharacterIds[0]].settings.myPersona :
-      '(未设置)';
+    const userNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
+    
+    // --- 动态拼接豆瓣人设 ---
+    let userPersona = '(未设置)';
+    const activePersonaIds = state.globalSettings.doubanActivePersonaIds || [];
+    if (activePersonaIds.length > 0 && state.personaPresets) {
+        const selectedPersonas = state.personaPresets.filter(p => activePersonaIds.includes(p.id));
+        if (selectedPersonas.length > 0) {
+            userPersona = selectedPersonas[0].persona;
+        }
+    } else if (activeCharacterIds.length > 0 && state.chats[activeCharacterIds[0]]) {
+        // 后备：如果没有选择人设，使用原来的逻辑
+        userPersona = state.chats[activeCharacterIds[0]].settings.myPersona || '(未设置)';
+    }
 
     let charactersContext = '';
     for (const charId of activeCharacterIds) {
@@ -326,14 +452,27 @@ ${charactersContext}
       const data = await response.json();
       const aiResponseContent = getGeminiResponseText(data);
 
-      const jsonMatch = aiResponseContent.match(/\[[\s\S]*\]/);
-
-      if (!jsonMatch) {
-        throw new Error(`AI返回的内容中未找到有效的JSON数组。原始返回: ${aiResponseContent}`);
+      let simulatedPosts;
+      try {
+        let textToParse = aiResponseContent;
+        const codeBlockMatch = textToParse.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (codeBlockMatch) {
+            textToParse = codeBlockMatch[1];
+        } else {
+            const firstBracket = textToParse.indexOf('[');
+            const lastBracket = textToParse.lastIndexOf(']');
+            if (firstBracket !== -1 && lastBracket !== -1 && lastBracket >= firstBracket) {
+                textToParse = textToParse.substring(firstBracket, lastBracket + 1);
+            }
+        }
+        simulatedPosts = JSON.parse(textToParse.trim());
+      } catch (parseError) {
+        throw new Error(`解析JSON失败: ${parseError.message}\n原始返回内容: ${aiResponseContent}`);
       }
 
-      const simulatedPosts = JSON.parse(jsonMatch[0]);
-      await db.doubanPosts.clear();
+      if (!isIncremental) {
+        await db.doubanPosts.clear();
+      }
       await db.doubanPosts.bulkAdd(simulatedPosts.map(p => ({
         ...p,
         timestamp: Date.now() - Math.random() * 100000
@@ -385,12 +524,43 @@ ${charactersContext}
     }
 
 
-    document.getElementById('douban-detail-avatar').src = authorAvatar;
+    const detailAvatar = document.getElementById('douban-detail-avatar');
+    if (detailAvatar) {
+        detailAvatar.src = authorAvatar;
+        detailAvatar.onerror = function() { this.onerror=null; this.src=defaultAvatar; };
+    }
     document.getElementById('douban-detail-author').textContent = authorDisplayName;
     document.getElementById('douban-detail-group').textContent = `来自 ${post.groupName}`;
     document.getElementById('douban-detail-post-title').textContent = post.postTitle;
     document.getElementById('douban-detail-content').innerHTML = post.content.replace(/\n/g, '<br>');
-    document.getElementById('douban-my-comment-avatar').src = state.qzoneSettings.avatar;
+    
+    const postBodyEl = document.getElementById('douban-post-detail-body');
+    postBodyEl.onclick = (e) => {
+        if (isDoubanDetailSelectMode) {
+            const isSelected = postBodyEl.classList.contains('selected');
+            if (isSelected) {
+                postBodyEl.classList.remove('selected');
+                selectedDoubanComments.delete('post_body');
+            } else {
+                postBodyEl.classList.add('selected');
+                selectedDoubanComments.add('post_body');
+            }
+            updateDoubanDetailForwardButton();
+        }
+    };
+    
+    if (!postBodyEl.querySelector('.douban-checkbox')) {
+        postBodyEl.style.position = 'relative';
+        const cb = document.createElement('div');
+        cb.className = 'douban-checkbox';
+        cb.style.cssText = 'display: none; position: absolute; top: 15px; right: 15px; z-index: 2; pointer-events: none;';
+        postBodyEl.appendChild(cb);
+    }
+    const myCommentAvatar = document.getElementById('douban-my-comment-avatar');
+    if (myCommentAvatar) {
+        myCommentAvatar.src = state.globalSettings.doubanUserAvatar || state.qzoneSettings.avatar || defaultAvatar;
+        myCommentAvatar.onerror = function() { this.onerror=null; this.src=defaultAvatar; };
+    }
     document.getElementById('douban-comment-input').value = '';
 
     const commentsListEl = document.getElementById('douban-detail-comments-list');
@@ -403,17 +573,18 @@ ${charactersContext}
 
       post.comments.forEach(comment => {
         let commenterAvatar = defaultAvatar;
-        const myNickname = state.qzoneSettings.nickname || '我';
-        const commenterName = comment.commenter;
+        const myNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
+        const isUserComment = comment.isUser || comment.commenter === '我' || comment.commenter === state.qzoneSettings.nickname || comment.commenter === state.globalSettings.doubanUserNickname;
+        const displayCommenterName = isUserComment ? myNickname : comment.commenter;
 
-        if (commenterAvatarMap.has(commenterName)) {
+        if (commenterAvatarMap.has(displayCommenterName)) {
 
-          commenterAvatar = commenterAvatarMap.get(commenterName);
+          commenterAvatar = commenterAvatarMap.get(displayCommenterName);
         } else {
 
-          if (commenterName === myNickname) {
-            commenterAvatar = state.qzoneSettings.avatar;
-          } else if (commenterName === post.authorName) {
+          if (isUserComment) {
+            commenterAvatar = state.globalSettings.doubanUserAvatar || state.qzoneSettings.avatar || defaultAvatar;
+          } else if (displayCommenterName === post.authorName) {
             commenterAvatar = authorAvatar;
           } else {
             const commenterChatByOriginalName = comment.commenterOriginalName ?
@@ -423,12 +594,12 @@ ${charactersContext}
             if (commenterChatByOriginalName) {
               commenterAvatar = commenterChatByOriginalName.settings.aiAvatar;
             } else {
-              const commenterChatByName = Object.values(state.chats).find(c => !c.isGroup && c.name === commenterName);
+              const commenterChatByName = Object.values(state.chats).find(c => !c.isGroup && c.name === displayCommenterName);
               if (commenterChatByName) {
                 commenterAvatar = commenterChatByName.settings.aiAvatar;
               } else {
                 // 优先使用自定义头像
-                const customAvatar = getNpcAvatarForCharacter(commenterName);
+                const customAvatar = getNpcAvatarForCharacter(displayCommenterName);
                 if (customAvatar) {
                   commenterAvatar = customAvatar;
                 } else if (comment.avatar_prompt && state.globalSettings.doubanEnableAiAvatar !== false) {
@@ -438,18 +609,36 @@ ${charactersContext}
             }
           }
 
-          commenterAvatarMap.set(commenterName, commenterAvatar);
+          commenterAvatarMap.set(displayCommenterName, commenterAvatar);
         }
 
         const commentEl = document.createElement('div');
         commentEl.className = 'douban-comment-item';
+        
+        const commentId = btoa(unescape(encodeURIComponent(displayCommenterName + comment.text))).replace(/[^a-zA-Z0-9]/g, '');
+        commentEl.dataset.commentId = commentId;
         commentEl.innerHTML = `
-                <img src="${commenterAvatar}" class="douban-comment-avatar">
+                <div class="douban-checkbox" style="display: none; margin-right: 10px; align-self: center; flex-shrink: 0; pointer-events: none;"></div>
+                <img src="${commenterAvatar}" class="douban-comment-avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
                 <div class="douban-comment-body">
-                    <div class="douban-comment-author">${commenterName}</div>
+                    <div class="douban-comment-author">${displayCommenterName}</div>
                     <div class="douban-comment-text">${comment.text.replace(/\n/g, '<br>')}</div>
                 </div>
             `;
+            
+        commentEl.onclick = (e) => {
+            if (isDoubanDetailSelectMode) {
+                const isSelected = commentEl.classList.contains('selected');
+                if (isSelected) {
+                    commentEl.classList.remove('selected');
+                    selectedDoubanComments.delete(commentId);
+                } else {
+                    commentEl.classList.add('selected');
+                    selectedDoubanComments.add(commentId);
+                }
+                updateDoubanDetailForwardButton();
+            }
+        };
         commentsListEl.appendChild(commentEl);
       });
     } else {
@@ -475,11 +664,12 @@ ${charactersContext}
       post.comments = [];
     }
 
-    const myNickname = state.qzoneSettings.nickname || '我';
+    const myNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
 
     post.comments.push({
       commenter: myNickname,
-      text: commentText
+      text: commentText,
+      isUser: true
     });
     post.commentsCount++;
 
@@ -518,8 +708,59 @@ ${charactersContext}
         throw new Error('API未配置，无法生成内容。');
       }
 
-      const userNickname = state.qzoneSettings.nickname || '我';
-      const userPersona = state.chats[Object.keys(state.chats)[0]]?.settings.myPersona || '(未设置)';
+      const userNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
+      
+      // --- 等待回复时同样读取人设 ---
+      let userPersona = '(未设置)';
+      const activePersonaIds = state.globalSettings.doubanActivePersonaIds || [];
+      if (activePersonaIds.length > 0 && state.personaPresets) {
+          const selectedPersonas = state.personaPresets.filter(p => activePersonaIds.includes(p.id));
+          if (selectedPersonas.length > 0) {
+              userPersona = selectedPersonas[0].persona;
+          }
+      } else {
+          // 后备逻辑
+          userPersona = state.chats[Object.keys(state.chats)[0]]?.settings.myPersona || '(未设置)';
+      }
+      
+      const allLinkedBookIds = new Set();
+      const activeCharacterIds = state.globalSettings.doubanActiveCharacterIds || [];
+      activeCharacterIds.forEach(charId => {
+        const c = state.chats[charId];
+        if (c && c.settings.linkedWorldBookIds) {
+          c.settings.linkedWorldBookIds.forEach(bookId => allLinkedBookIds.add(bookId));
+        }
+      });
+  
+      // 添加所有全局世界书
+      state.worldBooks.forEach(wb => {
+        if (wb.isGlobal) {
+          allLinkedBookIds.add(wb.id);
+        }
+      });
+      
+      // 添加豆瓣专属关联的世界书
+      const doubanActiveWorldBookIds = state.globalSettings.doubanActiveWorldBookIds || [];
+      doubanActiveWorldBookIds.forEach(wbId => {
+          allLinkedBookIds.add(wbId);
+      });
+  
+      let sharedWorldBookContext = '';
+      if (allLinkedBookIds.size > 0) {
+        sharedWorldBookContext += '\n\n# 统一世界观设定 (以下设定适用于所有参与角色)\n';
+        allLinkedBookIds.forEach(bookId => {
+          const book = state.worldBooks.find(wb => wb.id === bookId);
+          if (book) {
+            const enabledEntries = book.content
+              .filter(e => e.enabled !== false)
+              .map(e => `- ${e.content}`)
+              .join('\n');
+            if (enabledEntries) {
+              sharedWorldBookContext += `\n## 来自《${book.name}》:\n${enabledEntries}`;
+            }
+          }
+        });
+      }
 
       const existingNpcs = new Map();
       if (post.comments) {
@@ -561,7 +802,6 @@ ${charactersContext}
       }
 
       let charactersContext = '';
-      const activeCharacterIds = state.globalSettings.doubanActiveCharacterIds || [];
       for (const charId of activeCharacterIds) {
         const c = state.chats[charId];
         if (c) {
@@ -617,9 +857,14 @@ ${charactersContext}
 - **发帖人**: ${post.authorName}
 - **帖子内容摘要**: ${post.content.substring(0, 100)}...
 - **已有评论**:
-${post.comments.map(c => `- ${c.commenter}: ${c.text}`).join('\n')}
+${post.comments.map(c => {
+  const isUserComment = c.isUser || c.commenter === '我' || c.commenter === state.qzoneSettings.nickname || c.commenter === state.globalSettings.doubanUserNickname;
+  const displayName = isUserComment ? userNickname : c.commenter;
+  return `- ${displayName}: ${c.text}`;
+}).join('\n')}
 
 ${existingNpcContext}
+${sharedWorldBookContext}
 
 # 当前情景
 - **当前真实时间**: ${currentTimeString}
@@ -666,8 +911,24 @@ ${charactersContext}
 
       const data = await response.json();
       const aiResponseContent = getGeminiResponseText(data);
-      const cleanedJson = aiResponseContent.replace(/^```json\s*/, '').replace(/```$/, '');
-      const newComments = JSON.parse(cleanedJson);
+      
+      let newComments;
+      try {
+        let textToParse = aiResponseContent;
+        const codeBlockMatch = textToParse.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (codeBlockMatch) {
+            textToParse = codeBlockMatch[1];
+        } else {
+            const firstBracket = textToParse.indexOf('[');
+            const lastBracket = textToParse.lastIndexOf(']');
+            if (firstBracket !== -1 && lastBracket !== -1 && lastBracket >= firstBracket) {
+                textToParse = textToParse.substring(firstBracket, lastBracket + 1);
+            }
+        }
+        newComments = JSON.parse(textToParse.trim());
+      } catch (parseError) {
+        throw new Error(`解析JSON失败: ${parseError.message}\n原始返回内容: ${aiResponseContent}`);
+      }
 
       if (Array.isArray(newComments) && newComments.length > 0) {
         post.comments.push(...newComments);
@@ -701,10 +962,11 @@ ${charactersContext}
     } else {
       allCharacters.forEach(char => {
         const item = document.createElement('div');
-        item.className = 'contact-picker-item';
+        item.className = 'contact-picker-item' + (activeIds.has(char.id) ? ' selected' : '');
         item.innerHTML = `
-                <input type="checkbox" class="douban-cast-checkbox" data-chat-id="${char.id}" ${activeIds.has(char.id) ? 'checked' : ''} style="margin-right: 15px;">
-                <img src="${char.settings.aiAvatar || defaultAvatar}" class="avatar">
+                <div class="checkbox" style="margin-right: 15px;"></div>
+                <input type="checkbox" class="douban-cast-checkbox" data-chat-id="${char.id}" ${activeIds.has(char.id) ? 'checked' : ''} style="display: none;">
+                <img src="${char.settings.aiAvatar || defaultAvatar}" class="avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
                 <span class="name">${char.name}</span>
             `;
         listEl.appendChild(item);
@@ -740,11 +1002,173 @@ ${charactersContext}
     const item = e.target.closest('.contact-picker-item');
     if (item) {
       const checkbox = item.querySelector('.douban-cast-checkbox');
-      if (checkbox && e.target !== checkbox) {
+      if (checkbox) {
         checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
+        }
       }
     }
   });
+
+  async function openDoubanPersonaSelector() {
+    const modal = document.getElementById('douban-persona-modal');
+    const listEl = document.getElementById('douban-persona-list');
+    listEl.innerHTML = '';
+
+    const allPersonas = state.personaPresets || [];
+    const activeIds = new Set(state.globalSettings.doubanActivePersonaIds || []);
+
+    if (allPersonas.length === 0) {
+      listEl.innerHTML = '<p style="text-align:center; color:#8a8a8a; padding: 50px 0;">还没有可以参与的人设，请先去添加我的人设预设。</p>';
+    } else {
+      allPersonas.forEach(persona => {
+        const item = document.createElement('div');
+        item.className = 'contact-picker-item' + (activeIds.has(persona.id) ? ' selected' : '');
+        
+        let personaDesc = persona.persona || '';
+        if (personaDesc.length > 20) {
+            personaDesc = personaDesc.substring(0, 20) + '...';
+        }
+
+        item.innerHTML = `
+                <div class="checkbox" style="margin-right: 15px;"></div>
+                <input type="radio" name="douban-persona-radio" class="douban-persona-radio" data-persona-id="${persona.id}" ${activeIds.has(persona.id) ? 'checked' : ''} style="display: none;">
+                <img src="${persona.avatar || defaultAvatar}" class="avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
+                <span class="name">${personaDesc || '人设预设 ' + persona.id}</span>
+            `;
+        listEl.appendChild(item);
+      });
+    }
+    modal.classList.add('visible');
+  }
+
+  async function saveDoubanPersonaSelection() {
+    const selectedRadio = document.querySelector('#douban-persona-list .douban-persona-radio:checked');
+    let selectedIds = [];
+    if (selectedRadio) {
+        const id = selectedRadio.dataset.personaId;
+        selectedIds = [isNaN(parseInt(id)) ? id : parseInt(id)];
+    }
+
+    state.globalSettings.doubanActivePersonaIds = selectedIds;
+    await db.globalSettings.put(state.globalSettings);
+
+    document.getElementById('douban-persona-modal').classList.remove('visible');
+    
+    if (typeof showToast === 'function') {
+        showToast('人设选择已保存', 'success');
+    } else {
+        await showCustomAlert('保存成功', '人设选择已更新！');
+    }
+  }
+
+  const doubanPersonaSelectBtn = document.getElementById('douban-persona-select-btn');
+  if (doubanPersonaSelectBtn) doubanPersonaSelectBtn.addEventListener('click', openDoubanPersonaSelector);
+  
+  const cancelDoubanPersonaBtn = document.getElementById('cancel-douban-persona-btn');
+  if (cancelDoubanPersonaBtn) {
+      cancelDoubanPersonaBtn.addEventListener('click', () => {
+        document.getElementById('douban-persona-modal').classList.remove('visible');
+      });
+  }
+  
+  const saveDoubanPersonaBtn = document.getElementById('save-douban-persona-btn');
+  if (saveDoubanPersonaBtn) saveDoubanPersonaBtn.addEventListener('click', saveDoubanPersonaSelection);
+
+  const doubanPersonaList = document.getElementById('douban-persona-list');
+  if (doubanPersonaList) {
+      doubanPersonaList.addEventListener('click', (e) => {
+        const item = e.target.closest('.contact-picker-item');
+        if (item) {
+          const radio = item.querySelector('.douban-persona-radio');
+          if (radio) {
+            // 先清除同组其他的选中状态
+            document.querySelectorAll('#douban-persona-list .contact-picker-item').forEach(el => el.classList.remove('selected'));
+            radio.checked = true;
+            item.classList.add('selected');
+          }
+        }
+      });
+  }
+
+  async function openDoubanWorldBookSelector() {
+    const modal = document.getElementById('douban-worldbook-modal');
+    const listEl = document.getElementById('douban-worldbook-list');
+    listEl.innerHTML = '';
+
+    const allWorldBooks = state.worldBooks || [];
+    const activeIds = new Set(state.globalSettings.doubanActiveWorldBookIds || []);
+
+    if (allWorldBooks.length === 0) {
+      listEl.innerHTML = '<p style="text-align:center; color:#8a8a8a; padding: 50px 0;">还没有世界书，请先在设置中添加。</p>';
+    } else {
+      allWorldBooks.forEach(wb => {
+        const item = document.createElement('div');
+        item.className = 'contact-picker-item' + (activeIds.has(wb.id) ? ' selected' : '');
+
+        item.innerHTML = `
+                <div class="checkbox" style="margin-right: 15px;"></div>
+                <input type="checkbox" class="douban-worldbook-checkbox" data-worldbook-id="${wb.id}" ${activeIds.has(wb.id) ? 'checked' : ''} style="display: none;">
+                <span class="name" style="margin-left: 10px;">${wb.name || '未命名世界书'}</span>
+            `;
+        listEl.appendChild(item);
+      });
+    }
+    modal.classList.add('visible');
+  }
+
+  async function saveDoubanWorldBookSelection() {
+    const selectedCheckboxes = document.querySelectorAll('#douban-worldbook-list .douban-worldbook-checkbox:checked');
+    const selectedIds = Array.from(selectedCheckboxes).map(cb => {
+        const id = cb.dataset.worldbookId;
+        return isNaN(parseInt(id)) ? id : parseInt(id);
+    });
+
+    state.globalSettings.doubanActiveWorldBookIds = selectedIds;
+    await db.globalSettings.put(state.globalSettings);
+
+    document.getElementById('douban-worldbook-modal').classList.remove('visible');
+    
+    if (typeof showToast === 'function') {
+        showToast('世界书选择已保存', 'success');
+    } else {
+        await showCustomAlert('保存成功', '世界书选择已更新！');
+    }
+  }
+
+  const doubanWorldBookSelectBtn = document.getElementById('douban-worldbook-select-btn');
+  if (doubanWorldBookSelectBtn) doubanWorldBookSelectBtn.addEventListener('click', openDoubanWorldBookSelector);
+  
+  const cancelDoubanWorldBookBtn = document.getElementById('cancel-douban-worldbook-btn');
+  if (cancelDoubanWorldBookBtn) {
+      cancelDoubanWorldBookBtn.addEventListener('click', () => {
+        document.getElementById('douban-worldbook-modal').classList.remove('visible');
+      });
+  }
+  
+  const saveDoubanWorldBookBtn = document.getElementById('save-douban-worldbook-btn');
+  if (saveDoubanWorldBookBtn) saveDoubanWorldBookBtn.addEventListener('click', saveDoubanWorldBookSelection);
+
+  const doubanWorldBookList = document.getElementById('douban-worldbook-list');
+  if (doubanWorldBookList) {
+      doubanWorldBookList.addEventListener('click', (e) => {
+        const item = e.target.closest('.contact-picker-item');
+        if (item) {
+          const checkbox = item.querySelector('.douban-worldbook-checkbox');
+          if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+          }
+        }
+      });
+  }
 
 
   function openDoubanSettingsModal() {
@@ -754,6 +1178,14 @@ ${charactersContext}
     document.getElementById('douban-min-posts-input').value = state.globalSettings.doubanMinPosts || 12;
     document.getElementById('douban-max-posts-input').value = state.globalSettings.doubanMaxPosts || 20;
     document.getElementById('douban-enable-ai-avatar-checkbox').checked = state.globalSettings.doubanEnableAiAvatar !== false;
+    
+    document.getElementById('douban-user-nickname-input').value = state.globalSettings.doubanUserNickname || '';
+    const avatarPreview = document.getElementById('douban-user-avatar-preview');
+    if (state.globalSettings.doubanUserAvatar) {
+        avatarPreview.src = state.globalSettings.doubanUserAvatar;
+    } else {
+        avatarPreview.src = 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png';
+    }
 
     modal.classList.add('visible');
   }
@@ -763,6 +1195,8 @@ ${charactersContext}
     const minInput = document.getElementById('douban-min-posts-input');
     const maxInput = document.getElementById('douban-max-posts-input');
     const enableAiAvatarCheckbox = document.getElementById('douban-enable-ai-avatar-checkbox');
+    const nicknameInput = document.getElementById('douban-user-nickname-input');
+    const avatarPreview = document.getElementById('douban-user-avatar-preview');
 
     const min = parseInt(minInput.value);
     const max = parseInt(maxInput.value);
@@ -781,11 +1215,26 @@ ${charactersContext}
     state.globalSettings.doubanMinPosts = min;
     state.globalSettings.doubanMaxPosts = max;
     state.globalSettings.doubanEnableAiAvatar = enableAiAvatarCheckbox.checked;
+    
+    state.globalSettings.doubanUserNickname = nicknameInput.value.trim();
+    if (avatarPreview.src.includes('D7CD735A73F5FD1D7B8407E0EB8BBAC0.png')) {
+        state.globalSettings.doubanUserAvatar = '';
+    } else {
+        state.globalSettings.doubanUserAvatar = avatarPreview.src;
+    }
+    
     await db.globalSettings.put(state.globalSettings);
 
 
     document.getElementById('douban-settings-modal').classList.remove('visible');
-    await showCustomAlert('保存成功', '豆瓣设置已更新！下次重新生成时将生效。');
+    
+    if (state.currentScreen === 'douban-screen') {
+        await renderDoubanScreen();
+    } else if (state.currentScreen === 'douban-post-detail-screen' && typeof activeDoubanPostId !== 'undefined' && activeDoubanPostId) {
+        await openDoubanPostDetail(activeDoubanPostId);
+    }
+    
+    await showCustomAlert('保存成功', '豆瓣设置已更新！');
   }
 
   // ========== 自定义小组管理功能 ==========
@@ -814,7 +1263,7 @@ ${charactersContext}
         <input type="checkbox" class="npc-avatar-checkbox" data-index="${index}" 
           style="position: absolute; top: 5px; left: 5px; z-index: 10; width: 18px; height: 18px; cursor: pointer;"
           ${selectedNpcAvatars.has(index) ? 'checked' : ''}>
-        <img src="${avatar}" alt="NPC头像" 
+        <img src="${avatar}" alt="NPC头像" onerror="this.onerror=null; this.src=defaultAvatar;"
           style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;">
       </div>
     `).join('');
@@ -1182,7 +1631,7 @@ ${charactersContext}
       item.innerHTML = `
         <div class="checkbox"></div>
         <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-          <img src="${authorAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+          <img src="${authorAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.src=defaultAvatar;">
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 500; font-size: 14px; margin-bottom: 2px;">${post.postTitle}</div>
             <div style="font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${postContent}</div>
@@ -1242,6 +1691,264 @@ ${charactersContext}
   }
 
   // ========== 全局暴露 ==========
+  window.toggleDoubanSelectMode = toggleDoubanSelectMode;
+  window.toggleDoubanDetailSelectMode = toggleDoubanDetailSelectMode;
+  window.forwardSelectedDoubanPosts = async function() {
+    if (selectedDoubanPosts.size === 0) return;
+    const posts = await db.doubanPosts.toArray();
+    const selectedData = posts.filter(p => selectedDoubanPosts.has(p.id));
+    
+    let htmlContent = '<div class="douban-forward-card"><div class="douban-forward-card-header"><svg class="douban-logo-icon" viewBox="0 0 1024 1024"><path d="M170.666667 170.666667h128v682.666666h-128zM426.666667 170.666667h170.666666v682.666666h-170.666666zM725.333333 170.666667h128v682.666666h-128z"></path></svg><span class="douban-forward-card-title">转发的豆瓣帖子</span></div><div class="douban-forward-card-body">';
+    
+    selectedData.forEach(p => {
+        const textContent = p.content.replace(/<br>/g, '\n');
+        htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">${p.groupName}</span><span class="douban-forward-author">${p.authorName}</span></div><div class="douban-forward-post-title">${p.postTitle}</div><div class="douban-forward-text">${textContent}</div></div>`;
+    });
+    
+    htmlContent += '</div></div>';
+    forwardDoubanContent(htmlContent);
+  };
+  
+  window.deleteSelectedDoubanPosts = async function() {
+    if (selectedDoubanPosts.size === 0) return;
+    const confirmed = await showCustomConfirm(
+      '确认删除？',
+      `确定要删除选中的 ${selectedDoubanPosts.size} 个帖子吗？`,
+      { confirmButtonClass: 'btn-danger', confirmText: '确认删除' }
+    );
+    if (!confirmed) return;
+    
+    const postIds = Array.from(selectedDoubanPosts);
+    await db.doubanPosts.bulkDelete(postIds);
+    await showCustomAlert('删除成功', `已成功删除 ${postIds.length} 个帖子。`);
+    
+    if (isDoubanSelectMode) toggleDoubanSelectMode();
+    await renderDoubanScreen();
+  };
+  
+  window.deleteSelectedDoubanComments = async function() {
+    if (selectedDoubanComments.size === 0) return;
+    const post = await db.doubanPosts.get(activeDoubanPostId);
+    if (!post) return;
+    
+    // 如果勾选了楼主（即整个帖子），直接走删除整个帖子逻辑
+    if (selectedDoubanComments.has('post_body')) {
+      const confirmed = await showCustomConfirm(
+        '确认删除？',
+        `您选中了楼主内容，这将会删除整篇帖子，确定要删除吗？`,
+        { confirmButtonClass: 'btn-danger', confirmText: '确认删除' }
+      );
+      if (!confirmed) return;
+      await db.doubanPosts.delete(activeDoubanPostId);
+      if (isDoubanDetailSelectMode) toggleDoubanDetailSelectMode();
+      showScreen('douban-screen');
+      await renderDoubanScreen();
+      await showCustomAlert('删除成功', '该帖子已被删除。');
+      return;
+    }
+    
+    // 否则仅删除选中的回应
+    const confirmed = await showCustomConfirm(
+      '确认删除？',
+      `确定要删除选中的 ${selectedDoubanComments.size} 个回应吗？`,
+      { confirmButtonClass: 'btn-danger', confirmText: '确认删除' }
+    );
+    if (!confirmed) return;
+    
+    if (post.comments) {
+        const myNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
+        const newComments = [];
+        post.comments.forEach(comment => {
+            const isUserComment = comment.isUser || comment.commenter === '我' || comment.commenter === state.qzoneSettings.nickname || comment.commenter === state.globalSettings.doubanUserNickname;
+            const displayCommenterName = isUserComment ? myNickname : comment.commenter;
+            const commentId = btoa(unescape(encodeURIComponent(displayCommenterName + comment.text))).replace(/[^a-zA-Z0-9]/g, '');
+            if (!selectedDoubanComments.has(commentId)) {
+                newComments.push(comment);
+            }
+        });
+        post.comments = newComments;
+        post.commentsCount = newComments.length;
+        await db.doubanPosts.put(post);
+    }
+    
+    if (isDoubanDetailSelectMode) toggleDoubanDetailSelectMode();
+    await openDoubanPostDetail(activeDoubanPostId);
+    await showCustomAlert('删除成功', `已成功删除 ${selectedDoubanComments.size} 个回应。`);
+  };
+
+  window.forwardSelectedDoubanComments = async function() {
+    if (selectedDoubanComments.size === 0) return;
+    const post = await db.doubanPosts.get(activeDoubanPostId);
+    if (!post) return;
+    
+    let htmlContent = `<div class="douban-forward-card"><div class="douban-forward-card-header"><svg class="douban-logo-icon" viewBox="0 0 1024 1024"><path d="M170.666667 170.666667h128v682.666666h-128zM426.666667 170.666667h170.666666v682.666666h-170.666666zM725.333333 170.666667h128v682.666666h-128z"></path></svg><span class="douban-forward-card-title">《${post.postTitle}》的回应</span></div><div class="douban-forward-card-body">`;
+    
+    if (selectedDoubanComments.has('post_body')) {
+        const textContent = post.content.replace(/<br>/g, '\n');
+        htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">楼主</span><span class="douban-forward-author">${post.authorName}</span></div><div class="douban-forward-text">${textContent}</div></div>`;
+    }
+    
+    if (post.comments) {
+        const myNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
+        post.comments.forEach(comment => {
+            const isUserComment = comment.isUser || comment.commenter === '我' || comment.commenter === state.qzoneSettings.nickname || comment.commenter === state.globalSettings.doubanUserNickname;
+            const displayCommenterName = isUserComment ? myNickname : comment.commenter;
+            const commentId = btoa(unescape(encodeURIComponent(displayCommenterName + comment.text))).replace(/[^a-zA-Z0-9]/g, '');
+            if (selectedDoubanComments.has(commentId)) {
+                htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">回应</span><span class="douban-forward-author">${displayCommenterName}</span></div><div class="douban-forward-text">${comment.text}</div></div>`;
+            }
+        });
+    }
+    
+    htmlContent += '</div></div>';
+    forwardDoubanContent(htmlContent);
+  };
+  
+  async function forwardDoubanContent(content) {
+    if (typeof openForwardTargetPicker === 'function') {
+        await openForwardTargetPicker();
+        
+        const confirmBtn = document.getElementById('confirm-forward-target-btn');
+        const newBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+        
+        newBtn.onclick = async () => {
+            const selectedTargetIds = Array.from(document.querySelectorAll('.forward-target-checkbox:checked'))
+                .map(cb => cb.dataset.chatId);
+
+            if (selectedTargetIds.length === 0) return alert("请选择要转发到的聊天。");
+            
+            const doubanMsg = {
+                role: 'user',
+                type: 'html',
+                timestamp: Date.now(),
+                content: content
+            };
+            
+            for (const targetId of selectedTargetIds) {
+                const targetChat = state.chats[targetId];
+                if (targetChat) {
+                    targetChat.history.push(doubanMsg);
+                    
+                    targetChat.history.push({
+                        role: 'system',
+                        content: `[系统提示：用户向你分享了豆瓣上的帖子/评论。请根据你的人设，对这些内容发表你的看法或吐槽。]`,
+                        timestamp: Date.now() + 1,
+                        isHidden: true
+                    });
+                    
+                    await db.chats.put(targetChat);
+                }
+            }
+            
+            document.getElementById('forward-target-modal').classList.remove('visible');
+            await showCustomAlert("转发成功", "豆瓣内容已转发。");
+            
+            if (isDoubanSelectMode) toggleDoubanSelectMode();
+            if (isDoubanDetailSelectMode) toggleDoubanDetailSelectMode();
+
+            // 如果当前在被转发的聊天界面，触发AI回复
+            if (state.activeChatId && selectedTargetIds.includes(state.activeChatId)) {
+                if (typeof renderChatInterface === 'function') {
+                    renderChatInterface(state.activeChatId);
+                }
+                if (typeof triggerAiResponse === 'function') {
+                    triggerAiResponse();
+                } else if (window.triggerAiResponse) {
+                    window.triggerAiResponse();
+                }
+            }
+        };
+    }
+  }
+
+  // Bind UI events
+  document.addEventListener('DOMContentLoaded', () => {
+      const doubanUserAvatarResetBtn = document.getElementById('douban-user-avatar-reset-btn');
+      if (doubanUserAvatarResetBtn) {
+          doubanUserAvatarResetBtn.addEventListener('click', () => {
+              const avatarPreview = document.getElementById('douban-user-avatar-preview');
+              if (avatarPreview) {
+                  avatarPreview.src = 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png';
+              }
+              const nicknameInput = document.getElementById('douban-user-nickname-input');
+              if (nicknameInput) {
+                  nicknameInput.value = '';
+              }
+          });
+      }
+
+      const doubanSelectBtn = document.getElementById('douban-select-btn');
+      if (doubanSelectBtn) doubanSelectBtn.addEventListener('click', toggleDoubanSelectMode);
+      
+      const cancelDoubanSelectBtn = document.getElementById('cancel-douban-select-btn');
+      if (cancelDoubanSelectBtn) cancelDoubanSelectBtn.addEventListener('click', toggleDoubanSelectMode);
+      
+      const forwardDoubanBtn = document.getElementById('forward-selected-douban-btn');
+      if (forwardDoubanBtn) forwardDoubanBtn.addEventListener('click', forwardSelectedDoubanPosts);
+      
+      const selectAllDoubanCb = document.getElementById('select-all-douban-checkbox');
+      if (selectAllDoubanCb) {
+          selectAllDoubanCb.addEventListener('change', (e) => {
+              const isChecked = e.target.checked;
+              document.querySelectorAll('.douban-post-item').forEach(item => {
+                  const postId = parseInt(item.dataset.postId);
+                  if (isChecked) {
+                      item.classList.add('selected');
+                      selectedDoubanPosts.add(postId);
+                  } else {
+                      item.classList.remove('selected');
+                      selectedDoubanPosts.delete(postId);
+                  }
+              });
+              updateDoubanForwardButton();
+          });
+      }
+      
+      const doubanDetailSelectBtn = document.getElementById('douban-detail-select-btn');
+      if (doubanDetailSelectBtn) doubanDetailSelectBtn.addEventListener('click', toggleDoubanDetailSelectMode);
+      
+      const cancelDoubanDetailSelectBtn = document.getElementById('cancel-douban-detail-select-btn');
+      if (cancelDoubanDetailSelectBtn) cancelDoubanDetailSelectBtn.addEventListener('click', toggleDoubanDetailSelectMode);
+      
+      const forwardDoubanDetailBtn = document.getElementById('forward-selected-douban-detail-btn');
+      if (forwardDoubanDetailBtn) forwardDoubanDetailBtn.addEventListener('click', forwardSelectedDoubanComments);
+      
+      const deleteDoubanBtn = document.getElementById('delete-selected-douban-btn');
+      if (deleteDoubanBtn) deleteDoubanBtn.addEventListener('click', deleteSelectedDoubanPosts);
+      
+      const deleteDoubanDetailBtn = document.getElementById('delete-selected-douban-detail-btn');
+      if (deleteDoubanDetailBtn) deleteDoubanDetailBtn.addEventListener('click', deleteSelectedDoubanComments);
+      
+      const selectAllDoubanDetailCb = document.getElementById('select-all-douban-detail-checkbox');
+      if (selectAllDoubanDetailCb) {
+          selectAllDoubanDetailCb.addEventListener('change', (e) => {
+              const isChecked = e.target.checked;
+              const postBody = document.getElementById('douban-post-detail-body');
+              if (postBody) {
+                  if(isChecked) {
+                      postBody.classList.add('selected');
+                      selectedDoubanComments.add('post_body');
+                  } else {
+                      postBody.classList.remove('selected');
+                      selectedDoubanComments.delete('post_body');
+                  }
+              }
+              document.querySelectorAll('.douban-comment-item').forEach(item => {
+                  const commentId = item.dataset.commentId;
+                  if (isChecked) {
+                      item.classList.add('selected');
+                      selectedDoubanComments.add(commentId);
+                  } else {
+                      item.classList.remove('selected');
+                      selectedDoubanComments.delete(commentId);
+                  }
+              });
+              updateDoubanDetailForwardButton();
+          });
+      }
+  });
+
   window.openDoubanPostDetail = openDoubanPostDetail;
   window.openDoubanSettingsModal = openDoubanSettingsModal;
   window.openDeleteDoubanPostsModal = openDeleteDoubanPostsModal;
@@ -1253,6 +1960,7 @@ ${charactersContext}
   window.deleteSelectedNpcAvatars = deleteSelectedNpcAvatars;
   window.toggleSelectAllNpcAvatars = toggleSelectAllNpcAvatars;
   window.handleGenerateDoubanPosts = handleGenerateDoubanPosts;
+  window.handleIncrementalGenerateDoubanPosts = () => handleGenerateDoubanPosts(true);
   window.handleConfirmDeleteDoubanPosts = handleConfirmDeleteDoubanPosts;
   window.handleDoubanWaitReply = handleDoubanWaitReply;
   window.handleSendDoubanComment = handleSendDoubanComment;
@@ -1260,6 +1968,10 @@ ${charactersContext}
   window.openCustomGroupsModal = openCustomGroupsModal;
   window.openEditGroupModal = openEditGroupModal;
   window.saveEditGroup = saveEditGroup;
+  window.openDoubanPersonaSelector = openDoubanPersonaSelector;
+  window.saveDoubanPersonaSelection = saveDoubanPersonaSelection;
+  window.openDoubanWorldBookSelector = openDoubanWorldBookSelector;
+  window.saveDoubanWorldBookSelection = saveDoubanWorldBookSelection;
 
   // ========== 从 script.js 迁移：handleConfirmClearPosts ==========
   async function handleConfirmClearPosts() {

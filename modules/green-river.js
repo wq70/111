@@ -268,6 +268,16 @@
   // 加载设置弹窗中的选项
   // 加载设置弹窗中的选项 (修复版：增加字数和条数的回显)
   async function loadStorySettingsUI(settings = {}, selectedAuthorId = null) {
+    const exportBtn = document.getElementById('gr-export-txt-btn');
+    if (exportBtn) {
+      if (grState.activeStoryId) {
+        exportBtn.style.display = 'block';
+        exportBtn.onclick = () => openExportTxtModal(grState.activeStoryId);
+      } else {
+        exportBtn.style.display = 'none';
+      }
+    }
+
     // 1. 加载作者列表
     const authorSelect = document.getElementById('gr-author-select');
     authorSelect.innerHTML = '';
@@ -335,125 +345,6 @@
     document.getElementById('gr-reader-comments-enabled').checked = settings.readerCommentsEnabled || false;
     document.getElementById('gr-macro-world-view').value = settings.macroWorldView || '';
 
-    // 6. 加载作者追更相关设置
-    const autoUpdateEnabled = document.getElementById('gr-auto-update-enabled');
-    const autoUpdateSettings = document.getElementById('gr-auto-update-settings');
-    const updateType = document.getElementById('gr-auto-update-type');
-    const updateAuthorSelect = document.getElementById('gr-update-author-select');
-    const updateCharacterSelect = document.getElementById('gr-update-character-select');
-    const updateFrequency = document.getElementById('gr-update-frequency');
-    const customFrequencyGroup = document.getElementById('gr-custom-frequency-group');
-    const customFrequencyHours = document.getElementById('gr-custom-frequency-hours');
-
-    // 回显追更开关
-    autoUpdateEnabled.checked = settings.autoUpdate?.enabled || false;
-    autoUpdateSettings.style.display = autoUpdateEnabled.checked ? 'block' : 'none';
-
-    // 填充作者选择列表（追更用）
-    updateAuthorSelect.innerHTML = '';
-    authors.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a.id;
-      opt.textContent = a.name;
-      if (settings.autoUpdate?.authorId === a.id) opt.selected = true;
-      updateAuthorSelect.appendChild(opt);
-    });
-
-    // 填充角色选择列表（追更用）
-    updateCharacterSelect.innerHTML = '';
-    allEntities.forEach(item => {
-      const opt = document.createElement('option');
-      opt.value = item.id;
-      opt.textContent = `${item.name} (${item.type})`;
-      if (settings.autoUpdate?.characterId === item.id) opt.selected = true;
-      updateCharacterSelect.appendChild(opt);
-    });
-
-    // 回显追更方式
-    updateType.value = settings.autoUpdate?.type || 'author';
-    document.getElementById('gr-update-author-select-group').style.display =
-      updateType.value === 'author' ? 'block' : 'none';
-    document.getElementById('gr-update-character-select-group').style.display =
-      updateType.value === 'character' ? 'block' : 'none';
-
-    // 回显更新频率
-    updateFrequency.value = settings.autoUpdate?.frequency || 'manual';
-    customFrequencyGroup.style.display = updateFrequency.value === 'custom' ? 'block' : 'none';
-    customFrequencyHours.value = settings.autoUpdate?.customHours || 24;
-    
-    // 回显每日更新时间
-    const dailyTimeGroup = document.getElementById('gr-daily-time-group');
-    const dailyUpdateHour = document.getElementById('gr-daily-update-hour');
-    dailyTimeGroup.style.display = updateFrequency.value === 'daily' ? 'block' : 'none';
-    dailyUpdateHour.value = settings.autoUpdate?.dailyHour || 12;
-    
-    // 回显每周更新时间
-    const weeklyTimeGroup = document.getElementById('gr-weekly-time-group');
-    const weeklyUpdateDay = document.getElementById('gr-weekly-update-day');
-    const weeklyUpdateHour = document.getElementById('gr-weekly-update-hour');
-    weeklyTimeGroup.style.display = updateFrequency.value === 'weekly' ? 'block' : 'none';
-    weeklyUpdateDay.value = settings.autoUpdate?.weeklyDay || 1;
-    weeklyUpdateHour.value = settings.autoUpdate?.weeklyHour || 12;
-    
-    // 显示上次更新时间
-    const lastUpdateDisplay = document.getElementById('gr-last-update-display');
-    const lastUpdateTime = document.getElementById('gr-last-update-time');
-    const nextUpdateTime = document.getElementById('gr-next-update-time');
-    lastUpdateDisplay.style.display = updateFrequency.value !== 'manual' ? 'block' : 'none';
-    
-    if (settings.autoUpdate?.lastUpdate) {
-      const lastDate = new Date(settings.autoUpdate.lastUpdate);
-      lastUpdateTime.textContent = lastDate.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      
-      // 计算下次更新时间
-      const nextUpdate = calculateNextUpdateTime(settings.autoUpdate);
-      if (nextUpdate) {
-        nextUpdateTime.textContent = nextUpdate.toLocaleString('zh-CN', {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      } else {
-        nextUpdateTime.textContent = '待计算';
-      }
-    } else {
-      lastUpdateTime.textContent = '从未更新';
-      nextUpdateTime.textContent = '首次更新将在设定时间执行';
-    }
-
-    // 绑定追更设置的事件监听
-    autoUpdateEnabled.onchange = () => {
-      autoUpdateSettings.style.display = autoUpdateEnabled.checked ? 'block' : 'none';
-    };
-
-    updateType.onchange = () => {
-      document.getElementById('gr-update-author-select-group').style.display =
-        updateType.value === 'author' ? 'block' : 'none';
-      document.getElementById('gr-update-character-select-group').style.display =
-        updateType.value === 'character' ? 'block' : 'none';
-    };
-
-    updateFrequency.onchange = () => {
-      const dailyTimeGroup = document.getElementById('gr-daily-time-group');
-      const weeklyTimeGroup = document.getElementById('gr-weekly-time-group');
-      const lastUpdateDisplay = document.getElementById('gr-last-update-display');
-      
-      customFrequencyGroup.style.display = updateFrequency.value === 'custom' ? 'block' : 'none';
-      dailyTimeGroup.style.display = updateFrequency.value === 'daily' ? 'block' : 'none';
-      weeklyTimeGroup.style.display = updateFrequency.value === 'weekly' ? 'block' : 'none';
-      
-      // 显示上次更新时间（非手动模式时显示）
-      lastUpdateDisplay.style.display = updateFrequency.value !== 'manual' ? 'block' : 'none';
-    };
-
     // 绑定按钮事件
     const saveBtn = document.getElementById('gr-save-story-btn');
     const cancelBtn = document.getElementById('gr-cancel-settings-btn');
@@ -493,50 +384,6 @@
     if (!title) return alert("请输入书名");
     if (charIds.length === 0) return alert("请至少选择一个角色或群聊");
 
-    // 获取作者追更设置
-    const autoUpdateEnabled = document.getElementById('gr-auto-update-enabled').checked;
-    let autoUpdate;
-    // 编辑已有作品时，先读取之前的 lastUpdate，避免在 settings 声明前访问
-    let existingLastUpdate = null;
-    if (grState.activeStoryId) {
-      const existingStory = await db.grStories.get(grState.activeStoryId);
-      existingLastUpdate = existingStory?.settings?.autoUpdate?.lastUpdate ?? null;
-    }
-
-    if (autoUpdateEnabled) {
-      const updateType = document.getElementById('gr-auto-update-type').value;
-      const updateAuthorId = parseInt(document.getElementById('gr-update-author-select').value) || null;
-      const updateCharacterId = document.getElementById('gr-update-character-select').value || null;
-      const frequency = document.getElementById('gr-update-frequency').value;
-      
-      // 验证配置
-      if (updateType === 'author' && !updateAuthorId) {
-        alert('请选择一个作者用于追更');
-        return;
-      }
-      if (updateType === 'character' && !updateCharacterId) {
-        alert('请选择一个角色用于追更');
-        return;
-      }
-      
-      autoUpdate = {
-        enabled: true,
-        type: updateType,
-        authorId: updateAuthorId,
-        characterId: updateCharacterId,
-        frequency: frequency,
-        customHours: parseInt(document.getElementById('gr-custom-frequency-hours').value) || 24,
-        dailyHour: parseInt(document.getElementById('gr-daily-update-hour').value) || 12,
-        weeklyDay: parseInt(document.getElementById('gr-weekly-update-day').value) || 1,
-        weeklyHour: parseInt(document.getElementById('gr-weekly-update-hour').value) || 12,
-        lastUpdate: existingLastUpdate // 保留之前的更新时间
-      };
-    } else {
-      autoUpdate = {
-        enabled: false
-      };
-    }
-
     const settings = {
       charIds,
       bookIds,
@@ -544,8 +391,7 @@
       outputLength, // 这里的名字要和 prompt 里的对应
       contextLimit,
       macroWorldView,
-      readerCommentsEnabled,
-      autoUpdate // 添加作者追更设置
+      readerCommentsEnabled
     };
 
     if (grState.activeStoryId) {
@@ -1338,600 +1184,102 @@ ${charsContext}
   // 暴露给 HTML onclick
   window.openChapterList = openChapterList;
   window.closeChapterList = closeChapterList;
+  
   // ==========================================
-  // ▼▼▼ 作者追更功能 ▼▼▼
+  // 导出TXT功能
   // ==========================================
-
-  // 计算下次更新时间
-  function calculateNextUpdateTime(autoUpdate) {
-    if (!autoUpdate || !autoUpdate.enabled || autoUpdate.frequency === 'manual') {
-      return null;
+  async function openExportTxtModal(storyId) {
+    const story = await db.grStories.get(storyId);
+    if (!story || !story.chapters || story.chapters.length === 0) {
+      alert("该作品还没有任何章节，无法导出。");
+      return;
     }
-
-    const now = new Date();
-    let nextUpdate = new Date();
-
-    switch (autoUpdate.frequency) {
-      case 'daily':
-        // 每天指定小时更新
-        const dailyHour = autoUpdate.dailyHour || 12;
-        nextUpdate.setHours(dailyHour, 0, 0, 0);
-        
-        // 如果今天的更新时间已过，设置为明天
-        if (nextUpdate <= now) {
-          nextUpdate.setDate(nextUpdate.getDate() + 1);
+    const modal = document.getElementById('gr-export-txt-modal');
+    const listEl = document.getElementById('gr-export-txt-list');
+    listEl.innerHTML = '';
+    
+    // 渲染章节列表
+    story.chapters.forEach((ch, index) => {
+      const div = document.createElement('div');
+      div.style.cssText = 'display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #eee;';
+      div.innerHTML = `
+        <input type="checkbox" class="gr-export-checkbox" value="${index}" checked style="width: 18px; height: 18px; margin-right: 12px; cursor: pointer;">
+        <span style="font-size: 14px; color: #333;">${index + 1}. ${ch.title || '无题'}</span>
+      `;
+      div.onclick = (e) => {
+        if (e.target.tagName !== 'INPUT') {
+          const cb = div.querySelector('input');
+          cb.checked = !cb.checked;
+          updateExportSelectAllState();
         }
-        
-        // 如果已经在今天更新过，下次更新是明天
-        if (autoUpdate.lastUpdate) {
-          const lastUpdate = new Date(autoUpdate.lastUpdate);
-          if (lastUpdate.toDateString() === now.toDateString()) {
-            nextUpdate.setDate(nextUpdate.getDate() + 1);
-            nextUpdate.setHours(dailyHour, 0, 0, 0);
-          }
-        }
-        break;
-
-      case 'weekly':
-        // 每周指定星期和小时更新
-        const weeklyDay = autoUpdate.weeklyDay || 1; // 0=周日, 1=周一, ...
-        const weeklyHour = autoUpdate.weeklyHour || 12;
-        
-        nextUpdate.setHours(weeklyHour, 0, 0, 0);
-        
-        // 计算距离下一个指定星期几的天数
-        const currentDay = now.getDay();
-        let daysUntilNext = weeklyDay - currentDay;
-        if (daysUntilNext < 0 || (daysUntilNext === 0 && nextUpdate <= now)) {
-          daysUntilNext += 7;
-        }
-        
-        nextUpdate.setDate(nextUpdate.getDate() + daysUntilNext);
-        
-        // 如果本周已经更新过，下次更新是下周
-        if (autoUpdate.lastUpdate) {
-          const lastUpdate = new Date(autoUpdate.lastUpdate);
-          const lastWeekStart = new Date(lastUpdate);
-          lastWeekStart.setDate(lastUpdate.getDate() - lastUpdate.getDay());
-          const currentWeekStart = new Date(now);
-          currentWeekStart.setDate(now.getDate() - now.getDay());
-          
-          if (lastWeekStart.getTime() === currentWeekStart.getTime()) {
-            nextUpdate.setDate(nextUpdate.getDate() + 7);
-          }
-        }
-        break;
-
-      case 'custom':
-        // 自定义间隔（小时）
-        const customHours = autoUpdate.customHours || 24;
-        if (autoUpdate.lastUpdate) {
-          nextUpdate = new Date(autoUpdate.lastUpdate);
-          nextUpdate.setHours(nextUpdate.getHours() + customHours);
-        } else {
-          nextUpdate.setHours(nextUpdate.getHours() + customHours);
-        }
-        break;
-
-      default:
-        return null;
-    }
-
-    return nextUpdate;
-  }
-
-  // 检查是否需要自动更新
-  async function checkAutoUpdate(story) {
-    if (!story.settings.autoUpdate || !story.settings.autoUpdate.enabled) {
-      return false;
-    }
-
-    const autoUpdate = story.settings.autoUpdate;
-
-    // 如果频率设置为手动，不自动更新
-    if (autoUpdate.frequency === 'manual') {
-      return false;
-    }
-
-    const now = new Date();
-
-    // 如果从未更新过，根据频率决定是否立即更新
-    if (!autoUpdate.lastUpdate) {
-      if (autoUpdate.frequency === 'daily') {
-        // 每天模式：检查当前时间是否已到达设定的更新小时
-        const dailyHour = autoUpdate.dailyHour || 12;
-        return now.getHours() >= dailyHour;
-      } else if (autoUpdate.frequency === 'weekly') {
-        // 每周模式：检查是否是指定的星期几和时间
-        const weeklyDay = autoUpdate.weeklyDay || 1;
-        const weeklyHour = autoUpdate.weeklyHour || 12;
-        return now.getDay() === weeklyDay && now.getHours() >= weeklyHour;
-      } else {
-        // 自定义间隔：立即更新
-        return true;
-      }
-    }
-
-    const lastUpdate = new Date(autoUpdate.lastUpdate);
-
-    switch (autoUpdate.frequency) {
-      case 'daily':
-        // 每天指定小时更新：检查是否已过了上次更新的日期，且当前时间已到达设定小时
-        const dailyHour = autoUpdate.dailyHour || 12;
-        const isSameDay = lastUpdate.toDateString() === now.toDateString();
-        const isPastUpdateHour = now.getHours() >= dailyHour;
-        
-        // 如果不是同一天，且当前时间已到达设定小时，则需要更新
-        return !isSameDay && isPastUpdateHour;
-
-      case 'weekly':
-        // 每周指定星期和小时更新
-        const weeklyDay = autoUpdate.weeklyDay || 1;
-        const weeklyHour = autoUpdate.weeklyHour || 12;
-        
-        // 检查是否是指定的星期几
-        if (now.getDay() !== weeklyDay) {
-          return false;
-        }
-        
-        // 检查是否已到达指定小时
-        if (now.getHours() < weeklyHour) {
-          return false;
-        }
-        
-        // 检查本周是否已经更新过
-        const lastWeekStart = new Date(lastUpdate);
-        lastWeekStart.setDate(lastUpdate.getDate() - lastUpdate.getDay());
-        lastWeekStart.setHours(0, 0, 0, 0);
-        
-        const currentWeekStart = new Date(now);
-        currentWeekStart.setDate(now.getDate() - now.getDay());
-        currentWeekStart.setHours(0, 0, 0, 0);
-        
-        // 如果本周还没更新过，则需要更新
-        return lastWeekStart.getTime() < currentWeekStart.getTime();
-
-      case 'custom':
-        // 自定义间隔（小时）
-        const customHours = autoUpdate.customHours || 24;
-        const intervalMs = customHours * 60 * 60 * 1000;
-        const timeSinceLastUpdate = now.getTime() - lastUpdate.getTime();
-        return timeSinceLastUpdate >= intervalMs;
-
-      default:
-        return false;
-    }
-  }
-
-  // 自动生成新章节
-  async function autoGenerateChapter(storyId) {
-    try {
-      console.log(`[作者追更] 开始为作品 ${storyId} 生成新章节`);
-
-      const story = await db.grStories.get(storyId);
-      if (!story) {
-        console.error(`[作者追更] 作品 ${storyId} 不存在`);
-        return false;
-      }
-
-      const autoUpdate = story.settings.autoUpdate;
-      if (!autoUpdate || !autoUpdate.enabled) {
-        return false;
-      }
-
-      // 获取作者信息
-      const author = await db.grAuthors.get(story.authorId);
-      if (!author) {
-        console.error(`[作者追更] 作者 ${story.authorId} 不存在`);
-        return false;
-      }
-
-      // 构建生成提示词
-      const settingValue = parseInt(story.settings.outputLength) || 500;
-      const targetWordCount = Math.floor(settingValue * 1.5);
-      const historyLimit = story.settings.contextLimit || 20;
-
-      // 获取角色信息
-      let charsContext = "";
-      for (const charId of story.settings.charIds) {
-        if (charId.startsWith('npc_')) {
-          const npcId = parseInt(charId.replace('npc_', ''));
-          const npc = await db.npcs.get(npcId);
-          if (npc) {
-            charsContext += `[NPC] ${npc.name}: ${npc.description || ''}\n`;
-          }
-        } else {
-          const char = state.chats[charId];
-          if (char) {
-            charsContext += `${char.name}: ${char.firstMessage || char.description || ''}\n`;
-          }
-        }
-      }
-
-      // 获取世界书信息
-      let worldBookContext = "";
-      for (const bookId of story.settings.bookIds) {
-        const book = await db.worldBooks.get(bookId);
-        if (book) {
-          worldBookContext += `\n[${book.name}]\n`;
-          if (Array.isArray(book.content)) {
-            book.content.forEach(entry => {
-              if (typeof entry === 'object' && entry.content) {
-                worldBookContext += `${entry.content}\n`;
-              } else if (typeof entry === 'string') {
-                worldBookContext += `${entry}\n`;
-              }
-            });
-          } else if (typeof book.content === 'string') {
-            worldBookContext += book.content;
-          }
-        }
-      }
-
-      // 获取历史章节（追更仅使用摘要以控制长度，避免截断）
-      const recentChapters = story.chapters.slice(-historyLimit);
-      let chaptersText = "";
-      recentChapters.forEach((ch, idx) => {
-        const chTitle = ch.title || `第 ${idx + 1} 章`;
-        chaptersText += `\n\n[${chTitle}]\n摘要: ${ch.summary || '无'}`;
-      });
-
-      // 根据追更方式构建特殊提示词
-      let updatePrompt = "";
-      if (autoUpdate.type === 'character') {
-        // 使用角色视角
-        const charId = autoUpdate.characterId;
-        let charName = "未知角色";
-        if (charId && charId.startsWith('npc_')) {
-          const npcId = parseInt(charId.replace('npc_', ''));
-          const npc = await db.npcs.get(npcId);
-          if (npc) charName = npc.name;
-        } else if (charId) {
-          const char = state.chats[charId];
-          if (char) charName = char.name;
-        }
-        updatePrompt = `\n\n【特别说明】本次更新请以 ${charName} 的第一人称视角进行叙述，展现${charName}的内心活动和所见所闻。`;
-      } else if (autoUpdate.type === 'author') {
-        // 使用指定作者文风
-        // 修复：检查 authorId 是否有效
-        if (autoUpdate.authorId && !isNaN(autoUpdate.authorId)) {
-          const updateAuthor = await db.grAuthors.get(autoUpdate.authorId);
-          if (updateAuthor) {
-            updatePrompt = `\n\n【特别说明】本次更新请严格模仿【${updateAuthor.name}】的文风：${updateAuthor.style}`;
-          } else {
-            console.warn('[作者追更] 未找到指定的追更作者，将使用作品原作者文风');
-          }
-        } else {
-          console.warn('[作者追更] 追更作者ID无效，将使用作品原作者文风');
-        }
-      }
-
-      const readerCommentsEnabled = story.settings.readerCommentsEnabled || false;
-      const fullPrompt = readerCommentsEnabled
-        ? `你是一位专业的小说续写AI。请根据以下信息，续写下一章节内容。
-
-【基础设定】
-${story.settings.macroWorldView || '无特殊设定'}
-
-【角色信息】
-${charsContext}
-
-${worldBookContext}
-
-【已有章节】（作为上下文参考）${chaptersText}
-
-【作者文风】
-${author.style}
-
-${updatePrompt}
-
-【续写要求】
-1. 这是自动追更功能生成的新章节，请自然地推进剧情发展
-2. 字数要求：约 ${targetWordCount} 字
-3. 保持与前文的连贯性
-4. 符合角色性格和世界观设定
-5. 正文必须用双换行 \\n\\n 分段。可选：在部分段落后添加模拟读者评论（readerComments），不必每段都有，最多5段有评论、每段最多3条。段落序号 = content 按 \\n\\n 分割后的下标（从0开始）。
-
-请只输出一个 JSON 对象，不要其他文字：
-\`\`\`json
-{
-  "title": "第X章 标题",
-  "summary": "本章摘要（50字以内）",
-  "content": "正文，段落之间用\\\\n\\\\n分隔",
-  "readerComments": [{"segmentIndex": 0, "comments": [{"name": "读者昵称", "content": "评论内容"}]}]
-}
-\`\`\`
-
-现在开始续写：`
-        : `你是一位专业的小说续写AI。请根据以下信息，续写下一章节内容。
-
-【基础设定】
-${story.settings.macroWorldView || '无特殊设定'}
-
-【角色信息】
-${charsContext}
-
-${worldBookContext}
-
-【已有章节】（作为上下文参考）${chaptersText}
-
-【作者文风】
-${author.style}
-
-${updatePrompt}
-
-【续写要求】
-1. 这是自动追更功能生成的新章节，请自然地推进剧情发展
-2. 字数要求：约 ${targetWordCount} 字
-3. 保持与前文的连贯性
-4. 符合角色性格和世界观设定
-5. 请输出: 标题（一行）、摘要（一小段）、正文（完整章节内容）
-
-格式示例：
-标题: 第X章 XXX
-摘要: XXX（简要概括本章内容，50字以内）
-正文:
-（这里是章节正文内容）
-
-现在开始续写：`;
-
-      // 调用AI生成
-      const apiConfig = await db.apiConfig.get('main');
-      if (!apiConfig || !apiConfig.proxyUrl || !apiConfig.apiKey) {
-        console.error('[作者追更] API配置不完整');
-        alert('作者追更失败：API配置不完整，请先配置API');
-        return false;
-      }
-
-      const isGemini = apiConfig.proxyUrl.includes('generativelanguage');
-      let response;
-
-      if (isGemini) {
-        const payload = {
-          contents: [{
-            parts: [{
-              text: fullPrompt
-            }]
-          }],
-          generationConfig: {
-            maxOutputTokens: Math.min(8192, targetWordCount * 3), // Gemini支持更大的输出
-            temperature: 0.8
-          }
-        };
-
-        response = await fetch(`${apiConfig.proxyUrl}/${apiConfig.model}:generateContent?key=${apiConfig.apiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-      } else {
-        const payload = {
-          model: apiConfig.model,
-          messages: [{
-            role: 'user',
-            content: fullPrompt
-          }],
-          temperature: 0.8,
-          ...(state.globalSettings.apiMaxTokensEnabled && state.globalSettings.apiMaxTokens !== undefined 
-            ? { max_tokens: state.globalSettings.apiMaxTokens } 
-            : { max_tokens: Math.min(4096, targetWordCount * 3) }), // 增加max_tokens，至少3倍目标字数
-          ...(state.globalSettings.apiTopPEnabled && state.globalSettings.apiTopP !== undefined ? { top_p: state.globalSettings.apiTopP } : {}),
-          ...(state.globalSettings.apiPresencePenaltyEnabled && state.globalSettings.apiPresencePenalty !== undefined ? { presence_penalty: state.globalSettings.apiPresencePenalty } : {}),
-          ...(state.globalSettings.apiFrequencyPenaltyEnabled && state.globalSettings.apiFrequencyPenalty !== undefined ? { frequency_penalty: state.globalSettings.apiFrequencyPenalty } : {})
-        };
-
-        response = await fetch(`${apiConfig.proxyUrl}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiConfig.apiKey}`
-          },
-          body: JSON.stringify(payload)
-        });
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[作者追更] API请求失败:', response.status, response.statusText);
-        console.error('[作者追更] 错误详情:', errorText);
-        alert(`作者追更失败：API请求错误 (${response.status})\n${errorText.substring(0, 200)}`);
-        return false;
-      }
-
-      const data = await response.json();
-      console.log('[作者追更] API响应数据:', data);
-      let aiOutput = '';
-
-      if (isGemini) {
-        if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-          aiOutput = data.candidates[0].content.parts.map(p => p.text).join('');
-        } else {
-          console.error('[作者追更] Gemini响应格式异常:', JSON.stringify(data));
-        }
-      } else {
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-          aiOutput = data.choices[0].message.content;
-          // 检查是否因为长度限制而截断
-          const finishReason = data.choices[0].finish_reason;
-          if (finishReason === 'length') {
-            console.warn('[作者追更] AI输出因token限制被截断，尝试使用截断的内容');
-            if (!aiOutput || aiOutput.length < 100) {
-              console.error('[作者追更] 截断的内容过短，无法使用');
-              alert('作者追更失败：AI输出超过token限制且内容过短。\n建议：\n1. 减少"上下文引用条数"\n2. 减少"字数设置"\n3. 减少选择的角色和世界书数量');
-              return false;
-            }
-          }
-        } else {
-          console.error('[作者追更] OpenAI响应格式异常:', JSON.stringify(data));
-        }
-      }
-
-      if (!aiOutput) {
-        console.error('[作者追更] AI返回内容为空，完整响应:', JSON.stringify(data));
-        alert('作者追更失败：AI返回的内容为空。\n可能原因：\n1. 输入内容过长超过模型限制\n2. API配置错误\n请检查控制台日志获取详细信息');
-        return false;
-      }
-
-      console.log('[作者追更] AI生成内容:', aiOutput);
-
-      let newTitle = `第 ${story.chapters.length + 1} 章`;
-      let newSummary = '';
-      let newContent = '';
-      let readerComments = [];
-
-      if (readerCommentsEnabled) {
-        const jsonMatch = aiOutput.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const fixedStr = jsonMatch[0].replace(/\\([^"\\\/bfnrtu])/g, '\\\\$1');
-            const result = JSON.parse(fixedStr);
-            newTitle = result.title || newTitle;
-            newSummary = (result.summary || '').trim();
-            newContent = (result.content || '').trim();
-            readerComments = Array.isArray(result.readerComments) ? result.readerComments : [];
-            console.log('[作者追更] JSON 解析成功，读者评论条数:', readerComments.length);
-          } catch (e) {
-            console.warn('[作者追更] JSON 解析失败，回退到文本解析', e);
-          }
-        }
-      }
-
-      if (!newContent) {
-        // 文本格式解析
-        console.log('[作者追更] 开始解析AI输出（文本格式）...');
-        const lines = aiOutput.split('\n');
-        let currentSection = '';
-        let hasFoundTitle = false;
-        let hasFoundSummary = false;
-        let hasFoundContent = false;
-
-        for (let line of lines) {
-          const trimmedLine = line.trim();
-          if (!hasFoundTitle && (trimmedLine.startsWith('标题:') || trimmedLine.startsWith('标题：') || trimmedLine.startsWith('# '))) {
-            newTitle = trimmedLine.replace(/^(标题[:：]|#)\s*/, '').trim();
-            currentSection = 'title';
-            hasFoundTitle = true;
-          } else if (!hasFoundSummary && (trimmedLine.startsWith('摘要:') || trimmedLine.startsWith('摘要：'))) {
-            newSummary = trimmedLine.replace(/^摘要[:：]\s*/, '').trim();
-            currentSection = 'summary';
-            hasFoundSummary = true;
-          } else if (!hasFoundContent && (trimmedLine.startsWith('正文:') || trimmedLine.startsWith('正文：'))) {
-            currentSection = 'content';
-            hasFoundContent = true;
-          } else if (currentSection === 'content' && line) {
-            newContent += line + '\n';
-          } else if (currentSection === 'summary' && trimmedLine && !trimmedLine.startsWith('正文')) {
-            newSummary += ' ' + trimmedLine;
-          }
-        }
-
-        if (!hasFoundContent && aiOutput.length > 50) {
-          newContent = aiOutput;
-          const firstLine = lines[0]?.trim();
-          if (firstLine && firstLine.length < 30 && firstLine.length > 0) {
-            newTitle = firstLine;
-            newContent = lines.slice(1).join('\n');
-          }
-        }
-        newContent = newContent.trim();
-        newSummary = newSummary.trim();
-      }
-
-      console.log('[作者追更] 解析结果 - 标题:', newTitle);
-      console.log('[作者追更] 解析结果 - 摘要长度:', newSummary.length);
-      console.log('[作者追更] 解析结果 - 正文长度:', newContent.length);
-
-      if (!newContent || newContent.length < 50) {
-        console.error('[作者追更] 解析内容失败或内容过短');
-        console.error('[作者追更] AI原始输出:', aiOutput);
-        alert('作者追更生成失败：AI返回的内容无法解析或过短，请检查控制台日志');
-        return false;
-      }
-
-      const newChapter = {
-        title: newTitle,
-        content: newContent,
-        summary: newSummary,
-        createdAt: Date.now(),
-        autoGenerated: true
       };
-      if (readerComments.length > 0) newChapter.readerComments = readerComments;
-      story.chapters.push(newChapter);
-
-      // 更新最后更新时间
-      story.settings.autoUpdate.lastUpdate = Date.now();
-      story.lastUpdated = Date.now();
-
-      await db.grStories.put(story);
-
-      console.log(`[作者追更] 成功为作品《${story.title}》生成新章节: ${newTitle}`);
-      return true;
-
-    } catch (error) {
-      console.error('[作者追更] 生成失败:', error);
-      console.error('[作者追更] 错误堆栈:', error.stack);
-      // 向用户显示错误信息
-      if (typeof alert !== 'undefined') {
-        alert(`作者追更生成失败：${error.message}\n请查看控制台了解详细信息`);
-      }
-      return false;
-    }
-  }
-
-  // 检查所有作品的追更状态
-  async function checkAllStoriesForAutoUpdate() {
-    try {
-      const stories = await db.grStories.toArray();
-
-      for (const story of stories) {
-        if (await checkAutoUpdate(story)) {
-          console.log(`[作者追更] 作品《${story.title}》需要更新`);
-          await autoGenerateChapter(story.id);
-          // 添加延迟，避免同时发送太多请求
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-      }
-    } catch (error) {
-      console.error('[作者追更] 检查更新失败:', error);
-    }
-  }
-
-  // 启动追更定时器（每小时检查一次）
-  let autoUpdateTimer = null;
-
-  function startAutoUpdateTimer() {
-    if (autoUpdateTimer) {
-      clearInterval(autoUpdateTimer);
-    }
-
-    // 每小时检查一次
-    autoUpdateTimer = setInterval(() => {
-      const now = new Date();
-      console.log(`[作者追更] 定时检查开始... 当前时间: ${now.toLocaleString('zh-CN')}`);
-      checkAllStoriesForAutoUpdate();
-    }, 60 * 60 * 1000); // 1小时
-
-    console.log('[作者追更] 定时器已启动，每小时检查一次');
-  }
-
-  // 停止追更定时器
-  function stopAutoUpdateTimer() {
-    if (autoUpdateTimer) {
-      clearInterval(autoUpdateTimer);
-      autoUpdateTimer = null;
-      console.log('[作者追更] 定时器已停止');
-    }
-  }
-
-  // 页面加载时启动定时器
-  if (typeof window !== 'undefined') {
-    window.addEventListener('load', () => {
-      startAutoUpdateTimer();
-      // 立即检查一次
-      setTimeout(checkAllStoriesForAutoUpdate, 5000); // 延迟5秒后首次检查
+      listEl.appendChild(div);
     });
+
+    const selectAllCheckbox = document.getElementById('select-all-gr-export');
+    selectAllCheckbox.checked = true;
+    selectAllCheckbox.onclick = (e) => {
+      const isChecked = e.target.checked;
+      document.querySelectorAll('.gr-export-checkbox').forEach(cb => cb.checked = isChecked);
+    };
+
+    function updateExportSelectAllState() {
+      const allCbs = Array.from(document.querySelectorAll('.gr-export-checkbox'));
+      const allChecked = allCbs.every(cb => cb.checked);
+      const someChecked = allCbs.some(cb => cb.checked);
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    }
+    
+    document.querySelectorAll('.gr-export-checkbox').forEach(cb => {
+      cb.addEventListener('change', updateExportSelectAllState);
+    });
+
+    // 绑定按钮事件
+    const cancelBtn = document.getElementById('cancel-gr-export-btn');
+    const confirmBtn = document.getElementById('confirm-gr-export-btn');
+    
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.onclick = () => modal.classList.remove('visible');
+
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    newConfirmBtn.onclick = () => doExportTxt(story);
+
+    modal.classList.add('visible');
+  }
+
+  function doExportTxt(story) {
+    const selectedIndices = Array.from(document.querySelectorAll('.gr-export-checkbox'))
+      .filter(cb => cb.checked)
+      .map(cb => parseInt(cb.value));
+
+    if (selectedIndices.length === 0) {
+      alert("请至少选择一个章节进行导出。");
+      return;
+    }
+
+    let txtContent = story.title + "\n\n";
+    selectedIndices.sort((a, b) => a - b).forEach(index => {
+      const ch = story.chapters[index];
+      txtContent += "===============\n";
+      txtContent += (ch.title || `第 ${index + 1} 章`) + "\n";
+      txtContent += "===============\n\n";
+      txtContent += (ch.content || "") + "\n\n";
+    });
+
+    const blob = new Blob([txtContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${story.title || '作品导出'}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    document.getElementById('gr-export-txt-modal').classList.remove('visible');
   }
 
   // 暴露给全局
@@ -1941,5 +1289,3 @@ ${updatePrompt}
   window.openStorySettings = openStorySettings;
   window.addAuthor = addAuthor;
   window.deleteAuthor = deleteAuthor;
-  window.checkAllStoriesForAutoUpdate = checkAllStoriesForAutoUpdate; // 手动触发检查
-  window.autoGenerateChapter = autoGenerateChapter; // 手动触发单个作品更新

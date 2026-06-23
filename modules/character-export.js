@@ -469,32 +469,271 @@
     if (!chat) return;
 
     try {
-      // 方案3：导出时移除API历史记录
-      const chatDataCopy = { ...chat };
-      if (chatDataCopy.apiHistory) {
-        delete chatDataCopy.apiHistory;
+      const formatOptions = [
+        { text: '完整备份 (JSON)', value: 'json' },
+        { text: '纯文本记录 (TXT)', value: 'txt' },
+        { text: '纪念信件 (HTML)', value: 'html' }
+      ];
+      const format = await showChoiceModal('选择导出格式', formatOptions);
+      if (!format) return;
+
+      const safeName = chat.name.replace(/[\\/:*?"<>|]/g, '_');
+      const dateStr = new Date().toISOString().split('T')[0];
+
+      if (format === 'json') {
+        // 方案3：导出时移除API历史记录
+        const chatDataCopy = { ...chat };
+        if (chatDataCopy.apiHistory) {
+          delete chatDataCopy.apiHistory;
+        }
+
+        const backupData = {
+          type: 'EPhoneSingleChat',
+          version: 1,
+          chatData: chatDataCopy
+        };
+
+        const blob = new Blob(
+          [JSON.stringify(backupData, null, 2)], {
+          type: 'application/json'
+        }
+        );
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+
+        link.download = `EPhone-Chat-${safeName}-${dateStr}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else if (format === 'txt') {
+        let txtContent = `【与 ${chat.name} 的聊天记录】\n【导出时间：${new Date().toLocaleString()}】\n\n`;
+        
+        if (chat.history && chat.history.length > 0) {
+          for (const msg of chat.history) {
+            const role = msg.role === 'user' ? '我' : chat.name;
+            const time = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : '';
+            txtContent += `${role} [${time}]\n${msg.content}\n\n`;
+          }
+        } else {
+          txtContent += "暂无聊天记录。\n";
+        }
+        
+        const blob = new Blob([txtContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${safeName}的聊天记录_${dateStr}.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+      } else if (format === 'html') {
+        let htmlContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>与 ${chat.name} 的纪念信件</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; transition: background-color 0.3s ease; min-height: 100vh; }
+  
+  /* 顶部控制台 */
+  .control-panel {
+    position: fixed; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 15px 20px; z-index: 1000;
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 20px; backdrop-filter: blur(5px);
+  }
+  .control-group { display: flex; align-items: center; gap: 10px; }
+  .control-group label { font-size: 14px; color: #333; font-weight: bold; }
+  select, input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; }
+  input:focus, select:focus { border-color: #007aff; }
+
+  #main-content { margin-top: 80px; padding: 20px; }
+  .highlight { background-color: yellow; color: black; font-weight: bold; border-radius: 2px; padding: 0 2px; }
+
+  /* 默认头像占位 */
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+    font-weight: bold; color: #fff; flex-shrink: 0; font-size: 16px;
+  }
+
+  /* 主题 1: 现代气泡 (Modern Chat) */
+  body.theme-modern { background-color: #f0f2f5; color: #000; }
+  .theme-modern .chat-container { max-width: 600px; margin: 0 auto; padding: 20px; }
+  .theme-modern .header { text-align: center; margin-bottom: 30px; padding: 10px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);}
+  .theme-modern .title { font-size: 20px; font-weight: bold; margin: 0 0 5px 0; }
+  .theme-modern .subtitle { font-size: 12px; color: #888; }
+  .theme-modern .message { display: flex; flex-direction: column; margin-bottom: 20px; }
+  .theme-modern .user-msg { align-items: flex-end; }
+  .theme-modern .ai-msg { align-items: flex-start; }
+  .theme-modern .meta { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .theme-modern .content { font-size: 16px; white-space: pre-wrap; padding: 12px 16px; border-radius: 18px; max-width: 80%; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  .theme-modern .user-msg .content { background-color: #95ec69; color: #000; border-top-right-radius: 4px; }
+  .theme-modern .ai-msg .content { background-color: #ffffff; color: #000; border-top-left-radius: 4px; }
+  .theme-modern .avatar-container { display: none; }
+
+  /* 主题 2: 复古信笺 (Classic Letter) */
+  body.theme-letter { background-color: #f4e8d3; color: #4a3c31; font-family: "KaiTi", "楷体", STKaiti, serif; }
+  .theme-letter .chat-container { max-width: 800px; margin: 0 auto; background: #fbf5eb; padding: 60px 50px; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; border: 1px solid #e2d1b3; }
+  .theme-letter .chat-container::before { content: ''; position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px; border: 1px solid #e8dac1; pointer-events: none; }
+  .theme-letter .header { text-align: center; margin-bottom: 50px; border-bottom: 2px dashed #d5c4a1; padding-bottom: 20px; }
+  .theme-letter .title { font-size: 32px; font-weight: normal; margin: 0 0 10px 0; letter-spacing: 2px; }
+  .theme-letter .subtitle { font-size: 16px; color: #8c7a6b; }
+  .theme-letter .message { margin-bottom: 25px; position: relative; z-index: 1; }
+  .theme-letter .meta { font-size: 14px; color: #8c7a6b; margin-bottom: 5px; border-bottom: 1px solid #efe4ce; display: inline-block; padding-bottom: 2px; }
+  .theme-letter .content { font-size: 18px; white-space: pre-wrap; padding: 10px 15px; background: rgba(255,255,255,0.4); border-radius: 8px; margin-top: 5px; line-height: 1.8;}
+  .theme-letter .user-msg .content { background: rgba(220, 234, 240, 0.4); }
+  .theme-letter .user-msg .meta { color: #5c6b73; border-bottom-color: #d1dbe0; }
+  .theme-letter .avatar-container { display: none; }
+
+  /* 主题 3: 微信 (WeChat) */
+  body.theme-wechat { background-color: #EDEDED; color: #000; }
+  .theme-wechat .chat-container { max-width: 600px; margin: 0 auto; background: #EDEDED; padding: 10px 0;}
+  .theme-wechat .header { text-align: center; margin-bottom: 20px; padding: 15px; background: #EDEDED; border-bottom: 1px solid #D5D5D5;}
+  .theme-wechat .title { font-size: 17px; font-weight: bold; margin: 0; }
+  .theme-wechat .subtitle { font-size: 12px; color: #b2b2b2; margin-top: 5px; }
+  .theme-wechat .message { display: flex; margin-bottom: 20px; padding: 0 15px; }
+  .theme-wechat .user-msg { flex-direction: row-reverse; }
+  .theme-wechat .ai-msg { flex-direction: row; }
+  .theme-wechat .avatar-container { display: block; margin: 0 10px; }
+  .theme-wechat .msg-body { max-width: 70%; display: flex; flex-direction: column; }
+  .theme-wechat .user-msg .msg-body { align-items: flex-end; }
+  .theme-wechat .ai-msg .msg-body { align-items: flex-start; }
+  .theme-wechat .meta { display: none; }
+  .theme-wechat .content { font-size: 16px; white-space: pre-wrap; padding: 10px 14px; border-radius: 8px; line-height: 1.5; position: relative; }
+  .theme-wechat .user-msg .content { background-color: #95ec69; color: #000; }
+  .theme-wechat .ai-msg .content { background-color: #ffffff; color: #000; }
+  .theme-wechat .ai-msg .content::before { content: ''; position: absolute; top: 14px; left: -10px; border: 5px solid transparent; border-right-color: #ffffff; }
+  .theme-wechat .user-msg .content::after { content: ''; position: absolute; top: 14px; right: -10px; border: 5px solid transparent; border-left-color: #95ec69; }
+
+  /* 主题 4: 古早 Windows (Win98) */
+  body.theme-win98 { background-color: #008080; color: #000; font-family: "Tahoma", "宋体", sans-serif; }
+  .theme-win98 .control-panel { background: #c0c0c0; border-bottom: 2px solid #fff; box-shadow: inset 0 -2px #808080; }
+  .theme-win98 .chat-container { max-width: 700px; margin: 0 auto; background: #c0c0c0; padding: 2px; border-top: 2px solid #fff; border-left: 2px solid #fff; border-right: 2px solid #000; border-bottom: 2px solid #000; }
+  .theme-win98 .header { background: #000080; color: #fff; padding: 5px 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+  .theme-win98 .title { font-size: 14px; font-weight: bold; margin: 0; }
+  .theme-win98 .subtitle { font-size: 12px; }
+  .theme-win98 #message-list { padding: 10px; background: #fff; border: 2px inset #fff; height: 100%; min-height: 400px; }
+  .theme-win98 .message { margin-bottom: 15px; border-bottom: 1px dashed #c0c0c0; padding-bottom: 10px; }
+  .theme-win98 .meta { font-size: 12px; color: #000080; font-weight: bold; margin-bottom: 5px; }
+  .theme-win98 .content { font-size: 14px; white-space: pre-wrap; color: #000; }
+  .theme-win98 .user-msg .meta { color: #800080; }
+  .theme-win98 .avatar-container { display: none; }
+  .theme-win98 .highlight { background-color: #000080; color: #fff; }
+</style>
+</head>
+<body class="theme-modern">
+  <div class="control-panel">
+    <div class="control-group">
+      <label for="themeSelect">选择主题：</label>
+      <select id="themeSelect">
+        <option value="theme-modern">现代气泡</option>
+        <option value="theme-wechat">微信 (WeChat)</option>
+        <option value="theme-letter">复古信笺</option>
+        <option value="theme-win98">古早 Windows</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="searchInput">🔍 搜索记录：</label>
+      <input type="text" id="searchInput" placeholder="发件人、日期或内容..." autocomplete="off">
+    </div>
+  </div>
+
+  <div id="main-content">
+    <div class="chat-container">
+      <div class="header">
+        <h1 class="title">与 ${chat.name} 的聊天记录</h1>
+        <div class="subtitle">导出时间：${new Date().toLocaleString()}</div>
+      </div>
+      <div id="message-list">
+`;
+        if (chat.history && chat.history.length > 0) {
+          const aiInitial = chat.name ? chat.name.charAt(0) : 'A';
+          for (const msg of chat.history) {
+            const isUser = msg.role === 'user';
+            const role = isUser ? '我' : chat.name;
+            const time = msg.timestamp ? new Date(msg.timestamp).toLocaleString() : '';
+            const msgClass = isUser ? 'message user-msg' : 'message ai-msg';
+            
+            // 头像颜色稍微区分
+            const avatarBg = isUser ? '#7bed9f' : '#ff6b81';
+            const initial = isUser ? '我' : aiInitial;
+            const rawText = msg.content.replace(/"/g, '"').replace(/</g, '<').replace(/>/g, '>');
+
+            htmlContent += `
+        <div class="${msgClass}" data-text="${rawText}" data-meta="${role} · ${time}">
+          <div class="avatar-container"><div class="avatar" style="background:${avatarBg};">${initial}</div></div>
+          <div class="msg-body">
+            <div class="meta">${role} · ${time}</div>
+            <div class="content">${msg.content}</div>
+          </div>
+        </div>`;
+          }
+        } else {
+          htmlContent += `        <div style="text-align: center; color: #888; margin-top: 50px;">暂无聊天记录</div>\n`;
+        }
+        
+        htmlContent += `
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 主题切换
+    document.getElementById('themeSelect').addEventListener('change', (e) => {
+      document.body.className = e.target.value;
+    });
+
+    // 搜索过滤与高亮
+    const searchInput = document.getElementById('searchInput');
+    const messages = document.querySelectorAll('.message');
+
+    function highlightText(text, keyword) {
+      if (!keyword) return text;
+      const escapedKeyword = keyword.replace(/[.*+?^\${}()|[\\]\\\\]/g, '\\\\$&');
+      const regex = new RegExp('(' + escapedKeyword + ')', 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    searchInput.addEventListener('input', (e) => {
+      const keyword = e.target.value.trim().toLowerCase();
+      messages.forEach(msg => {
+        const rawContent = msg.getAttribute('data-text');
+        const rawMeta = msg.getAttribute('data-meta');
+        const contentEl = msg.querySelector('.content');
+        const metaEl = msg.querySelector('.meta');
+
+        const isMatch = rawContent.toLowerCase().includes(keyword) || rawMeta.toLowerCase().includes(keyword);
+        if (isMatch) {
+          msg.style.display = '';
+          if (keyword) {
+            contentEl.innerHTML = highlightText(rawContent, keyword);
+            metaEl.innerHTML = highlightText(rawMeta, keyword);
+          } else {
+            contentEl.textContent = rawContent;
+            metaEl.textContent = rawMeta;
+          }
+        } else {
+          msg.style.display = 'none';
+        }
+      });
+    });
+  </script>
+</body>
+</html>`;
+
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `致_${safeName}_的纪念信件_${dateStr}.html`;
+        link.click();
+        URL.revokeObjectURL(url);
       }
 
-      const backupData = {
-        type: 'EPhoneSingleChat',
-        version: 1,
-        chatData: chatDataCopy
-      };
-
-      const blob = new Blob(
-        [JSON.stringify(backupData, null, 2)], {
-        type: 'application/json'
-      }
-      );
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-
-      link.download = `EPhone-Chat-${chat.name}-${new Date().toISOString().split('T')[0]}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-
-      await showCustomAlert('导出成功', `与"${chat.name}"的聊天记录已成功导出！`);
+      let formatName = '完整备份';
+      if (format === 'txt') formatName = 'TXT文本';
+      if (format === 'html') formatName = '纪念信件';
+      await showCustomAlert('导出成功', `与"${chat.name}"的聊天记录已成功导出为 ${formatName}！`);
 
     } catch (error) {
       console.error("导出单个聊天时出错:", error);

@@ -1136,6 +1136,9 @@ window.initEventBindingsA = async function(state, db) {
     // 双语模式开关事件
     document.getElementById('bilingual-mode-toggle').addEventListener('change', (e) => {
       document.getElementById('bilingual-display-mode-group').style.display = e.target.checked ? 'flex' : 'none';
+      if (state.activeChatId && state.chats[state.activeChatId] && state.chats[state.activeChatId].isGroup) {
+        document.getElementById('bilingual-characters-group').style.display = e.target.checked ? 'block' : 'none';
+      }
     });
     
     // 自动记忆开关实时生效
@@ -3043,6 +3046,13 @@ window.initEventBindingsA = async function(state, db) {
         worldBookCheckboxesContainer.classList.remove('visible');
         worldBookSelectBox.classList.remove('expanded');
       }
+      const bilingualMultiselect = document.getElementById('bilingual-chars-multiselect');
+      if (bilingualMultiselect && !bilingualMultiselect.contains(e.target)) {
+        const container = document.getElementById('bilingual-chars-checkboxes-container');
+        const box = bilingualMultiselect.querySelector('.select-box');
+        if (container) container.classList.remove('visible');
+        if (box) box.classList.remove('expanded');
+      }
     });
 
     document.getElementById('chat-settings-btn').addEventListener('click', async () => {
@@ -3206,7 +3216,53 @@ window.initEventBindingsA = async function(state, db) {
         (chat.settings.enableBilingualMode) ? 'flex' : 'none';
       
       if (isGroup) {
+        document.getElementById('bilingual-characters-group').style.display = 
+          (chat.settings.enableBilingualMode) ? 'block' : 'none';
 
+        const bilingualCharsContainer = document.getElementById('bilingual-chars-checkboxes-container');
+        bilingualCharsContainer.innerHTML = '';
+        const bilingualCharacters = chat.settings.bilingualCharacters || [];
+        
+        chat.members.forEach(member => {
+          const isChecked = bilingualCharacters.includes(member.originalName);
+          const label = document.createElement('label');
+          label.innerHTML = `<input type="checkbox" value="${member.originalName}" ${isChecked ? 'checked' : ''}> ${member.groupNickname} (${member.originalName})`;
+          bilingualCharsContainer.appendChild(label);
+        });
+
+        const bilingualSelectBox = document.querySelector('#bilingual-chars-multiselect .select-box');
+        
+        function updateBilingualSelectionDisplay() {
+          const checkedBoxes = bilingualCharsContainer.querySelectorAll('input:checked');
+          const displayText = document.querySelector('#bilingual-chars-multiselect .selected-options-text');
+
+          if (checkedBoxes.length === 0) {
+            displayText.textContent = '全员双语';
+          } else if (checkedBoxes.length > 2) {
+            displayText.textContent = `已选择 ${checkedBoxes.length} 个角色`;
+          } else {
+            const displayItems = Array.from(checkedBoxes).map(cb => {
+              return cb.parentElement.textContent.trim().split(' (')[0];
+            });
+            displayText.textContent = displayItems.join(', ');
+          }
+        }
+        
+        updateBilingualSelectionDisplay();
+
+        const newBilingualSelectBox = bilingualSelectBox.cloneNode(true);
+        bilingualSelectBox.parentNode.replaceChild(newBilingualSelectBox, bilingualSelectBox);
+        newBilingualSelectBox.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (state.globalSettings.dropdownPopupMode) {
+            showMultiselectPopup('生效双语角色', bilingualCharsContainer, updateBilingualSelectionDisplay);
+          } else {
+            bilingualCharsContainer.classList.toggle('visible');
+            newBilingualSelectBox.classList.toggle('expanded');
+          }
+        });
+        bilingualCharsContainer.addEventListener('change', updateBilingualSelectionDisplay);
+        
         document.getElementById('group-background-activity-switch').checked = chat.settings.enableBackgroundActivity;
         document.getElementById('my-group-nickname-input').value = chat.settings.myNickname || '';
         document.getElementById('group-avatar-preview').src = chat.settings.groupAvatar || defaultGroupAvatar;
@@ -3220,7 +3276,7 @@ window.initEventBindingsA = async function(state, db) {
         document.getElementById('enable-sticker-vision-checkbox').checked = chat.settings.enableStickerVision || false;
         document.getElementById('enable-sticker-smart-match-checkbox').checked = chat.settings.enableStickerSmartMatch || false;
       } else {
-
+        document.getElementById('bilingual-characters-group').style.display = 'none';
         document.getElementById('single-char-background-activity-group').style.display = 'block';
         document.getElementById('enable-todo-list-switch').checked = chat.settings.enableTodoList || false;
         // --- 修复天气设置回显逻辑 ---
@@ -4026,6 +4082,12 @@ window.initEventBindingsA = async function(state, db) {
       chat.settings.bilingualDisplayMode = document.getElementById('bilingual-display-mode-select').value;
       
       if (chat.isGroup) {
+        const checkedBilingualChars = document.querySelectorAll('#bilingual-chars-checkboxes-container input[type="checkbox"]:checked');
+        const newBilingualChars = [];
+        checkedBilingualChars.forEach(cb => {
+          newBilingualChars.push(cb.value);
+        });
+        chat.settings.bilingualCharacters = newBilingualChars;
         chat.settings.enableBackgroundActivity = document.getElementById('group-background-activity-switch').checked;
         chat.settings.myNickname = document.getElementById('my-group-nickname-input').value.trim();
         chat.settings.groupAvatar = document.getElementById('group-avatar-preview').src;

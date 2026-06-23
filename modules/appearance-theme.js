@@ -450,13 +450,57 @@
         );
 
         if (cssAction === 'overwrite') {
+          const cssInput = document.getElementById('global-css-input');
+          const currentCss = state.globalSettings.globalCss || '';
+
+          if (currentCss && currentCss.trim() !== '') {
+            const presets = await db.appearancePresets.where('type').equals('global_css').toArray();
+            const existingPreset = presets.find(p => p.value.trim() === currentCss.trim());
+            
+            if (!existingPreset) {
+              const importedName = cssInput ? (cssInput.dataset.importedName || '') : '';
+              
+              const saveName = await showCustomPrompt(
+                '未保存的自定义CSS', 
+                '检测到当前的CSS未保存，覆盖后将丢失。是否要在覆盖前保存？\n(输入名称以保存，留空或取消则不保存)', 
+                importedName
+              );
+
+              if (saveName && saveName.trim()) {
+                const nameToSave = saveName.trim();
+                const existingByName = presets.find(p => p.name === nameToSave);
+
+                if (existingByName) {
+                  const confirmed = await showCustomConfirm('覆盖预设', `名为 "${nameToSave}" 的预设已存在。要覆盖它吗？`, {
+                    confirmButtonClass: 'btn-danger'
+                  });
+                  if (confirmed) {
+                    await db.appearancePresets.update(existingByName.id, {
+                      value: currentCss
+                    });
+                    if (typeof loadCssPresetsDropdown === 'function') await loadCssPresetsDropdown();
+                  }
+                } else {
+                  await db.appearancePresets.add({
+                    name: nameToSave,
+                    type: 'global_css',
+                    value: currentCss
+                  });
+                  if (typeof loadCssPresetsDropdown === 'function') await loadCssPresetsDropdown();
+                }
+              }
+            }
+          }
+
           state.globalSettings.globalCss = textContent;
           await db.globalSettings.put(state.globalSettings);
           applyGlobalCss(state.globalSettings.globalCss);
 
           // 刷新界面显示
-          const cssInput = document.getElementById('global-css-input');
-          if (cssInput) cssInput.value = textContent;
+          if (cssInput) {
+            cssInput.value = textContent;
+            cssInput.dataset.importedName = file.name.replace(/\.[^/.]+$/, "");
+          }
 
           await showCustomAlert('CSS导入成功', '代码已覆盖并应用到全局样式表。');
         } else if (cssAction === 'append') {
@@ -467,7 +511,10 @@
 
           // 刷新界面显示
           const cssInput = document.getElementById('global-css-input');
-          if (cssInput) cssInput.value = state.globalSettings.globalCss;
+          if (cssInput) {
+            cssInput.value = state.globalSettings.globalCss;
+            cssInput.dataset.importedName = file.name.replace(/\.[^/.]+$/, "");
+          }
 
           await showCustomAlert('CSS导入成功', '代码已附加并应用到全局样式表。');
         }

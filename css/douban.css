@@ -1,0 +1,414 @@
+/* ========================================
+   豆瓣专属 UI 美化样式
+======================================== */
+
+/* --- 毛玻璃底栏 (Action Bar) --- */
+.douban-glass-action-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.7); /* 更高的透明度 */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+/* 当显示时 */
+.douban-glass-action-bar.visible,
+#douban-action-bar[style*="display: flex"],
+#douban-detail-action-bar[style*="display: flex"] {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* --- 黑暗模式适配 --- */
+#phone-screen.dark-mode .douban-glass-action-bar {
+    background: rgba(28, 28, 30, 0.75);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* --- 管理按钮样式 --- */
+.douban-manage-btn {
+    width: calc(100% - 40px);
+    margin: 0 20px 15px 20px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a4a4a;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.douban-manage-btn:hover {
+    background-color: #eeeeee;
+    border-color: #d0d0d0;
+}
+
+.douban-manage-btn:active {
+    background-color: #e0e0e0;
+    transform: scale(0.98);
+}
+
+/* 夜间模式适配 */
+#phone-screen.dark-mode .douban-manage-btn {
+    color: #d0d0d0;
+    background-color: #2c2c2e;
+    border-color: #38383a;
+}
+
+#phone-screen.dark-mode .douban-manage-btn:hover {
+    background-color: #3a3a3c;
+    border-color: #48484a;
+}
+
+#phone-screen.dark-mode .douban-manage-btn:active {
+    background-color: #48484a;
+}
+
+/* --- 按钮样式 --- */
+.douban-glass-btn {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.douban-glass-btn:active {
+    transform: scale(0.96);
+}
+
+/* 取消按钮 */
+.douban-glass-btn-cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #333;
+}
+
+.douban-glass-btn-cancel:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+#phone-screen.dark-mode .douban-glass-btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e5e5ea;
+}
+
+#phone-screen.dark-mode .douban-glass-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* 转发按钮 (主色调) */
+.douban-glass-btn-primary {
+    background: #00B51D; /* 豆瓣绿 */
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 181, 29, 0.3);
+}
+
+.douban-glass-btn-primary:hover {
+    background: #009918;
+    box-shadow: 0 4px 12px rgba(0, 181, 29, 0.4);
+}
+
+.douban-glass-btn-primary:disabled {
+    background: #a5d8ad;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#phone-screen.dark-mode .douban-glass-btn-primary {
+    background: #00B51D;
+    color: #fff;
+}
+
+#phone-screen.dark-mode .douban-glass-btn-primary:disabled {
+    background: rgba(0, 181, 29, 0.3);
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- 自定义 Checkbox (全选) --- */
+.douban-glass-select-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+}
+
+#phone-screen.dark-mode .douban-glass-select-all {
+    color: #e5e5ea;
+}
+
+.douban-glass-checkbox-input {
+    display: none;
+}
+
+.douban-glass-checkbox-custom {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid #c7c7cc;
+    background: transparent;
+    position: relative;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#phone-screen.dark-mode .douban-glass-checkbox-custom {
+    border-color: #5c5c5e;
+}
+
+.douban-glass-checkbox-input:checked + .douban-glass-checkbox-custom {
+    background-color: #00B51D;
+    border-color: #00B51D;
+    transform: scale(1.1);
+}
+
+.douban-glass-checkbox-input:checked + .douban-glass-checkbox-custom::after {
+    content: '';
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    position: absolute;
+    top: 3px;
+    left: 7px;
+    animation: douban-check-anim 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* --- 列表项 Checkbox --- */
+/* 隐藏原来的生硬框，使用美化版 */
+/* 修复：普通模式下不影响原本样式，只有在 selection-mode 下才显示 */
+.selection-mode .douban-post-item .douban-checkbox,
+.selection-mode .douban-comment-item .douban-checkbox,
+.selection-mode#douban-post-detail-body .douban-checkbox {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    border: 1.5px solid #c7c7cc !important;
+    background: transparent !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    margin-right: 10px;
+}
+
+#phone-screen.dark-mode .selection-mode .douban-post-item .douban-checkbox,
+#phone-screen.dark-mode .selection-mode .douban-comment-item .douban-checkbox,
+#phone-screen.dark-mode .selection-mode#douban-post-detail-body .douban-checkbox {
+    border-color: #5c5c5e !important;
+}
+
+/* 修复详情页帖子主体的复选框位置 */
+.selection-mode#douban-post-detail-body .douban-checkbox {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    margin-right: 0 !important;
+}
+
+.selection-mode .douban-post-item.selected .douban-checkbox,
+.selection-mode .douban-comment-item.selected .douban-checkbox,
+.selection-mode#douban-post-detail-body.selected .douban-checkbox {
+    background-color: #00B51D !important;
+    border-color: #00B51D !important;
+    transform: scale(1.1);
+}
+
+.selection-mode .douban-post-item.selected .douban-checkbox::after,
+.selection-mode .douban-comment-item.selected .douban-checkbox::after,
+.selection-mode#douban-post-detail-body.selected .douban-checkbox::after {
+    content: '' !important;
+    width: 4px !important;
+    height: 9px !important;
+    border: solid white !important;
+    border-width: 0 2px 2px 0 !important;
+    transform: rotate(45deg) !important;
+    position: absolute !important;
+    top: 2.5px !important;
+    left: 6px !important;
+    animation: douban-check-anim 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    display: block !important;
+}
+
+@keyframes douban-check-anim {
+    0% { height: 0; width: 0; opacity: 0; }
+    100% { height: 10px; width: 5px; opacity: 1; }
+}
+
+/* 列表进入选择模式时的滑动动画 */
+.selection-mode .douban-post-item .douban-checkbox,
+.selection-mode .douban-comment-item .douban-checkbox {
+    animation: slide-in-left 0.3s ease forwards;
+}
+
+.selection-mode#douban-post-detail-body .douban-checkbox {
+    animation: fade-in-scale 0.3s ease forwards;
+}
+
+@keyframes fade-in-scale {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-in-left {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* ========================================
+   聊天框内的豆瓣分享卡片样式 (Forward Card)
+======================================== */
+.douban-forward-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #eaeaea;
+    overflow: hidden;
+    margin: 8px 0;
+    max-width: 280px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+#phone-screen.dark-mode .douban-forward-card {
+    background: #242426;
+    border-color: #38383a;
+}
+
+/* 卡片头部 */
+.douban-forward-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 12px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eaeaea;
+}
+
+#phone-screen.dark-mode .douban-forward-card-header {
+    background: #1c1c1e;
+    border-color: #38383a;
+}
+
+.douban-logo-icon {
+    width: 16px;
+    height: 16px;
+    fill: #00B51D;
+}
+
+.douban-forward-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+}
+
+#phone-screen.dark-mode .douban-forward-card-title {
+    color: #a0a0a5;
+}
+
+/* 卡片内容区 */
+.douban-forward-card-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.douban-forward-item {
+    position: relative;
+    padding-left: 10px;
+}
+
+.douban-forward-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 3px;
+    background: #00B51D;
+    border-radius: 2px;
+    opacity: 0.6;
+}
+
+.douban-forward-item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.douban-forward-tag {
+    font-size: 11px;
+    background: #f0f0f0;
+    color: #666;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+#phone-screen.dark-mode .douban-forward-tag {
+    background: #333;
+    color: #aaa;
+}
+
+.douban-forward-author {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+}
+
+#phone-screen.dark-mode .douban-forward-author {
+    color: #e5e5ea;
+}
+
+.douban-forward-post-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #111;
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+
+#phone-screen.dark-mode .douban-forward-post-title {
+    color: #fff;
+}
+
+.douban-forward-text {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 限制行数 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+#phone-screen.dark-mode .douban-forward-text {
+    color: #ccc;
+}

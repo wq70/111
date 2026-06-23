@@ -574,8 +574,38 @@ window.initFeatures = function(state, db) {
     document.getElementById('regenerate-char-usage-btn').addEventListener('click', handleGenerateAppUsage);
     document.getElementById('regenerate-char-music-btn').addEventListener('click', handleGenerateSimulatedMusic);
     document.getElementById('close-char-music-player-btn').addEventListener('click', closeCharMusicPlayer);
-    document.getElementById('regenerate-douban-btn').addEventListener('click', handleGenerateDoubanPosts);
-    document.getElementById('regenerate-douban-btn').addEventListener('click', handleGenerateDoubanPosts);
+    const doubanMoreActionsBtn = document.getElementById('douban-more-actions-btn');
+    const doubanDropdownMenu = document.getElementById('douban-dropdown-menu');
+    
+    if (doubanMoreActionsBtn && doubanDropdownMenu) {
+        doubanMoreActionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            doubanDropdownMenu.classList.toggle('show');
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!doubanMoreActionsBtn.contains(e.target) && !doubanDropdownMenu.contains(e.target)) {
+                doubanDropdownMenu.classList.remove('show');
+            }
+        });
+        
+        const dropdownItems = doubanDropdownMenu.querySelectorAll('.douban-dropdown-item');
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', () => {
+                doubanDropdownMenu.classList.remove('show');
+            });
+        });
+    }
+
+    const regenDoubanBtn = document.getElementById('regenerate-douban-btn');
+    if (regenDoubanBtn) {
+        regenDoubanBtn.addEventListener('click', () => handleGenerateDoubanPosts(false));
+    }
+    
+    const incrementalDoubanBtn = document.getElementById('incremental-douban-btn');
+    if (incrementalDoubanBtn) {
+        incrementalDoubanBtn.addEventListener('click', () => handleGenerateDoubanPosts(true));
+    }
 
     // MY Phone 重新生成按钮事件监听
     document.getElementById('regenerate-myphone-qq-btn')?.addEventListener('click', async () => {
@@ -998,9 +1028,14 @@ window.initFeatures = function(state, db) {
       saveMyPhoneMusic();
     });
 
-    document.getElementById('douban-detail-back-btn').addEventListener('click', () => showScreen('douban-screen'));
-    document.getElementById('douban-send-comment-btn').addEventListener('click', handleSendDoubanComment);
-    document.getElementById('douban-wait-reply-btn').addEventListener('click', handleDoubanWaitReply);
+    const doubanDetailBackBtn = document.getElementById('douban-detail-back-btn');
+    if (doubanDetailBackBtn) doubanDetailBackBtn.addEventListener('click', () => showScreen('douban-screen'));
+    
+    const doubanSendCommentBtn = document.getElementById('douban-send-comment-btn');
+    if (doubanSendCommentBtn) doubanSendCommentBtn.addEventListener('click', handleSendDoubanComment);
+    
+    const doubanWaitReplyBtn = document.getElementById('douban-wait-reply-btn');
+    if (doubanWaitReplyBtn) doubanWaitReplyBtn.addEventListener('click', handleDoubanWaitReply);
 
     document.getElementById('cphone-wallpaper-upload-input').addEventListener('change', async (event) => {
       const file = event.target.files[0];
@@ -1556,56 +1591,95 @@ window.initFeatures = function(state, db) {
         handleChangeAlbumArt(musicState.currentIndex);
       }
     });
-    document.getElementById('douban-settings-btn').addEventListener('click', openDoubanSettingsModal);
-    document.getElementById('save-douban-settings-btn').addEventListener('click', saveDoubanSettings);
-    document.getElementById('cancel-douban-settings-btn').addEventListener('click', () => {
-      document.getElementById('douban-settings-modal').classList.remove('visible');
+    const doubanSettingsBtn = document.getElementById('douban-settings-btn');
+    if (doubanSettingsBtn) doubanSettingsBtn.addEventListener('click', openDoubanSettingsModal);
+    
+    const saveDoubanSettingsBtn = document.getElementById('save-douban-settings-btn');
+    if (saveDoubanSettingsBtn) saveDoubanSettingsBtn.addEventListener('click', saveDoubanSettings);
+    
+    const cancelDoubanSettingsBtn = document.getElementById('cancel-douban-settings-btn');
+    if (cancelDoubanSettingsBtn) cancelDoubanSettingsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('douban-settings-modal');
+      if (modal) modal.classList.remove('visible');
     });
 
     // 管理NPC头像
-    document.getElementById('manage-npc-avatars-btn').addEventListener('click', () => {
-      document.getElementById('douban-settings-modal').classList.remove('visible');
+    const manageNpcAvatarsBtn = document.getElementById('manage-npc-avatars-btn');
+    if (manageNpcAvatarsBtn) manageNpcAvatarsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('douban-settings-modal');
+      if (modal) modal.classList.remove('visible');
       openNpcAvatarsModal();
     });
-    document.getElementById('add-npc-avatar-url-btn').addEventListener('click', addNpcAvatarFromURL);
-    document.getElementById('add-npc-avatar-local-btn').addEventListener('click', addNpcAvatarFromLocal);
-    document.getElementById('npc-avatar-local-input').addEventListener('change', handleNpcAvatarLocalUpload);
-    document.getElementById('delete-selected-npc-avatars-btn').addEventListener('click', deleteSelectedNpcAvatars);
-    document.getElementById('select-all-npc-avatars').addEventListener('change', toggleSelectAllNpcAvatars);
-    document.getElementById('close-npc-avatars-btn').addEventListener('click', () => {
-      document.getElementById('npc-avatars-modal').classList.remove('visible');
+    
+    const addNpcAvatarUrlBtn = document.getElementById('add-npc-avatar-url-btn');
+    if (addNpcAvatarUrlBtn) addNpcAvatarUrlBtn.addEventListener('click', addNpcAvatarFromURL);
+    
+    const addNpcAvatarLocalBtn = document.getElementById('add-npc-avatar-local-btn');
+    if (addNpcAvatarLocalBtn) addNpcAvatarLocalBtn.addEventListener('click', addNpcAvatarFromLocal);
+    
+    const npcAvatarLocalInput = document.getElementById('npc-avatar-local-input');
+    if (npcAvatarLocalInput) npcAvatarLocalInput.addEventListener('change', handleNpcAvatarLocalUpload);
+    
+    const deleteSelectedNpcAvatarsBtn = document.getElementById('delete-selected-npc-avatars-btn');
+    if (deleteSelectedNpcAvatarsBtn) deleteSelectedNpcAvatarsBtn.addEventListener('click', deleteSelectedNpcAvatars);
+    
+    const selectAllNpcAvatars = document.getElementById('select-all-npc-avatars');
+    if (selectAllNpcAvatars) selectAllNpcAvatars.addEventListener('change', toggleSelectAllNpcAvatars);
+    
+    const closeNpcAvatarsBtn = document.getElementById('close-npc-avatars-btn');
+    if (closeNpcAvatarsBtn) closeNpcAvatarsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('npc-avatars-modal');
+      if (modal) modal.classList.remove('visible');
       selectedNpcAvatars.clear();
     });
 
     // 管理自定义小组
-    document.getElementById('manage-custom-groups-btn').addEventListener('click', () => {
-      document.getElementById('douban-settings-modal').classList.remove('visible');
+    const manageCustomGroupsBtn = document.getElementById('manage-custom-groups-btn');
+    if (manageCustomGroupsBtn) manageCustomGroupsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('douban-settings-modal');
+      if (modal) modal.classList.remove('visible');
       openCustomGroupsModal();
     });
-    document.getElementById('add-custom-group-btn').addEventListener('click', () => {
+    
+    const addCustomGroupBtn = document.getElementById('add-custom-group-btn');
+    if (addCustomGroupBtn) addCustomGroupBtn.addEventListener('click', () => {
       openEditGroupModal(null);
     });
-    document.getElementById('close-custom-groups-btn').addEventListener('click', () => {
-      document.getElementById('custom-groups-modal').classList.remove('visible');
+    
+    const closeCustomGroupsBtn = document.getElementById('close-custom-groups-btn');
+    if (closeCustomGroupsBtn) closeCustomGroupsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('custom-groups-modal');
+      if (modal) modal.classList.remove('visible');
     });
-    document.getElementById('save-edit-group-btn').addEventListener('click', saveEditGroup);
-    document.getElementById('cancel-edit-group-btn').addEventListener('click', () => {
-      document.getElementById('edit-custom-group-modal').classList.remove('visible');
+    
+    const saveEditGroupBtn = document.getElementById('save-edit-group-btn');
+    if (saveEditGroupBtn) saveEditGroupBtn.addEventListener('click', saveEditGroup);
+    
+    const cancelEditGroupBtn = document.getElementById('cancel-edit-group-btn');
+    if (cancelEditGroupBtn) cancelEditGroupBtn.addEventListener('click', () => {
+      const modal = document.getElementById('edit-custom-group-modal');
+      if (modal) modal.classList.remove('visible');
     });
 
     // 管理豆瓣帖子
-    document.getElementById('manage-douban-posts-btn').addEventListener('click', () => {
+    const manageDoubanPostsBtn = document.getElementById('manage-douban-posts-btn');
+    if (manageDoubanPostsBtn) manageDoubanPostsBtn.addEventListener('click', () => {
       openDeleteDoubanPostsModal();
     });
 
     // 删除豆瓣帖子模态框事件
-    document.getElementById('cancel-delete-douban-posts-btn').addEventListener('click', () => {
-      document.getElementById('delete-douban-posts-modal').classList.remove('visible');
+    const cancelDeleteDoubanPostsBtn = document.getElementById('cancel-delete-douban-posts-btn');
+    if (cancelDeleteDoubanPostsBtn) cancelDeleteDoubanPostsBtn.addEventListener('click', () => {
+      const modal = document.getElementById('delete-douban-posts-modal');
+      if (modal) modal.classList.remove('visible');
     });
-    document.getElementById('confirm-delete-douban-posts-btn').addEventListener('click', handleConfirmDeleteDoubanPosts);
+    
+    const confirmDeleteDoubanPostsBtn = document.getElementById('confirm-delete-douban-posts-btn');
+    if (confirmDeleteDoubanPostsBtn) confirmDeleteDoubanPostsBtn.addEventListener('click', handleConfirmDeleteDoubanPosts);
 
     // 豆瓣帖子列表项点击事件（单选）
-    document.getElementById('delete-douban-posts-list').addEventListener('click', (e) => {
+    const deleteDoubanPostsList = document.getElementById('delete-douban-posts-list');
+    if (deleteDoubanPostsList) deleteDoubanPostsList.addEventListener('click', (e) => {
       const item = e.target.closest('.clear-posts-item');
       if (item) {
         item.classList.toggle('selected');
@@ -1613,7 +1687,8 @@ window.initFeatures = function(state, db) {
     });
 
     // 全选豆瓣帖子
-    document.getElementById('select-all-douban-posts').addEventListener('change', (e) => {
+    const selectAllDoubanPosts = document.getElementById('select-all-douban-posts');
+    if (selectAllDoubanPosts) selectAllDoubanPosts.addEventListener('change', (e) => {
       const isChecked = e.target.checked;
       document.querySelectorAll('#delete-douban-posts-list .clear-posts-item').forEach(item => {
         if (isChecked) {

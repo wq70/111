@@ -2000,7 +2000,30 @@ ${linkedContents}
         }
         let systemPromptTemplate = window.getActiveChatPrompt ? window.getActiveChatPrompt(chat.settings.isOfflineMode ? 'group_offline' : 'group') : '';
         
-        let bilingualModeGroupContext = chat.settings.enableBilingualMode ? `
+        let bilingualModeGroupContext = '';
+        if (chat.settings.enableBilingualMode) {
+          if (chat.settings.bilingualCharacters && chat.settings.bilingualCharacters.length > 0) {
+            const chars = chat.settings.bilingualCharacters.join('、');
+            bilingualModeGroupContext = `
+# 【双语输出铁律 - 最高优先级】
+以下指定角色的文本和语音消息都【必须】使用双语格式：外语〖中文〗
+指定双语角色：[${chars}]
+
+示例：
+- Hello〖你好〗
+- How are you?〖你好吗？〗
+- I miss you〖我想你了〗
+
+重要规则：
+- 【只有】以上指定的角色必须使用双语格式。其他未指定的角色【绝对禁止】使用双语，必须使用单语正常输出！
+- 括号必须是 〖 和 〗（不是【】或其他符号）
+- 外语和〖之间紧贴，不要有空格
+- 每句话都要有对应的翻译
+- 不要在〖〗中使用〗符号
+- 【绝对禁止】指定的双语角色只发外语或只发中文！
+`;
+          } else {
+            bilingualModeGroupContext = `
 # 【双语输出铁律 - 最高优先级】
 所有角色的文本和语音消息都【必须】使用格式：外语〖中文〗
 
@@ -2015,7 +2038,9 @@ ${linkedContents}
 - 每句话都要有对应的翻译
 - 不要在〖〗中使用〗符号
 - 【绝对禁止】只发外语或只发中文！
-` : '';
+`;
+          }
+        }
 
         let groupTimePerceptionInstruction = chat.settings.enableTimePerception ? `5.  **情景感知**: 你的对话【必须】自然地体现出对当前时间 (${currentTime}) 和情景的感知。${longTimeNoSee ? `【重要提示】${timeContextText} 你应该让角色们主动开启新话题来打破沉默。` : ''}` : '';
         
@@ -2068,7 +2093,7 @@ ${linkedContents}
         - 使用场景：当你想要分享一张写实风格的高质量图片时使用。
         - 不要频繁使用，只在真正想分享图片的时候使用。` : '';
         
-        let bilingualAlertVoice = chat.settings.enableBilingualMode ? ' ⚠️ 必须使用双语格式：外语〖中文〗' : '';
+        let bilingualAlertVoice = chat.settings.enableBilingualMode ? ' ⚠️ （注意：如果该角色是指定的双语角色，必须使用双语格式：外语〖中文〗）' : '';
 
           const contextMap = {
             'aiAgeContext': aiAgeContext,

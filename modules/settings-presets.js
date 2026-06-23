@@ -1802,10 +1802,56 @@
     const selectedId = parseInt(selectEl.value);
     if (isNaN(selectedId)) return;
 
+    const cssInput = document.getElementById('global-css-input');
+    const currentCss = cssInput ? cssInput.value.trim() : '';
+
+    if (currentCss) {
+      const presets = await db.appearancePresets.where('type').equals('global_css').toArray();
+      const existingPreset = presets.find(p => p.value.trim() === currentCss);
+      
+      if (!existingPreset) {
+        const importedName = cssInput.dataset.importedName || '';
+        
+        const saveName = await showCustomPrompt(
+          '未保存的自定义CSS', 
+          '检测到当前的CSS未保存，切换后将丢失。是否要保存？\n(输入名称以保存，留空或取消则不保存)', 
+          importedName
+        );
+
+        if (saveName && saveName.trim()) {
+          const nameToSave = saveName.trim();
+          const existingByName = presets.find(p => p.name === nameToSave);
+
+          if (existingByName) {
+            const confirmed = await showCustomConfirm('覆盖预设', `名为 "${nameToSave}" 的预设已存在。要覆盖它吗？`, {
+              confirmButtonClass: 'btn-danger'
+            });
+            if (confirmed) {
+              await db.appearancePresets.update(existingByName.id, {
+                value: currentCss
+              });
+              await loadCssPresetsDropdown();
+              selectEl.value = selectedId;
+            }
+          } else {
+            await db.appearancePresets.add({
+              name: nameToSave,
+              type: 'global_css',
+              value: currentCss
+            });
+            await loadCssPresetsDropdown();
+            selectEl.value = selectedId;
+          }
+        }
+      }
+    }
+
     const preset = await db.appearancePresets.get(selectedId);
     if (preset) {
-      const cssInput = document.getElementById('global-css-input');
-      cssInput.value = preset.value;
+      if (cssInput) {
+        cssInput.value = preset.value;
+        cssInput.dataset.importedName = '';
+      }
       applyGlobalCss(preset.value);
     }
   }
