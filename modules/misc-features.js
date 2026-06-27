@@ -2629,34 +2629,24 @@
     const chatId = state.activeChatId;
     if (!chatId) return;
 
-
     showScreen('chat-interface-screen');
-
 
     setTimeout(async () => {
       const messagesContainer = document.getElementById('chat-messages');
       const selector = `.message-bubble[data-timestamp="${timestamp}"]`;
       let targetMessage = messagesContainer.querySelector(selector);
-      let attempts = 0;
-      const maxAttempts = 20;
 
-
-      while (!targetMessage && attempts < maxAttempts) {
-        const loadMoreBtn = document.getElementById('load-more-btn');
-        if (loadMoreBtn) {
-          console.log(`目标消息未找到, 正在加载更多历史记录... (尝试 ${attempts + 1})`);
-          await loadMoreMessages();
-          targetMessage = messagesContainer.querySelector(selector);
-          attempts++;
+      // 如果当前界面没有这条消息，使用历史上下文加载
+      if (!targetMessage) {
+        console.log(`目标消息未找到, 正在进入历史上下文模式...`);
+        if (typeof renderChatContext === 'function') {
+          await renderChatContext(chatId, timestamp);
         } else {
-
-          break;
+           console.error("renderChatContext is not defined");
         }
+      } else {
+        scrollToOriginalMessage(timestamp);
       }
-
-
-      scrollToOriginalMessage(timestamp);
-
     }, 200);
   }
 
@@ -2874,7 +2864,7 @@
 // ============================================================
 
   let currentPage = 0;
-  const totalPages = 3;
+  const totalPages = 4;
 
 
   function setupHomeScreenPagination() {

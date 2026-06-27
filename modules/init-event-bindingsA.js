@@ -1350,6 +1350,16 @@ window.initEventBindingsA = async function(state, db) {
       showScreen('chat-list-screen'); // 切换画面
     });
 
+    // 历史模式返回最新
+    const returnToLatestBtn = document.getElementById('return-to-latest-btn');
+    if (returnToLatestBtn) {
+      returnToLatestBtn.addEventListener('click', () => {
+        if (state.activeChatId) {
+          renderChatInterface(state.activeChatId);
+        }
+      });
+    }
+
     // 3. 绑定：狼人杀 -> 退出游戏
     document.getElementById('exit-werewolf-game-btn').addEventListener('click', async () => {
       const confirmed = await showCustomConfirm('退出游戏', '确定要退出当前这局狼人杀吗？游戏进度将不会被保存。', {
@@ -1965,6 +1975,7 @@ window.initEventBindingsA = async function(state, db) {
       state.globalSettings.cleanApiSettings = document.getElementById('clean-api-settings-switch').checked;
       state.globalSettings.apiStyleBeautify = document.getElementById('api-style-beautify-switch').checked;
       state.globalSettings.dropdownPopupMode = document.getElementById('dropdown-popup-mode-switch').checked;
+      state.globalSettings.showThoughtChainInChat = document.getElementById('global-show-thought-chain-switch').checked;
       state.globalSettings.lockScreenEnabled = document.getElementById('lock-screen-toggle').checked;
       state.globalSettings.lockScreenBypassEnabled = document.getElementById('lock-screen-bypass-toggle').checked;
       state.globalSettings.lockScreenPassword = document.getElementById('lock-screen-password-input').value.trim();

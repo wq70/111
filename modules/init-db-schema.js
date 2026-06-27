@@ -103,4 +103,9 @@ db.version(57).stores({
   secondaryApiPresets: '++id, name'
 });
 
+// 思维链预设系统
+db.version(58).stores({
+  thoughtChainPresets: '++id, name'
+});
+
 window.db = db;

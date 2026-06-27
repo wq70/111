@@ -47,6 +47,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
   <script src="update-notification.js?v=0.0.36" defer></script>
+  <script src="thought-chain-manager.js?v=0.0.36" defer></script>
   <script src="online-chat-manager.js?v=0.0.36" defer></script>
   <script src="online-chat-integration.js?v=0.0.36" defer></script>
   <script src="sticker-vision.js?v=0.0.36" defer></script>
@@ -518,9 +519,19 @@
               </div>
             </div>
           </div>
+          <!-- 新增第四页 -->
+          <div class="home-screen-page">
+            <div id="page-4-app-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; padding: 20px; width: 100%; box-sizing: border-box; align-items: start; justify-items: center;">
+              <div class="desktop-app-icon" onclick="showScreen('thought-chain-screen')">
+                <div class="icon-bg-desktop"><img id="icon-img-thought-chain" src="https://i.postimg.cc/MTC3Tkw8/IMG-6436.jpg" alt="思维链"></div>
+                <span class="label">思维链</span>
+              </div>
+            </div>
+          </div>
         </div> </div>
       <div id="home-screen-pagination">
         <div class="pagination-dot active"></div>
+        <div class="pagination-dot"></div>
         <div class="pagination-dot"></div>
         <div class="pagination-dot"></div>
       </div>
@@ -3416,6 +3427,12 @@
       <div id="chat-messages">
         <div id="typing-indicator">对方正在输入...</div>
       </div>
+      <button id="return-to-latest-btn" style="display: none; position: absolute; bottom: 160px; right: 20px; z-index: 100; background-color: white; color: #333; border: none; border-radius: 50%; width: 40px; height: 40px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); cursor: pointer; padding: 0; text-align: center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-top: 2px;">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <polyline points="19 12 12 19 5 12"></polyline>
+        </svg>
+      </button>
       <div id="chat-input-area">
         <div id="chat-at-mention-popup" class="at-mention-popup"></div>
         <!-- 智能匹配表情包显示区域 -->
@@ -3811,6 +3828,16 @@
                 </label>
             </div>
             <div class="settings-item">
+                <div>
+                    <label>在聊天界面显示AI深度思考</label>
+                    <div class="settings-desc">关闭后只在长按消息弹窗内可见</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="global-show-thought-chain-switch" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item">
                 <label>顶部状态栏</label>
                 <label class="toggle-switch">
                     <input type="checkbox" id="status-bar-toggle-switch">
@@ -4126,6 +4153,109 @@
         <button class="form-button form-button-secondary" id="reset-font-btn"data-lang-key="fontResetDefault">全部恢复默认字体</button>
       </div>
     </div>
+    <!-- 思维链/预设配置屏幕 -->
+    <div id="thought-chain-screen" class="screen ios-settings-screen">
+      <div class="header">
+        <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
+        <span>思维链管理</span>
+        <div class="header-actions">
+          <span class="action-btn" id="add-thought-chain-btn" title="添加条目">+</span>
+        </div>
+      </div>
+      <div class="settings-container ios-scroll-container" style="background-color: #f5f5f7;">
+        
+        <!-- 全局开关与重置 -->
+        <div class="settings-section" style="margin: 15px; border-radius: 12px; overflow: hidden; background: white; flex-shrink: 0;">
+          <div class="settings-item" style="border-bottom: 1px solid #eee;">
+            <div>
+              <div style="font-weight: 500;">启用自定义思维链</div>
+              <div style="font-size: 12px; color: var(--text-secondary);">关闭后将不注入这里的思维链条目</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="thought-chain-enable-switch" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <!-- 预设管理 -->
+          <div class="settings-item" style="border-bottom: 1px solid #eee; flex-wrap: wrap; gap: 10px; padding: 15px;">
+             <div style="display: flex; align-items: center; width: 100%; gap: 10px;">
+                 <label style="font-weight: 500; margin-bottom: 0; white-space: nowrap;">配置预设</label>
+                 <select id="thought-chain-preset-select" class="settings-select" style="flex-grow: 1; width: auto; min-width: 0;">
+                     <option value="current">当前配置 (未保存)</option>
+                 </select>
+             </div>
+             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; width: 100%;">
+                 <button id="new-thought-chain-preset-btn" class="settings-mini-btn">新建</button>
+                 <button id="import-thought-chain-preset-btn" class="settings-mini-btn">导入</button>
+                 <button id="export-thought-chain-preset-btn" class="settings-mini-btn">导出</button>
+                 <button id="save-thought-chain-preset-btn" class="settings-mini-btn">保存</button>
+                 <button id="delete-thought-chain-preset-btn" class="settings-mini-btn" style="color: #ff3b30; border-color: rgba(255,59,48,0.3);">删除</button>
+                 <input type="file" id="import-thought-chain-preset-file" accept=".json" style="display: none;">
+             </div>
+          </div>
+          
+          <button id="thought-chain-reset-btn" style="width: 100%; padding: 12px; background: none; border: none; color: #ff3b30; font-size: 15px; font-weight: 500; cursor: pointer;">
+            恢复默认条目
+          </button>
+        </div>
+
+        <!-- 条目列表 -->
+        <div id="thought-chain-list" style="padding: 0 15px 40px; display: flex; flex-direction: column; gap: 12px;">
+          <!-- 动态渲染的条目 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 思维链条目编辑弹窗 -->
+    <div id="thought-chain-editor-modal" class="modal">
+      <div class="modal-content" style="height: 75%; max-width: 500px;">
+        <div class="modal-header">
+          <span id="thought-chain-editor-title">编辑条目</span>
+        </div>
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
+          <div class="form-group">
+            <label>条目名称</label>
+            <input type="text" id="tc-name-input" placeholder="例如：潜台词感知">
+          </div>
+          <div class="form-group" style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+              <label>注入位置</label>
+              <select id="tc-position-select" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                <option value="head">头部 (System)</option>
+                <option value="middle">中间 (System)</option>
+                <option value="bottom">底部 (AI Role - 触发器)</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label>发送身份</label>
+              <select id="tc-role-select" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                <option value="system">系统 (System)</option>
+                <option value="assistant">AI自己 (Assistant)</option>
+                <option value="user">用户 (User)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <label>内容文本 <span style="font-size: 12px; color: #999; font-weight: normal;">(支持 <code><变量名></code>)</span></label>
+            <textarea id="tc-content-input" style="flex-grow: 1; width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; resize: none; font-family: monospace; font-size: 14px; box-sizing: border-box;" placeholder="输入具体的提示词内容..."></textarea>
+          </div>
+          <div class="form-group" style="display: flex; justify-content: space-between; align-items: center;">
+            <label style="margin: 0;">是否启用</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="tc-enabled-switch" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel" id="tc-cancel-btn">取消</button>
+          <button class="save" id="tc-save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+
+
     <div id="contact-picker-screen" class="screen">
       <div class="header"> <span class="back-btn" id="cancel-contact-picker-btn"data-lang-key="cancel">取消</span> <span>选择联系人</span> <span class="save-btn" id="confirm-contact-picker-btn"data-lang-key="done">完成(0)</span> </div>
       <div class="list-container" id="contact-picker-list"> </div>
@@ -5746,7 +5876,14 @@
         <div class="alipay-nav">
             <span class="back-btn" onclick="showScreen('home-screen')">‹</span>
             <span class="alipay-title">支付宝</span>
-            <span class="alipay-action" onclick="handleUserTopUp()">充值</span>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="alipay-theme-toggle-btn" class="alipay-action" onclick="toggleAlipayTheme()" title="切换主题">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="vertical-align: middle;">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </span>
+                <span class="alipay-action" onclick="handleUserTopUp()">充值</span>
+            </div>
         </div>
     </div>
     
@@ -6841,7 +6978,9 @@
   </div>
   <div id="message-actions-modal" class="modal">
     <div id="custom-modal" style="width: 250px;">
-      <div class="custom-modal-footer"> <button id="edit-message-btn" data-lang-key="edit">编辑消息</button> <button id="copy-message-btn">复制文本</button> <button id="copy-timestamp-btn">复制时间戳</button> <button id="recall-message-btn">撤回</button> <button id="publish-to-announcement-btn" style="display: none;">发布到公告板</button>
+      <div class="custom-modal-footer"> 
+        <button id="view-thought-chain-btn" style="display: none; color: var(--accent-color);">查看深度思考</button>
+        <button id="edit-message-btn" data-lang-key="edit">编辑消息</button> <button id="copy-message-btn">复制文本</button> <button id="copy-timestamp-btn">复制时间戳</button> <button id="recall-message-btn">撤回</button> <button id="publish-to-announcement-btn" style="display: none;">发布到公告板</button>
         <button id="translate-message-btn">翻译</button> <button id="quote-message-btn">引用</button> <button id="forward-message-btn">转发</button> <button id="select-message-btn">进入多选</button> <button id="cancel-message-action-btn" style="margin-top: 8px; border-radius: 8px; background-color: #f0f0f0;"data-lang-key="cancel">取消</button> </div>
     </div>
   </div>

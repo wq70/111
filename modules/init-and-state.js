@@ -34,6 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let state = {
     chats: {},
     activeChatId: null,
+    isViewingHistoryMode: false,
+    historyCenterTimestamp: null,
     globalSettings: {},
     apiConfig: {},
     userStickers: [],
@@ -165,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chatRenderWindow: 50,
       safeRenderMode: false,
       dropdownPopupMode: false,
+      showThoughtChainInChat: true, // 新增：是否在聊天界面显示思考气泡
       systemNotification: {
         enabled: false,
         appName: 'EPhone',

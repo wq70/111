@@ -16,6 +16,33 @@
     if (isSelectionMode) return;
 
     activeMessageTimestamp = timestamp;
+    
+    // 检查此消息前面是否有被隐藏的思考过程
+    const msgIndex = chat.history.findIndex(m => m.timestamp === timestamp);
+    const viewThoughtChainBtn = document.getElementById('view-thought-chain-btn');
+    if (viewThoughtChainBtn) {
+        let foundHiddenThought = false;
+        // 往前找，如果找到 thought_chain_block 并且全局设置为隐藏
+        for (let i = msgIndex - 1; i >= 0; i--) {
+            const prevMsg = chat.history[i];
+            if (prevMsg.type === 'thought_chain_block') {
+                if (state.globalSettings.showThoughtChainInChat === false) {
+                    foundHiddenThought = true;
+                    // 点击查看深度思考
+                    viewThoughtChainBtn.onclick = () => {
+                        hideMessageActions();
+                        showCustomAlert('AI 深度思考', parseMarkdown(processMentions(String(prevMsg.content), chat)).replace(/\n/g, '<br>'));
+                    };
+                }
+                break; // 无论是否隐藏，只看最近的一个，防止找太远
+            }
+            if (prevMsg.role === 'user') {
+                break; // 如果中间隔了用户消息，说明不是针对当前回复的思考过程
+            }
+        }
+        viewThoughtChainBtn.style.display = foundHiddenThought ? 'block' : 'none';
+    }
+
     document.getElementById('message-actions-modal').classList.add('visible');
   }
 

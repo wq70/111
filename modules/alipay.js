@@ -6,6 +6,8 @@
 // ========================================
 
   const BLACK_GOLD_THRESHOLD = 10000;
+  
+  window.alipayThemeOverride = null; // null | 'standard' | 'blackgold'
 
   let selectedKinshipCharId = null;
 
@@ -21,13 +23,7 @@
     const alipayScreen = document.getElementById('alipay-screen');
     const statusTag = document.getElementById('alipay-status-tag');
 
-    if (window.userBalance >= BLACK_GOLD_THRESHOLD) {
-      alipayScreen.classList.add('theme-blackgold');
-      if (statusTag) statusTag.textContent = '黑金会员';
-    } else {
-      alipayScreen.classList.remove('theme-blackgold');
-      if (statusTag) statusTag.textContent = '标准会员';
-    }
+    checkThemeStatus();
 
     const oldWrapper = document.getElementById('alipay-kinship-section-wrapper');
     if (oldWrapper) oldWrapper.remove();
@@ -427,7 +423,15 @@
   // 全局主题检查 (核心：余额变动自动切换黑金/蓝色)
   function checkThemeStatus() {
     const threshold = 10000;
-    const isGold = window.userBalance >= threshold;
+    let isGold = false;
+    
+    if (window.alipayThemeOverride === 'blackgold') {
+        isGold = true;
+    } else if (window.alipayThemeOverride === 'standard') {
+        isGold = false;
+    } else {
+        isGold = window.userBalance >= threshold;
+    }
 
     const screens = ['alipay-screen', 'fund-screen'];
     screens.forEach(id => {
@@ -775,6 +779,28 @@
 
     document.getElementById('fund-trade-modal').classList.remove('visible');
     renderFundScreen();
+  };
+
+  window.toggleAlipayTheme = function() {
+    const threshold = 10000;
+    let currentIsGold = false;
+    if (window.alipayThemeOverride === 'blackgold') {
+        currentIsGold = true;
+    } else if (window.alipayThemeOverride === 'standard') {
+        currentIsGold = false;
+    } else {
+        currentIsGold = window.userBalance >= threshold;
+    }
+    
+    window.alipayThemeOverride = currentIsGold ? 'standard' : 'blackgold';
+    
+    const btn = document.getElementById('alipay-theme-toggle-btn');
+    if (btn) {
+        btn.classList.add('animating');
+        setTimeout(() => btn.classList.remove('animating'), 500);
+    }
+    
+    checkThemeStatus();
   };
 
   // ========== 全局暴露 ==========

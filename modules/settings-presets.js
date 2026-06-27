@@ -239,11 +239,8 @@
 - 数组的后续项是你的一系列行动。
 {{bilingualModeContext}}
 
-## 2. 思维链 (Chain of Thought) - 你的大脑
-在行动前，你必须先思考。请在JSON数组的第一项返回：
-\`{"type": "thought_chain", "subtext_perception": "对方这句话的潜台词是什么？当前话题是否涉及世界书/人设中的特殊设定？我该如何体现？对他/她的人设是否把握准确？", "emotional_reaction": "我此刻的真实情绪（开心/委屈/期待？）我的情绪是否符合我的人设", "character_thoughts": {"{{chat.originalName}}": "基于人设，我内心最真实的想法..."}}\`
-*注意：character_thoughts 是防止OOC的关键，必须以第一人称书写。*
-
+{{thoughtChainContextHead}}
+{{thoughtChainContextMiddle}}
 {{thoughtsPrompt}}
 ## 4. 可选指令列表 (Capability List)
 
@@ -319,13 +316,12 @@
 # 输出格式铁律 (最高优先级)
 - 你的回复【必须】是一个JSON数组。
 
--   **【思维链 (Chain of Thought) - (第一步)】**: 你的JSON数组的【第一个元素，必须】是一个 \`{"type": "thought_chain", ...}\` 对象。
--   **【角色发言 (第二步)】**: 在思维链对象【之后】，才是所有角色的具体行动JSON对象 (text, sticker, etc.)。
+-   **【角色发言 (第一步)】**: 你的JSON数组中的所有元素都是角色的具体行动JSON对象 (text, sticker, etc.)。
 
 - 数组中的每个对象都【必须】包含 "type" 和 "name" 字段。'name'字段【必须】使用角色的【本名】。
 
 # 【【【name 字段铁律 - 防止幻觉拦截】】】
-- 除 \`thought_chain\`、\`narration\` 外，数组中**每一个**对象【必须】包含 \`"name"\` 字段，否则该条消息会被系统拦截无法显示。
+- 除 \`narration\` 外，数组中**每一个**对象【必须】包含 \`"name"\` 字段，否则该条消息会被系统拦截无法显示。
 - \`"name"\`【必须】且【只能】是以下群成员本名之一（严禁使用群名、用户昵称或任何未列出的名字）：**{{memberNames}}**
 - 发文本时必须写 \`{"type": "text", "name": "上列本名之一", "message": "内容"}\`，\`name\` 与 \`message\` 缺一不可。
 
@@ -405,11 +401,8 @@
 {{narratorInstruction}}
 # 可用指令列表 (按需组合使用)
 
-### 思维链 (必须作为第一个元素！)
--   **\`{"type": "thought_chain", "subtext_perception": "用户（或上一位发言者）这句话里隐藏的情绪是什么？", "emotional_reaction": "大家听到这句话后的第一反应是什么？（惊讶？开心？担忧？）", "character_thoughts": {"角色A本名": "角色A此刻的感性想法...", "角色B本名": "角色B此刻的感性想法..."}}\`**
-    -   **subtext_perception**: 敏锐捕捉发言背后的潜台词。
-    -   **emotional_reaction**: 确定当前群聊的情感温度。
-
+{{thoughtChainContextHead}}
+{{thoughtChainContextMiddle}}
 
 ### 核心聊天
 -   **发文本**: \`{"type": "text", "name": "角色本名", "message": "内容"}\`

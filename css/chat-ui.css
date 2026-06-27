@@ -820,3 +820,64 @@
                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
            }
 
+           /* 思维链块样式（作为系统消息类型） */
+           .message-wrapper.thought-chain-wrapper {
+               display: flex;
+               justify-content: center;
+               width: 100%;
+               margin: 10px 0;
+           }
+
+           .message-bubble.is-thought-chain-block {
+               background: transparent;
+               border: none;
+               box-shadow: none;
+               padding: 0;
+               max-width: 90%;
+           }
+
+           .thought-chain-details {
+               cursor: pointer;
+               background: rgba(0, 0, 0, 0.04);
+               border-radius: 8px;
+               padding: 8px 12px;
+               transition: background-color 0.2s;
+           }
+           
+           .dark-mode .thought-chain-details {
+               background: rgba(255, 255, 255, 0.05);
+           }
+           
+           .thought-chain-details:hover {
+               background: rgba(0, 0, 0, 0.06);
+           }
+           
+           .dark-mode .thought-chain-details:hover {
+               background: rgba(255, 255, 255, 0.1);
+           }
+
+           .thought-chain-summary {
+               font-size: 12px;
+               color: var(--text-secondary);
+               user-select: none;
+               outline: none;
+               display: flex;
+               align-items: center;
+               justify-content: center;
+               transition: opacity 0.2s;
+           }
+           
+           .thought-chain-summary::-webkit-details-marker {
+               display: none;
+           }
+
+           .thought-chain-content {
+               margin-top: 6px;
+               font-size: 12px;
+               color: var(--text-secondary);
+               line-height: 1.4;
+               padding-top: 6px;
+               font-style: italic;
+               opacity: 0.8;
+               text-align: left;
+           }

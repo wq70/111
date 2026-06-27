@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.33'; // 当前更新版本号
+    this.currentVersion = '0.0.34'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -22,19 +22,18 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
-      <div class="update-item">1. 修复精炼记忆的BUG</div>
-      <div class="update-item">2. 修复谷歌生图</div>
-      <div class="update-item">3. 修复代付BUG</div>
-      <div class="update-item">4. 新增导出长期记忆，可以选择导出JSON和TXT</div>
-      <div class="update-item">5. 新增可以用酒馆兼容模式导出角色卡</div>
-      <div class="update-item">6. 新增可以多图发送识别</div>
-      <div class="update-item">7. 新增转换向量可以智能分类与精炼（需要配置向量模型）</div>
-      <div class="update-item">8. 新增可以多选删除向量记忆</div>
-      <div class="update-item">9. 新增群聊多人线下</div>
-      <div class="update-item">10. 新增收藏可以全选删除</div>
-      <div class="update-item">11. 新增后台保活无声。尝试的</div>
-      <div class="update-item">12. 新增紧急跳过锁屏</div>
-      <div class="update-item">13. 新增清除聊天记忆一并清除长期记忆的按钮</div>
+      <div class="update-item">1. 新增绿江可以导出TXT</div>
+      <div class="update-item">2. 删除作者追更这个功能</div>
+      <div class="update-item">3. 新增豆瓣可以选择绑定USER人设</div>
+      <div class="update-item">4. 新增豆瓣可以选择绑定世界书</div>
+      <div class="update-item">5. 优化豆瓣生成报错的功能</div>
+      <div class="update-item">6. 优化了一下豆瓣如果生图失败会恢复默认头像，新增USER可以设置自己的头像/昵称</div>
+      <div class="update-item">7. 新增豆瓣可以增量生成/新增豆瓣可以删除</div>
+      <div class="update-item">8. 新增导出记录可以为TXT和HTML，HTML主要用于观赏</div>
+      <div class="update-item">9. 新增美化没保存的时候切换或者覆盖会显示提醒弹窗</div>
+      <div class="update-item">10. 新增优化群聊双语可以选择</div>
+      <div class="update-item">11. 优化查找聊天记录过多转跳不过去的BUG，现在可以实时转跳了，点击按钮可以回到最新</div>
+      <div class="update-item" style="color: #ff4757; font-weight: bold; background: #ffeaa7; padding: 5px; border-radius: 4px; line-height: 1.4;">12. 新增思维链，感谢 <a href="https://discord.com/channels/1291925535324110879/1436589419074424882" target="_blank" style="color: #0984e3; text-decoration: underline;">老师们的指导</a>，思维链功能灵感来源1900老师，感谢授权。默认预设是330老师写在提示词里面的思维链，我提取出来做成符合当前版本的了。</div>
     `;
 
     return `
@@ -42,7 +41,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://i.postimg.cc/hGh6rJ5r/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">5.28更新</div>
+            <div class="update-title">6.27更新</div>
           </div>
           
           <div class="update-notification-body">

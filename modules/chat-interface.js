@@ -89,7 +89,82 @@
     }
   }
 
+  // ======= 新增：渲染上下文（历史模式） =======
+  async function renderChatContext(chatId, targetTimestamp) {
+    state.isViewingHistoryMode = true;
+    state.historyCenterTimestamp = targetTimestamp;
+    
+    // 显示返回最新按钮
+    const returnBtn = document.getElementById('return-to-latest-btn');
+    if (returnBtn) returnBtn.style.display = 'block';
+
+    const chat = state.chats[chatId];
+    if (!chat) return;
+
+    const messagesContainer = document.getElementById('chat-messages');
+    messagesContainer.innerHTML = '';
+    showLoader(messagesContainer, 'center'); // 临时显示加载
+
+    // 寻找目标消息索引
+    const targetIndex = chat.history.findIndex(m => m.timestamp === targetTimestamp);
+    if (targetIndex === -1) {
+      hideLoader(messagesContainer);
+      alert('未找到该消息的上下文');
+      return;
+    }
+
+    // 计算切片范围
+    const renderWindow = state.globalSettings.chatRenderWindow || 50;
+    const halfWindow = Math.floor(renderWindow / 2);
+    
+    let startIndex = Math.max(0, targetIndex - halfWindow);
+    let endIndex = Math.min(chat.history.length, targetIndex + halfWindow + 1);
+    
+    // 如果靠近开头或结尾，补齐数量
+    if (endIndex - startIndex < renderWindow) {
+      if (startIndex === 0) {
+        endIndex = Math.min(chat.history.length, startIndex + renderWindow);
+      } else if (endIndex === chat.history.length) {
+        startIndex = Math.max(0, endIndex - renderWindow);
+      }
+    }
+
+    const messagesToRender = chat.history.slice(startIndex, endIndex);
+    currentRenderedCount = endIndex - startIndex; // 在历史模式下，这个变量的意义可能需要调整，但目前用于保持兼容性
+    
+    // 隐藏加载动画
+    hideLoader(messagesContainer);
+
+    const fragment = document.createDocumentFragment();
+    let lastTimestamp = 0;
+
+    for (const msg of messagesToRender) {
+      if (!msg.isHidden) {
+        if (lastTimestamp > 0 && (msg.timestamp - lastTimestamp > 600000)) {
+          fragment.appendChild(createSystemTimestampElement(msg.timestamp));
+        }
+        lastTimestamp = msg.timestamp;
+      }
+      const messageEl = await createMessageElement(msg, chat, true);
+      if (messageEl) {
+        fragment.appendChild(messageEl);
+      }
+    }
+
+    messagesContainer.appendChild(fragment);
+
+    // 滚动定位到目标消息
+    setTimeout(() => {
+      scrollToOriginalMessage(targetTimestamp);
+    }, 100);
+  }
+
   async function renderChatInterface(chatId) {
+    state.isViewingHistoryMode = false;
+    state.historyCenterTimestamp = null;
+    const returnBtn = document.getElementById('return-to-latest-btn');
+    if (returnBtn) returnBtn.style.display = 'none';
+
     applyButtonOrder();
     cleanupWaimaiTimers();
     const chat = state.chats[chatId];
@@ -319,6 +394,11 @@
       return;
     }
 
+    // 历史模式下暂时禁用上滑加载，或者提示用户返回最新
+    if (state.isViewingHistoryMode) {
+      isLoadingMoreMessages = false;
+      return;
+    }
 
     showLoader(messagesContainer, 'top');
     const oldScrollHeight = messagesContainer.scrollHeight;
@@ -419,7 +499,8 @@
       msg.type !== 'narration' && msg.type !== 'pat_message' && !msg.type?.startsWith('waimai_') &&
       msg.type !== 'red_packet' && msg.type !== 'transfer' && msg.type !== 'poll' && msg.type !== 'gift' &&
       msg.type !== 'kinship_request' && msg.type !== 'synth_music' && msg.type !== 'naiimag' && msg.type !== 'realimag' && msg.type !== 'googleimag' &&
-      msg.type !== 'ai_image' && msg.type !== 'user_photo' && msg.type !== 'couple_invite' && msg.type !== 'couple_invite_response') {
+      msg.type !== 'ai_image' && msg.type !== 'user_photo' && msg.type !== 'couple_invite' && msg.type !== 'couple_invite_response' &&
+      msg.type !== 'thought_chain_block') {
       const contentStr = String(msg.content || '').trim().toLowerCase();
       if (contentStr === '' || contentStr === 'undefined') {
         console.log('[QQ Undefined过滤] 已过滤空消息或undefined消息:', msg);
@@ -1120,7 +1201,7 @@
     } else if (msg.type === 'synth_music') {
       bubble.classList.add('is-card-like', 'is-music-synth');
 
-      const notesJson = JSON.stringify(msg.notes).replace(/"/g, '&quot;');
+      const notesJson = JSON.stringify(msg.notes).replace(/"/g, '"');
       // 获取乐器类型，默认为 piano
       const instrumentType = msg.instrument || 'piano';
 
@@ -1138,6 +1219,40 @@
             </button>
         </div>
     `;
+    } else if (msg.type === 'thought_chain_block') {
+      // 根据全局设置决定是否在聊天界面直接显示
+      if (state.globalSettings.showThoughtChainInChat === false) {
+          return null; // 隐藏，直接返回 null
+      }
+      
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message-wrapper thought-chain-wrapper'; // 使用新的专门居中排版
+      wrapper.dataset.timestamp = msg.timestamp;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble is-thought-chain-block'; // 移除 system-bubble 以消除灰色背景
+      bubble.dataset.timestamp = msg.timestamp;
+      
+      // 注意这里使用了较弱的颜色，去掉了系统消息原有的灰色背景等
+      bubble.innerHTML = `
+        <details class="thought-chain-details">
+            <summary class="thought-chain-summary" title="点击展开/折叠思考过程">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: -2px; opacity: 0.6;"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                <span style="opacity: 0.6; font-size: 11px;">深度思考</span>
+            </summary>
+            <div class="thought-chain-content">
+                ${parseMarkdown(processMentions(String(msg.content), chat)).replace(/\n/g, '<br>')}
+            </div>
+        </details>
+      `;
+
+      wrapper.appendChild(bubble);
+
+      addLongPressListener(wrapper, () => showMessageActions(msg.timestamp));
+      wrapper.addEventListener('click', () => {
+        if (isSelectionMode) toggleMessageSelection(msg.timestamp);
+      });
+      return wrapper;
     } else {
       const processedContent = String(rawContent);
       let processedByRule = await applyRenderingRules(processedContent, chat.id);
@@ -1476,6 +1591,7 @@
 
   // ========== 全局暴露 ==========
   window.renderChatInterface = renderChatInterface;
+  window.renderChatContext = renderChatContext;
   window.loadMoreMessages = loadMoreMessages;
   window.scrollToOriginalMessage = scrollToOriginalMessage;
 
