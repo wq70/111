@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.34'; // 当前更新版本号
+    this.currentVersion = '0.0.35'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -17,6 +17,7 @@ class UpdateNotification {
   // 创建弹窗HTML
   createNotificationHTML() {
     const updateContent = `
+      <div style="margin-bottom: 15px;"><button id="update-clear-global-css-btn" style="width: 100%; padding: 10px; background: #ff4d4f; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">🧹 清除全局自定义CSS (防错位)</button></div>
       <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
       <div class="update-item important-note">强烈建议：安装到主屏幕以获得最佳体验</div>
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
@@ -137,6 +138,41 @@ class UpdateNotification {
         if (!btnDontShow.disabled) {
           this.handleDontShow();
         }
+      });
+    }
+
+    // 清除全局 CSS 按钮事件
+    const clearCssBtn = document.getElementById('update-clear-global-css-btn');
+    if (clearCssBtn) {
+      clearCssBtn.addEventListener('click', () => {
+        // 1. 更新内存状态
+        if (window.state && window.state.globalSettings) {
+          window.state.globalSettings.globalCss = '';
+          // 2. 更新数据库
+          if (window.db && window.db.globalSettings) {
+            window.db.globalSettings.put({ id: 1, ...window.state.globalSettings }).catch(console.error);
+          }
+        }
+        // 3. 更新输入框（如果存在）
+        const globalCssInput = document.getElementById('global-css-input');
+        if (globalCssInput) globalCssInput.value = '';
+        // 4. 清除页面上的样式标签
+        const styleEl = document.getElementById('global-custom-style');
+        if (styleEl) styleEl.textContent = '';
+        
+        // 5. 调用 applyGlobalCss 确保应用空样式
+        if (typeof window.applyGlobalCss === 'function') {
+          window.applyGlobalCss('');
+        }
+        
+        // 6. 重新渲染聊天消息 (如果有激活的聊天)，确保气泡等恢复默认
+        if (window.state && window.state.activeChatId && typeof window.renderMessages === 'function') {
+            const chat = window.state.chats[window.state.activeChatId];
+            if (chat) window.renderMessages(chat);
+        }
+
+        clearCssBtn.textContent = '✅ 已清除全局CSS';
+        clearCssBtn.style.background = '#52c41a';
       });
     }
 

@@ -29,17 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const lastSaveTime = DualWriteManager.getLastSaveTime();
       
       // 构建恢复信息
-      let recoveryInfo = '【您的数据是安全的，请放心！】\n\n';
-      recoveryInfo += '检测到应用上次没有正常关闭（可能是浏览器崩溃、电脑断电或强制关闭）。\n\n';
-      recoveryInfo += '【为什么会有这个提示？】\n';
-      recoveryInfo += '应用具有异常退出检测功能，当检测到上次没有正常退出时，会自动显示这个提示，让您了解当前的数据状态。\n\n';
-      recoveryInfo += '【数据保存机制说明】\n';
-      recoveryInfo += '• 您的所有数据都实时自动保存在浏览器本地数据库中\n';
-      recoveryInfo += '• 即使异常退出，已保存的数据也不会丢失\n';
-      recoveryInfo += '• 系统会定期创建数据快照，确保数据安全\n';
-      recoveryInfo += '• 如果您开启了云备份，数据还会同步到云端\n\n';
+      let recoveryInfo = '<div style="max-height: 40vh; overflow-y: auto; padding-right: 5px;">';
+      recoveryInfo += '<div style="margin-bottom: 15px;"><button id="clear-global-css-btn" style="width: 100%; padding: 10px; background: #ff4d4f; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">🧹 清除全局自定义CSS (防错位)</button></div>';
+      recoveryInfo += '<b>【您的数据是安全的】</b>\n';
+      recoveryInfo += '检测到应用上次异常关闭。您的所有数据已自动保存在本地数据库中，不会丢失。\n\n';
       
-      recoveryInfo += '【当前数据状态】\n';
+      recoveryInfo += '<b>【当前数据状态】</b>\n';
       
       if (lastSaveTime) {
         const timeDiff = Date.now() - lastSaveTime;
@@ -48,9 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       if (lastSnapshot) {
-        recoveryInfo += `聊天数：${lastSnapshot.summary?.chatsCount || 0}\n`;
-        recoveryInfo += `说说数：${lastSnapshot.summary?.qzonePostsCount || 0}\n`;
-        recoveryInfo += `NPC数：${lastSnapshot.summary?.npcsCount || 0}\n`;
+        recoveryInfo += `数据快照：聊天 ${lastSnapshot.summary?.chatsCount || 0} | 说说 ${lastSnapshot.summary?.qzonePostsCount || 0} | NPC ${lastSnapshot.summary?.npcsCount || 0}\n`;
       }
       
       if (unsavedLogs.length > 0) {
@@ -59,20 +52,57 @@ document.addEventListener('DOMContentLoaded', () => {
         // 显示最近的几条操作
         const recentOps = unsavedLogs.slice(-5).map(log => {
           const time = new Date(log.timestamp).toLocaleTimeString();
-          return `  • ${time}：${log.operation} ${log.tableName}`;
+          return `• ${time}：${log.operation} ${log.tableName}`;
         }).join('\n');
         
-        recoveryInfo += '\n最近的操作：\n' + recentOps;
+        recoveryInfo += recentOps + '\n';
       }
       
-      recoveryInfo += '\n\n您可以继续正常使用，数据已经恢复完成。如有任何疑问，可以检查云备份记录。';
+      recoveryInfo += '\n您可以继续正常使用，数据已经恢复完成。';
+      recoveryInfo += '</div>';
       
       // 显示恢复提示（使用原有的 showCustomAlert）
       if (typeof showCustomAlert === 'function') {
-        await showCustomAlert('正常启动提示', recoveryInfo);
+        const alertPromise = showCustomAlert('正常启动提示', recoveryInfo);
+        setTimeout(() => {
+          const btn = document.getElementById('clear-global-css-btn');
+          if (btn) {
+            btn.onclick = () => {
+              // 1. 更新内存状态
+              if (window.state && window.state.globalSettings) {
+                window.state.globalSettings.globalCss = '';
+                // 2. 更新数据库
+                if (window.db && window.db.globalSettings) {
+                  window.db.globalSettings.put({ id: 1, ...window.state.globalSettings }).catch(console.error);
+                }
+              }
+              // 3. 更新输入框（如果存在）
+              const globalCssInput = document.getElementById('global-css-input');
+              if (globalCssInput) globalCssInput.value = '';
+              // 4. 清除页面上的样式标签
+              const styleEl = document.getElementById('global-custom-style');
+              if (styleEl) styleEl.textContent = '';
+              
+              // 5. 如果有 applyGlobalCss 函数，调用它以确保应用空样式
+              if (typeof window.applyGlobalCss === 'function') {
+                window.applyGlobalCss('');
+              }
+              
+              // 6. 重新渲染聊天消息 (如果有激活的聊天)，确保气泡等恢复默认
+              if (window.state && window.state.activeChatId && typeof window.renderMessages === 'function') {
+                  const chat = window.state.chats[window.state.activeChatId];
+                  if (chat) window.renderMessages(chat);
+              }
+
+              btn.textContent = '✅ 已清除全局CSS';
+              btn.style.background = '#52c41a';
+            };
+          }
+        }, 100);
+        await alertPromise;
       } else {
         // 如果 showCustomAlert 还未定义，使用 alert
-        alert('正常启动提示\n\n' + recoveryInfo);
+        alert('正常启动提示\n\n检测到应用上次异常关闭。数据安全。');
       }
       
       console.log('[崩溃恢复] 恢复信息:', {
