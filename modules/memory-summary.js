@@ -94,7 +94,7 @@ window.openTokenBreakdown = async function() {
   parts.push({ name: '离线预设', tokens: estimateTokens(offlineStr) });
 
   // 7. 聊天上下文
-  const historySlice = chat.history.filter(msg => !msg.isExcluded).slice(-maxMemory);
+  const historySlice = chat.history.filter(msg => !msg.isExcluded && msg.type !== 'thought_chain_block').slice(-maxMemory);
   const historyStr = historySlice.map(msg => {
     if (typeof msg.content === 'string') return msg.content;
     if (Array.isArray(msg.content)) return msg.content.map(p => p.text).join(' ');

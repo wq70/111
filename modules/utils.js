@@ -886,7 +886,7 @@ async function calculateCurrentContextTokens() {
     }
   }
 
-  const historySlice = chat.history.filter(msg => !msg.isExcluded).slice(-maxMemory);
+  const historySlice = chat.history.filter(msg => !msg.isExcluded && msg.type !== 'thought_chain_block').slice(-maxMemory);
   fullContextString += historySlice.map(msg => {
     if (typeof msg.content === 'string') return msg.content;
     if (Array.isArray(msg.content)) return msg.content.map(p => p.text).join(' ');
