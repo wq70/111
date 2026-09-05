@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '0.0.35'; // 当前更新版本号
+    this.currentVersion = '0.0.36'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -21,6 +21,7 @@ class UpdateNotification {
       <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
       <div class="update-item important-note">强烈建议：安装到主屏幕以获得最佳体验</div>
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
+      <div class="update-item tips" style="background: #fff0f6; border-left: 3px solid #ff69b4; color: #c41d7f; font-weight: 500;">🌸 提示：设置界面的小可爱好像悄悄藏了点新东西，快去戳戳她看吧～</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-divider">本次更新内容</div>
       <div class="update-item">1. 新增绿江可以导出TXT</div>

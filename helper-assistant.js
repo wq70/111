@@ -2,6 +2,7 @@
 class HelperAssistant {
   constructor() {
     this.imageUrl = 'https://i.postimg.cc/nryMr5SQ/retouch-2026020222230989.png';
+    this.xinyuanUrl = 'https://wq70.github.io/xinyuan330/';
     this.discordHelpUrl = 'https://discord.com/channels/1379304008157499423/1443544486796853248';
     this.discordDmUrl = 'https://discord.com/users/1353222930875551804';
     this.storageKey = 'helper_assistant_position';
@@ -101,6 +102,12 @@ class HelperAssistant {
     assistant.innerHTML = `
       <img src="${this.imageUrl}" class="helper-image" draggable="false">
       <div class="helper-menu" id="helper-menu">
+        <div class="helper-menu-item" data-action="xinyuan">
+          <span class="helper-menu-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          </span>
+          <span class="helper-menu-text">新链接</span>
+        </div>
         <div class="helper-menu-item" data-action="help">
           <span class="helper-menu-icon">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
@@ -284,6 +291,9 @@ class HelperAssistant {
     this.hideMenu();
 
     switch (action) {
+      case 'xinyuan':
+        window.open(this.xinyuanUrl, '_blank');
+        break;
       case 'help':
         window.open(this.discordHelpUrl, '_blank');
         break;
