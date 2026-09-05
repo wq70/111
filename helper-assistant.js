@@ -292,7 +292,7 @@ class HelperAssistant {
 
     switch (action) {
       case 'xinyuan':
-        window.open(this.xinyuanUrl, '_blank');
+        this.showXinyuanModal();
         break;
       case 'help':
         window.open(this.discordHelpUrl, '_blank');
@@ -309,6 +309,88 @@ class HelperAssistant {
       default:
         break;
     }
+  }
+
+  // 显示新链接弹窗
+  showXinyuanModal() {
+    if (document.getElementById('xinyuan-modal-overlay')) {
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = 'xinyuan-modal-overlay';
+    overlay.className = 'xinyuan-modal-overlay';
+    overlay.innerHTML = `
+      <div class="declaration-modal">
+        <div class="declaration-header">
+          <h2>新链接说明</h2>
+          <button class="declaration-close-btn" id="xinyuan-close-btn">&times;</button>
+        </div>
+        <div class="declaration-content">
+          <div class="declaration-section">
+            <h3>声明</h3>
+            <p>因为更改了一些数据存储，怕数据不互通才有的新链接，当前属于测试加半成品。</p>
+          </div>
+          
+          <div class="declaration-section">
+            <h3>链接地址</h3>
+            <div class="xinyuan-url-box" id="xinyuan-url-text">${this.xinyuanUrl}</div>
+          </div>
+
+          <div class="xinyuan-action-btns">
+            <button class="xinyuan-btn xinyuan-btn-copy" id="xinyuan-copy-btn">复制</button>
+            <button class="xinyuan-btn xinyuan-btn-jump" id="xinyuan-jump-btn">转跳</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      overlay.classList.add('show');
+    }, 10);
+
+    const closeModal = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 300);
+    };
+
+    overlay.querySelector('#xinyuan-close-btn').addEventListener('click', closeModal);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeModal();
+      }
+    });
+
+    const copyBtn = overlay.querySelector('#xinyuan-copy-btn');
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(this.xinyuanUrl).then(() => {
+        copyBtn.textContent = '已复制';
+        setTimeout(() => {
+          copyBtn.textContent = '复制';
+        }, 2000);
+      }).catch(() => {
+        // 兼容降级处理
+        const textarea = document.createElement('textarea');
+        textarea.value = this.xinyuanUrl;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        copyBtn.textContent = '已复制';
+        setTimeout(() => {
+          copyBtn.textContent = '复制';
+        }, 2000);
+      });
+    });
+
+    const jumpBtn = overlay.querySelector('#xinyuan-jump-btn');
+    jumpBtn.addEventListener('click', () => {
+      window.open(this.xinyuanUrl, '_blank');
+      closeModal();
+    });
   }
 
   // 显示声明弹窗
@@ -719,7 +801,75 @@ style.textContent = `
     margin: 5px 0;
   }
 
-  /* 暗黑模式适配 - 声明弹窗 */
+  /* 新链接弹窗样式 */
+  #xinyuan-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  #xinyuan-modal-overlay.show {
+    opacity: 1;
+  }
+
+  .xinyuan-url-box {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #495057;
+    word-break: break-all;
+    user-select: all;
+  }
+
+  .xinyuan-action-btns {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .xinyuan-btn {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    text-align: center;
+  }
+
+  .xinyuan-btn-copy {
+    background: #f0f0f0;
+    color: #333;
+  }
+
+  .xinyuan-btn-copy:hover {
+    background: #e0e0e0;
+  }
+
+  .xinyuan-btn-jump {
+    background: linear-gradient(135deg, #FFB7C5 0%, #FF9AA2 100%);
+    color: white;
+  }
+
+  .xinyuan-btn-jump:hover {
+    opacity: 0.9;
+  }
+
+  /* 暗黑模式适配 - 声明与新链接弹窗 */
   @media (prefers-color-scheme: dark) {
     .declaration-modal {
       background: #2D2D2D;
@@ -732,6 +882,21 @@ style.textContent = `
 
     .declaration-footer {
       border-top-color: #444;
+    }
+
+    .xinyuan-url-box {
+      background: #383838;
+      border-color: #4f4f4f;
+      color: #e0e0e0;
+    }
+
+    .xinyuan-btn-copy {
+      background: #404040;
+      color: #e0e0e0;
+    }
+
+    .xinyuan-btn-copy:hover {
+      background: #4d4d4d;
     }
   }
 `;
