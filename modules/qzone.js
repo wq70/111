@@ -56,6 +56,7 @@
   window.renderQzoneScreenProxy = renderQzoneScreen;
 
   async function saveQzoneSettings() {
+    window.refreshAppearanceVariables?.();
     if (db && state.qzoneSettings) {
       await db.qzoneSettings.put(state.qzoneSettings);
     }

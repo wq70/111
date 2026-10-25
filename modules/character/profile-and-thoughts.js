@@ -43,7 +43,7 @@
     });
   }
 
-  function applyCustomThoughtsUI(force = false) {
+  function applyCustomThoughtsUI(force = false, chat = state.chats[state.activeChatId]) {
     const modal = getThoughtsModal();
     const modalContent = modal?.querySelector('.character-profile-content');
     if (!modalContent) return null;
@@ -51,7 +51,7 @@
     const uiEnabled = !!state.globalSettings.customThoughtsUIEnabled;
     const mode = uiEnabled && state.globalSettings.customThoughtsHTML ? 'custom' : 'default';
     const html = mode === 'custom'
-      ? state.globalSettings.customThoughtsHTML
+      ? window.renderAppearanceHtml(state.globalSettings.customThoughtsHTML, chat)
       : (typeof getDefaultThoughtsHTML === 'function' ? getDefaultThoughtsHTML() : '');
     const currentDefaultMarkupIsUsable = mode === 'default'
       && getThoughtsElement('profile-heartfelt-voice')
@@ -77,7 +77,7 @@
       styleEl.id = 'custom-thoughts-style';
       document.head.appendChild(styleEl);
     }
-    const css = mode === 'custom' ? (state.globalSettings.customThoughtsCSS || '') : '';
+    const css = mode === 'custom' ? window.replaceAppearanceVariables(state.globalSettings.customThoughtsCSS, chat, 'css') : '';
     if (appliedThoughtsCSS !== css || styleEl.textContent !== css) {
       styleEl.textContent = css;
       appliedThoughtsCSS = css;
@@ -311,7 +311,7 @@
     const requestId = ++thoughtsOpenRequestId;
     thoughtsHistoryRequestId++;
     thoughtsModalTrigger = document.activeElement;
-    applyCustomThoughtsUI();
+    applyCustomThoughtsUI(false, chat);
     hideThoughtsHistory();
 
     const heartfeltVoiceEl = getThoughtsElement('profile-heartfelt-voice');

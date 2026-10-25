@@ -18,6 +18,8 @@
 
   async function appendMessage(msg, chat, isInitialLoad = false) {
 
+    if (!isInitialLoad && state.activeChatId === chat.id) window.refreshAppearanceVariables?.(chat);
+
     if (!isInitialLoad) window.MemoryWorldTime?.capture(msg, chat);
 
     const messagesContainer = document.getElementById('chat-messages');

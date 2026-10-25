@@ -96,6 +96,7 @@
     if (screenId === 'font-settings-screen') {
       openFontSettings();
     }
+    window.refreshAppearanceVariables?.();
   }
   window.updateListenTogetherIconProxy = () => { };
 

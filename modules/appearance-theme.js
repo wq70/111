@@ -298,30 +298,100 @@
 
 
 
-  function applyScopedCss(cssString, scopeId, styleTagId) {
+  function getAppearanceVariables(chat = state.chats?.[state.activeChatId]) {
+    const settings = chat?.settings || {};
+    const user = state.qzoneSettings || {};
+    const fallbackAvatar = typeof defaultAvatar === 'string' ? defaultAvatar : '';
+    return {
+      char_name: chat ? (chat.originalName || chat.name || '') : '',
+      char_remark: chat?.name || '',
+      user_name: user.nickname || '用户',
+      user_nickname: settings.myNickname || '我',
+      char_avatar: (chat?.isGroup ? settings.groupAvatar : settings.aiAvatar) || fallbackAvatar,
+      user_avatar: settings.myAvatar || user.avatar || fallbackAvatar
+    };
+  }
+
+  // 只展开模板原文；名字里出现的 {{...}} 是数据，不再次执行。
+  function replaceAppearanceVariables(source, chat, format = 'text') {
+    const values = getAppearanceVariables(chat);
+    return String(source || '').replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (match, key) => {
+      if (!Object.prototype.hasOwnProperty.call(values, key)) return match;
+      const value = String(values[key]);
+      // CSS 十六进制转义同时适用于引号内的文本、URL 和选择器片段。
+      return format === 'css'
+        ? value.replace(/[^a-zA-Z0-9_\-\u0080-\uffff]/gu, char => `\\${char.codePointAt(0).toString(16)} `)
+        : value;
+    });
+  }
+
+  function renderAppearanceHtml(source, chat) {
+    if (!String(source || '').includes('{{')) return source || '';
+    const template = document.createElement('template');
+    template.innerHTML = source;
+    const visit = node => {
+      if (node.nodeType === 3) {
+        node.textContent = replaceAppearanceVariables(node.textContent, chat);
+        return;
+      }
+      if (node.nodeType === 1) {
+        // 模板变量只用于显示内容，不作为脚本执行。
+        if (node.localName === 'script') return;
+        if (node.localName === 'style') {
+          node.textContent = replaceAppearanceVariables(node.textContent, chat, 'css');
+          return;
+        }
+        for (const attr of Array.from(node.attributes)) {
+          if (/^on/i.test(attr.name)) continue;
+          node.setAttribute(attr.name, replaceAppearanceVariables(attr.value, chat, attr.name === 'style' ? 'css' : 'text'));
+        }
+      }
+      for (const child of Array.from(node.childNodes)) visit(child);
+    };
+    visit(template.content);
+    return template.innerHTML;
+  }
+
+  let appearanceVariableSignature = '';
+  function refreshAppearanceVariables(chat = state.chats?.[state.activeChatId]) {
+    const signature = JSON.stringify([chat?.id, getAppearanceVariables(chat)]);
+    const changed = signature !== appearanceVariableSignature;
+    appearanceVariableSignature = signature;
+    applyGlobalCss(state.globalSettings.globalCss, chat);
+    applyScopedCss(chat?.settings?.customCss || '', '#chat-messages', 'custom-bubble-style', chat);
+    const modal = document.getElementById('character-profile-modal');
+    const hasCustomVariables = state.globalSettings.customThoughtsUIEnabled
+      && [state.globalSettings.customThoughtsHTML, state.globalSettings.customThoughtsCSS].some(source => source?.includes('{{'));
+    if (changed && hasCustomVariables && chat && modal?.classList.contains('visible') && typeof window.showCharacterProfileModal === 'function') {
+      void window.showCharacterProfileModal(chat.id);
+    }
+  }
+
+  function applyScopedCss(cssString, scopeId, styleTagId, chat) {
     const styleTag = document.getElementById(styleTagId);
     if (!styleTag) return;
 
     if (!cssString || cssString.trim() === '') {
-      styleTag.innerHTML = '';
+      styleTag.textContent = '';
       return;
     }
 
 
-    const scopedCss = cssString
+    const scopedCss = replaceAppearanceVariables(cssString, chat, 'css')
       .replace(/\s*\.message-bubble\.user\s+([^{]+\{)/g, `${scopeId} .message-bubble.user $1`)
       .replace(/\s*\.message-bubble\.ai\s+([^{]+\{)/g, `${scopeId} .message-bubble.ai $1`)
       .replace(/\s*\.message-bubble\s+([^{]+\{)/g, `${scopeId} .message-bubble $1`);
 
-    styleTag.innerHTML = scopedCss;
+    if (styleTag.textContent !== scopedCss) styleTag.textContent = scopedCss;
   }
 
 
-  function applyGlobalCss(cssString) {
+  function applyGlobalCss(cssString, chat) {
     const styleTag = document.getElementById('global-custom-style');
     if (styleTag) {
 
-      styleTag.innerHTML = cssString || '';
+      const css = replaceAppearanceVariables(cssString, chat, 'css');
+      if (styleTag.textContent !== css) styleTag.textContent = css;
     }
   }
 
@@ -893,6 +963,9 @@
   window.applyTheme = applyTheme;
   window.applyScopedCss = applyScopedCss;
   window.applyGlobalCss = applyGlobalCss;
+  window.replaceAppearanceVariables = replaceAppearanceVariables;
+  window.renderAppearanceHtml = renderAppearanceHtml;
+  window.refreshAppearanceVariables = refreshAppearanceVariables;
   window.applyPhoneFrame = applyPhoneFrame;
   window.applyAppIcons = applyAppIcons;
   window.applyCPhoneAppIcons = applyCPhoneAppIcons;
