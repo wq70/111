@@ -97,6 +97,12 @@
     // 普通聊天恢复直接返回；不把无关规则、空规则送进 Worker 队列。
     if (!preview) rules = rules.filter(rule => !engine.applicable(rule, chatId, meta, stage));
     if (!rules.length) return { content: input, isHtml: false, inlineOnly: false, trace: [], warnings: [], excluded: false };
+    // 用内容所属聊天的快照，不读取当前打开的另一个角色；快照同时进入缓存键和 Worker。
+    const usesAppearanceVariables = rules.some(rule => [rule.template ?? rule.replaceString, rule.options?.elseTemplate, rule.options?.candidates, rule.options?.suffix].some(source => typeof source === 'string' && /\{\{\s*(?:char_name|char_remark|user_name|user_nickname|char_avatar|user_avatar)\s*\}\}/.test(source)));
+    if (usesAppearanceVariables && typeof window.getAppearanceVariables === 'function') {
+      const chat = typeof state !== 'undefined' ? state.chats?.[chatId] : null;
+      meta = { ...meta, appearanceVariables: window.getAppearanceVariables(chat || null) };
+    }
     const volatile = rules.some(rule => rule.options?.randomMode === 'reroll');
     const key = !preview && !volatile && input.length <= 50000 ? JSON.stringify([input, rules.map(rule => [engine.fingerprint(rule), rule.executionOrder, rule.isEnabled, rule.chatId, rule.doNotSend]), chatId, meta, stage]) : null;
     if (key && results.has(key)) return results.get(key).result;

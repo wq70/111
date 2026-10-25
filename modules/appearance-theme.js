@@ -964,6 +964,7 @@
   window.applyScopedCss = applyScopedCss;
   window.applyGlobalCss = applyGlobalCss;
   window.replaceAppearanceVariables = replaceAppearanceVariables;
+  window.getAppearanceVariables = getAppearanceVariables;
   window.renderAppearanceHtml = renderAppearanceHtml;
   window.refreshAppearanceVariables = refreshAppearanceVariables;
   window.applyPhoneFrame = applyPhoneFrame;

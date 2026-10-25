@@ -720,6 +720,11 @@
     if (window.RenderingRuleRuntime) {
       return window.RenderingRuleRuntime.run(rawContent, ruleCache.activeRules, chatId, metadata);
     }
+    if (window.RenderingRuleEngine) {
+      const chat = typeof state !== 'undefined' ? state.chats?.[chatId] : null;
+      const appearanceVariables = window.getAppearanceVariables?.(chat || null);
+      return window.RenderingRuleEngine.run(rawContent, ruleCache.activeRules, chatId, { ...metadata, appearanceVariables });
+    }
 
     const canCacheResult = rawContent.length <= 50000;
     const cacheKey = canCacheResult ? `${String(chatId)}\u0000${rawContent}` : null;

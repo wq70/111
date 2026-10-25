@@ -1084,7 +1084,9 @@
           <div class="form-group" style="flex-grow: 1; display: flex; flex-direction: column;"> <label for="rule-regex-input">正则表达式 (使用g作为标志)</label> <textarea id="rule-regex-input" rows="3" style="font-family: monospace; resize: vertical;" placeholder="例如：MTR\[(.*?)\]\[(.*?)\|(.*?)\]"></textarea>
           </div>
           <div class="form-group" style="flex-grow: 2; display: flex; flex-direction: column;"> <label for="rule-template-input">替换内容 / HTML 模板 (用 $1, $2 引用)</label> <textarea id="rule-template-input" rows="6" style="font-family: monospace; resize: vertical;"
-              placeholder="例如：<div class=`waimai-card`>...<span>$2</span>...</div>"></textarea> </div>
+              placeholder="例如：<div class=`waimai-card`>...<span>$2</span>...</div>"></textarea>
+            <p style="font-size: 12px; color: #999; line-height: 1.6;">支持 <code>{{char_name}}</code> 角色本名、<code>{{char_remark}}</code> 角色备注、<code>{{user_name}}</code> 我的全局昵称、<code>{{user_nickname}}</code> 当前聊天昵称，以及 <code>{{char_avatar}}</code>、<code>{{user_avatar}}</code> 头像地址。当前心声和历史心声均按所属聊天取值；可与 <code>$1</code>、<code>$2</code> 一起使用。</p>
+          </div>
           <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;"> <label for="rule-enabled-switch" style="margin-bottom: 0;">启用规则</label> <label class="toggle-switch"> <input type="checkbox" id="rule-enabled-switch" checked>
               <span class="slider"></span> </label> </div>
 <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">

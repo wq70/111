@@ -41,7 +41,7 @@
         if (source.startsWith('{{', i)) {
           const end = source.indexOf('}}', i + 2);
           if (end >= 0) {
-            warnings.push('包含未支持的宏，已按原文保留');
+            if (!/^\{\{\s*(?:char_name|char_remark|user_name|user_nickname|char_avatar|user_avatar)\s*\}\}$/.test(source.slice(i, end + 2))) warnings.push('包含未支持的宏，已按原文保留');
             literal += source.slice(i, end + 2); i = end + 2; continue;
           }
           if (/^\{\{\s*(random|pick)\b/i.test(source.slice(i))) throw new Error('随机表达式缺少候选项或结束标记');
@@ -78,9 +78,9 @@
   }
 
   // ECMAScript replacement-string semantics, including two-digit fallback.
-  function substitute(template, match) {
+  function substitute(template, match, variables = {}, asHtml = false, escapeCaptures = asHtml) {
     const { whole, captures, index, input, groups } = match;
-    return template.replace(/\$(\$|&|`|'|<[^>]*>|\d{1,2})/g, (token, key) => {
+    const capture = (token, key) => {
       if (key === '$') return '$';
       if (key === '&') return whole;
       if (key === '`') return input.slice(0, index);
@@ -91,6 +91,31 @@
       const first = Number(key[0]);
       if (key.length === 2 && first > 0 && first <= captures.length) return String(captures[first - 1] ?? '') + key[1];
       return token;
+    };
+    // 一次处理模板中的变量和捕获引用，插入的值不再作为 $1 或随机表达式执行。
+    return template.replace(/\{\{\s*(char_name|char_remark|user_name|user_nickname|char_avatar|user_avatar)\s*\}\}|\$(\$|&|`|'|<[^>]*>|\d{1,2})/g, (token, variable, key, offset) => {
+      if (variable) {
+        if (!Object.prototype.hasOwnProperty.call(variables, variable)) return token;
+        const value = String(variables[variable] ?? '');
+        if (!asHtml) return value;
+        // HTML 模板内的样式使用 CSS 转义，其余文字和属性使用 HTML 转义。
+        const prefix = template.slice(0, offset);
+        const inStyle = prefix.toLowerCase().lastIndexOf('<style') > prefix.toLowerCase().lastIndexOf('</style');
+        const tagStart = prefix.lastIndexOf('<');
+        const tagEnd = template.indexOf('>', offset);
+        const tag = tagStart > prefix.lastIndexOf('>') && tagEnd >= 0 ? template.slice(tagStart, tagEnd + 1) : '';
+        const attribute = [...tag.matchAll(/\s([^\s=<>]+)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g)].find(attr => offset - tagStart >= attr.index && offset - tagStart < attr.index + attr[0].length);
+        const inScript = prefix.toLowerCase().lastIndexOf('<script') > prefix.toLowerCase().lastIndexOf('</script');
+        if (inScript || attribute && /^(?:on|srcdoc$)/i.test(attribute[1])) return token;
+        const inStyleAttribute = [...tag.matchAll(/\bstyle\s*=\s*(?:"[^"]*"|'[^']*')/gi)].some(attr => offset - tagStart >= attr.index && offset - tagStart < attr.index + attr[0].length);
+        if (inStyle || inStyleAttribute) {
+          const css = value.replace(/[^a-zA-Z0-9_\-\u0080-\uffff]/gu, char => `\\${char.codePointAt(0).toString(16)} `);
+          return inStyleAttribute ? escapeHtml(css) : css;
+        }
+        return attribute ? escapeHtml(value).replace(/[\s=`]/g, char => `&#${char.codePointAt(0)};`) : escapeHtml(value);
+      }
+      const value = capture(token, key);
+      return escapeCaptures && key !== '$' ? escapeHtml(value) : value;
     });
   }
 
@@ -218,9 +243,7 @@
     const authored = expand(nodes, path);
     const hasHtml = htmlPattern.test(authored);
     context.authoredHtml = context.authoredHtml || hasHtml;
-    if (!asHtml && !hasHtml) return substitute(authored, match);
-    // Escape captured data while preserving authored markup and literal text.
-    return authored.replace(/\$(\$|&|`|'|<[^>]*>|\d{1,2})/g, token => token === '$$' ? '$' : escapeHtml(substitute(token, match)));
+    return substitute(authored, match, context.variables, asHtml || hasHtml);
   }
 
   function protectedRanges(text, options) {
@@ -306,7 +329,13 @@
       spec.regex.lastIndex = 0;
       const matched = spec.regex.test(input) ? 1 : 0;
       spec.regex.lastIndex = 0;
-      const content = input.replace(spec.regex, stage === 'context' && rule.doNotSend ? '' : rule.template ?? rule.replaceString);
+      const template = String(rule.template ?? rule.replaceString ?? '');
+      const hasVariables = /\{\{\s*(?:char_name|char_remark|user_name|user_nickname|char_avatar|user_avatar)\s*\}\}/.test(template);
+      const replacement = stage === 'context' && rule.doNotSend ? '' : template;
+      const content = hasVariables && replacement ? input.replace(spec.regex, (...args) => {
+        const groups = typeof args[args.length - 1] === 'object' ? args.pop() : undefined;
+        return substitute(replacement, { whole: args[0], captures: args.slice(1, -2), index: args[args.length - 2], input, groups }, meta.appearanceVariables, htmlPattern.test(template), false);
+      }) : input.replace(spec.regex, replacement);
       return { content, matched, isHtml: stage === 'display' && content !== input && htmlPattern.test(String(rule.template ?? rule.replaceString ?? '')), warnings: [] };
     }
     const condition = options.condition || {};
@@ -318,7 +347,7 @@
     const allowed = allowedRanges(input, options.region);
     const seedOptions = { matchMode: options.matchMode || 'regex', flags: options.flags ?? 'g', action: options.action || 'replace', selection: options.selection || 'independent', randomMode: options.randomMode || 'stable', ...(spec.action === 'random' ? { candidates: options.candidates ?? rule.template } : {}), ...(options.matchMode === 'markers' ? { startMarker: options.startMarker, endMarker: options.endMarker } : {}) };
     const seed = JSON.stringify([chatId, meta.messageId ?? meta.timestamp ?? input, meta.field || 'content', meta.fieldKey || '', input, rule.regex ?? rule.findRegex, rule.template ?? rule.replaceString, seedOptions, meta.previewNonce || 0]);
-    const context = { seed, options, previous: new Map(), matchNumber: 0, choices: preview ? selections : null };
+    const context = { seed, options, previous: new Map(), matchNumber: 0, choices: preview ? selections : null, variables: meta.appearanceVariables };
     let changedParts = 0;
     const pieces = [];
     const replaceSegment = (segment, baseOffset = 0) => {
@@ -355,7 +384,7 @@
         else if (action === 'wrap') {
           const prefix = render(), suffix = String(options.suffix || '');
           context.authoredHtml = context.authoredHtml || htmlPattern.test(suffix);
-          output = prefix + (context.authoredHtml ? escapeHtml(whole) : whole) + substitute(suffix, match);
+          output = prefix + (context.authoredHtml ? escapeHtml(whole) : whole) + substitute(suffix, match, context.variables, context.authoredHtml);
         }
         else if (action === 'extract') output = render() || String(match.captures[0] ?? whole);
         else if (action === 'mask') {
