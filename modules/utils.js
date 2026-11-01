@@ -957,6 +957,7 @@ function openSimpleImageZoom(src) {
 
   // 2. 设置图片并显示
   const img = overlay.querySelector('img');
+  window.prepareLockedImagePreview?.(overlay, img);
   img.src = src;
 
   overlay.style.display = 'flex';

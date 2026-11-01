@@ -1,194 +1,112 @@
-           /* ========== 移动端控制台样式 ========== */
-           #mobile-console {
-               position: fixed;
-               top: 0;
-               left: 0;
-               right: 0;
-               bottom: 0;
-               background: var(--bg-primary, #ffffff);
-               z-index: 99999;
-               display: flex;
-               flex-direction: column;
-           }
-
-           #phone-screen.dark-mode #mobile-console {
-               background: #000000;
-           }
-
-           #mobile-console-header {
-               display: flex;
-               justify-content: space-between;
-               align-items: center;
-               padding: 15px 20px;
-               /* iOS安全区域适配 - 避免被状态栏遮挡 */
-               padding-top: calc(15px + env(safe-area-inset-top));
-               background: var(--secondary-bg, #f5f5f7);
-               border-bottom: 1px solid var(--border-color, #e0e0e0);
-               font-size: 17px;
-               font-weight: 600;
-               color: var(--text-primary, #000000);
-           }
-
-           #phone-screen.dark-mode #mobile-console-header {
-               background: #1c1c1e;
-               border-bottom-color: #38383a;
-               color: #ffffff;
-           }
-
-           #mobile-console-actions {
-               display: flex;
-               gap: 10px;
-           }
-
-           #mobile-console-actions button {
-               padding: 6px 12px;
-               font-size: 14px;
-               background: var(--bg-primary, #ffffff);
-               border: 1px solid var(--border-color, #d1d1d6);
-               border-radius: 6px;
-               color: var(--text-primary, #000000);
-               cursor: pointer;
-               transition: all 0.2s;
-           }
-
-           #phone-screen.dark-mode #mobile-console-actions button {
-               background: #2c2c2e;
-               border-color: #48484a;
-               color: #ffffff;
-           }
-
-           #mobile-console-actions button:active {
-               opacity: 0.6;
-               transform: scale(0.95);
-           }
-
-           #mobile-console-tabs {
-               display: flex;
-               background: var(--secondary-bg, #f5f5f7);
-               border-bottom: 1px solid var(--border-color, #e0e0e0);
-               padding: 0 10px;
-           }
-
-           #phone-screen.dark-mode #mobile-console-tabs {
-               background: #1c1c1e;
-               border-bottom-color: #38383a;
-           }
-
-           .console-tab {
-               flex: 1;
-               padding: 12px 8px;
-               font-size: 13px;
-               background: transparent;
-               border: none;
-               border-bottom: 2px solid transparent;
-               color: var(--text-secondary, #8e8e93);
-               cursor: pointer;
-               transition: all 0.2s;
-           }
-
-           #phone-screen.dark-mode .console-tab {
-               color: #8e8e93;
-           }
-
-           .console-tab.active {
-               color: var(--accent-color, #007aff);
-               border-bottom-color: var(--accent-color, #007aff);
-               font-weight: 600;
-           }
-
-           #phone-screen.dark-mode .console-tab.active {
-               color: #0a84ff;
-               border-bottom-color: #0a84ff;
-           }
-
-           #mobile-console-content {
-               flex: 1;
-               overflow-y: auto;
-               padding: 10px;
-               font-family: 'Courier New', Courier, monospace;
-               font-size: 12px;
-               line-height: 1.6;
-               background: var(--bg-primary, #ffffff);
-           }
-
-           #phone-screen.dark-mode #mobile-console-content {
-               background: #000000;
-           }
-
-           .console-entry {
-               padding: 8px 10px;
-               margin-bottom: 5px;
-               border-radius: 6px;
-               border-left: 3px solid;
-               background: var(--secondary-bg, #f5f5f7);
-               word-wrap: break-word;
-               white-space: pre-wrap;
-           }
-
-           #phone-screen.dark-mode .console-entry {
-               background: #1c1c1e;
-           }
-
-           .console-entry.log {
-               border-left-color: #007aff;
-               color: var(--text-primary, #000000);
-           }
-
-           #phone-screen.dark-mode .console-entry.log {
-               border-left-color: #0a84ff;
-               color: #ffffff;
-           }
-
-           .console-entry.warn {
-               border-left-color: #ff9500;
-               color: #ff9500;
-               background: rgba(255, 149, 0, 0.1);
-           }
-
-           #phone-screen.dark-mode .console-entry.warn {
-               border-left-color: #ff9f0a;
-               color: #ff9f0a;
-               background: rgba(255, 159, 10, 0.15);
-           }
-
-           .console-entry.error {
-               border-left-color: #ff3b30;
-               color: #ff3b30;
-               background: rgba(255, 59, 48, 0.1);
-           }
-
-           #phone-screen.dark-mode .console-entry.error {
-               border-left-color: #ff453a;
-               color: #ff453a;
-               background: rgba(255, 69, 58, 0.15);
-           }
-
-           .console-entry.info {
-               border-left-color: #34c759;
-               color: var(--text-primary, #000000);
-           }
-
-           #phone-screen.dark-mode .console-entry.info {
-               border-left-color: #32d74b;
-               color: #ffffff;
-           }
-
-           .console-timestamp {
-               font-size: 10px;
-               color: var(--text-secondary, #8e8e93);
-               margin-right: 8px;
-           }
-
-           #phone-screen.dark-mode .console-timestamp {
-               color: #8e8e93;
-           }
-
-           .console-message {
-               display: inline;
-           }
-
-           /* ========== 移动端控制台样式结束 ========== */
-
+/* 移动端调试控制台；所有选择器限定在面板内，避免业务样式干扰。 */
+#mobile-console {
+    --console-bg: #fff;
+    --console-panel: #f5f5f7;
+    --console-text: #202124;
+    --console-muted: #6c7078;
+    --console-border: #e1e3e6;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--console-bg);
+    color: var(--console-text);
+    font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    text-align: left;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-sizing: border-box;
+}
+#phone-screen.dark-mode #mobile-console {
+    --console-bg: #17181b;
+    --console-panel: #23252a;
+    --console-text: #e6e8ed;
+    --console-muted: #a5a9b3;
+    --console-border: #363940;
+    color-scheme: dark;
+}
+#mobile-console *, #mobile-console *::before, #mobile-console *::after { box-sizing: border-box; }
+#mobile-console-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: calc(12px + env(safe-area-inset-top)) 12px 12px;
+    background: var(--console-panel);
+    border-bottom: 1px solid var(--console-border);
+    font-size: 17px;
+    font-weight: 600;
+}
+#mobile-console-header, #mobile-console-tabs, #mobile-console-toolbar, #console-status, #console-notice { flex-shrink: 0; }
+#mobile-console-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+#mobile-console button, #mobile-console select {
+    min-height: 32px;
+    margin: 0;
+    padding: 5px 10px;
+    border: 1px solid var(--console-border);
+    border-radius: 6px;
+    background: var(--console-bg);
+    color: var(--console-text);
+    font: inherit;
+    cursor: pointer;
+}
+#mobile-console button:active { opacity: .65; }
+#mobile-console :focus-visible { outline: 2px solid #007aff; outline-offset: 2px; }
+#mobile-console-tabs { display: flex; overflow-x: auto; border-bottom: 1px solid var(--console-border); }
+#mobile-console .console-tab {
+    flex: 1 0 auto;
+    padding: 10px 9px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: var(--console-muted);
+    white-space: nowrap;
+}
+#mobile-console .console-tab span { font-size: 10px; opacity: .85; }
+#mobile-console .console-tab.active { color: #007aff; border-bottom-color: #007aff; font-weight: 600; }
+#mobile-console-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--console-border); }
+#mobile-console-toolbar label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 12px; }
+#mobile-console-toolbar input[type='checkbox'] { width: 15px; height: 15px; margin: 0; accent-color: #007aff; }
+#mobile-console #console-search { flex: 1 1 200px; min-width: 100px; width: auto; height: 32px; margin: 0; padding: 5px 8px; border: 1px solid var(--console-border); border-radius: 6px; background: var(--console-bg); color: var(--console-text); font: inherit; }
+#mobile-console-toolbar select { font-size: 12px; }
+#console-status { min-height: 26px; padding: 4px 12px; color: var(--console-muted); font-size: 11px; }
+#mobile-console-content { flex: 1 1 0; min-height: 0; overflow: auto; overscroll-behavior: contain; background: var(--console-bg); font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-anchor: none; }
+#mobile-console .console-entry {
+    display: block;
+    min-height: 0;
+    height: auto;
+    margin: 0;
+    padding: 6px 12px 6px calc(10px + min(var(--console-depth, 0), 5) * 10px);
+    border: 0;
+    border-bottom: 1px solid var(--console-border);
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--console-text);
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+#mobile-console .console-entry.warn { border-left-color: #c68100; background: rgba(255, 180, 0, .08); }
+#mobile-console .console-entry.error { border-left-color: #e5484d; background: rgba(229, 72, 77, .08); }
+#mobile-console .console-entry.info { border-left-color: #007aff; }
+#mobile-console .console-entry.debug { border-left-color: #8b6bcc; }
+#mobile-console .console-entry.network { border-left-color: #26936a; }
+#mobile-console .console-entry-header { display: flex; gap: 8px; align-items: baseline; color: var(--console-muted); font-size: 10px; }
+#mobile-console .console-message { display: block; margin: 2px 0 0; white-space: pre-wrap; }
+#mobile-console .console-source { color: var(--console-muted); font-size: 11px; }
+#mobile-console .console-details { margin: 3px 0 0; font-size: 11px; }
+#mobile-console .console-details summary { color: var(--console-muted); cursor: pointer; }
+#mobile-console .console-details pre { max-height: 300px; overflow: auto; margin: 6px 0 0; padding: 8px; border: 1px solid var(--console-border); border-radius: 4px; background: var(--console-panel); color: inherit; font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+#mobile-console .console-empty { padding: 36px 16px; text-align: center; color: var(--console-muted); }
+#console-notice { padding: 7px 12px; border-top: 1px solid var(--console-border); color: var(--console-muted); font-size: 10px; }
+#mobile-console .console-copy-field { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: .01; }
+@media (max-width: 360px) {
+    #mobile-console-header { padding-left: 8px; padding-right: 8px; font-size: 15px; }
+    #mobile-console-actions { gap: 4px; }
+    #mobile-console-actions button { padding: 5px 8px; font-size: 12px; }
+}
            /* 守护甜心风格好友列表 */
            .shugo-list-item {
                background: rgba(255, 255, 255, 0.9);

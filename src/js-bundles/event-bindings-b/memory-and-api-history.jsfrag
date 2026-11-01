@@ -90,6 +90,12 @@ window.initEventBindingsB = function(state, db) {
                elevenlabsVoiceId: chat.settings.elevenlabsVoiceId || '',
                elevenlabsModel: chat.settings.elevenlabsModel || '',
                elevenlabsVoiceSettings: { ...(chat.settings.elevenlabsVoiceSettings || {}) },
+               fishVoiceId: chat.settings.fishVoiceId || '',
+               fishModel: chat.settings.fishModel || '',
+               fishVoiceSettings: JSON.parse(JSON.stringify(chat.settings.fishVoiceSettings || {})),
+               fishTtsSpeed: chat.settings.fishTtsSpeed ?? (window.ttsProvider.provider(chat) === 'fish' ? chat.settings.ttsSpeed ?? 1 : 1),
+               voiceUnderstandingMode: chat.settings.voiceUnderstandingMode || 'auto',
+               voiceCallUnderstandingMode: chat.settings.voiceCallUnderstandingMode || 'same',
                ttsSpeed: chat.settings.ttsSpeed ?? 1,
                minimaxTtsSpeed: chat.settings.minimaxTtsSpeed ?? (window.ttsProvider.provider(chat) === 'minimax' ? chat.settings.ttsSpeed ?? 1 : 1),
                elevenlabsTtsSpeed: chat.settings.elevenlabsTtsSpeed ?? (window.ttsProvider.provider(chat) === 'elevenlabs' ? chat.settings.ttsSpeed ?? 1 : 1),
@@ -270,8 +276,8 @@ window.initEventBindingsB = function(state, db) {
         if (savedSettings.longTermMemoryLimit !== undefined) chat.settings.longTermMemoryLimit = savedSettings.longTermMemoryLimit;
         chat.settings.enableTts = savedSettings.enableTts;
         chat.settings.minimaxVoiceId = savedSettings.minimaxVoiceId;
-        for (const key of ['ttsProvider', 'elevenlabsVoiceId', 'elevenlabsModel', 'elevenlabsVoiceSettings', 'ttsSpeed', 'minimaxTtsSpeed', 'elevenlabsTtsSpeed', 'ttsSplitLongText', 'ttsStreaming', 'ttsSaveAudio']) {
-          if (Object.prototype.hasOwnProperty.call(savedSettings, key)) chat.settings[key] = savedSettings[key];
+        for (const key of ['fishVoiceId', 'fishModel', 'fishVoiceSettings', 'fishTtsSpeed', 'voiceUnderstandingMode', 'voiceCallUnderstandingMode', 'ttsProvider', 'elevenlabsVoiceId', 'elevenlabsModel', 'elevenlabsVoiceSettings', 'ttsSpeed', 'minimaxTtsSpeed', 'elevenlabsTtsSpeed', 'ttsSplitLongText', 'ttsStreaming', 'ttsSaveAudio']) {
+          if (Object.prototype.hasOwnProperty.call(savedSettings, key)) chat.settings[key] = savedSettings[key] && typeof savedSettings[key] === 'object' ? JSON.parse(JSON.stringify(savedSettings[key])) : savedSettings[key];
         }
 
         chat.settings.ttsLanguage = savedSettings.ttsLanguage;

@@ -6,7 +6,6 @@
 
   let initialized = false;
   let eventsBound = false;
-  let currentBannerTaskId = null;
 
   function settings() {
     if (!window.state || !window.state.globalSettings) return { enabled: true, completionNotifications: true };
@@ -48,7 +47,7 @@
   function capabilitySummary(capabilities) {
     const available = [];
     if (capabilities.wakeLock) available.push('屏幕锁');
-    available.push('任务恢复');
+    available.push('任务记录');
     if (capabilities.mediaSession) available.push('媒体会话');
     if (capabilities.pip) available.push('等待小窗');
     if (capabilities.notification && capabilities.notificationPermission === 'granted') available.push('完成通知');
@@ -66,54 +65,15 @@
     if (taskElement && window.ReplyTaskStore) {
       const tasks = await window.ReplyTaskStore.listRecoverable();
       if (!tasks.length) {
-        taskElement.textContent = '暂无待恢复回复';
+        taskElement.textContent = '暂无未完成回复记录';
       } else {
         const interrupted = tasks.filter(task => task.status === 'interrupted' || task.status === 'failed').length;
         taskElement.textContent = interrupted
-          ? `${interrupted} 条回复可继续，打开对应聊天处理`
+          ? `${interrupted} 条回复有中断或失败记录`
           : `${tasks.length} 条回复正在守护`;
       }
     }
     return capabilities;
-  }
-
-  function setButtonVisible(button, visible) {
-    if (button) button.hidden = !visible;
-  }
-
-  async function renderChatBanner(chatId) {
-    const banner = document.getElementById('reply-guardian-banner');
-    if (!banner || !window.ReplyTaskStore || !chatId || !settings().enabled) {
-      if (banner) banner.hidden = true;
-      currentBannerTaskId = null;
-      return;
-    }
-
-    const tasks = await window.ReplyTaskStore.listRecoverable(chatId);
-    const task = tasks[0];
-    if (!task) {
-      banner.hidden = true;
-      currentBannerTaskId = null;
-      return;
-    }
-
-    currentBannerTaskId = task.id;
-    banner.hidden = false;
-    banner.dataset.state = task.status;
-    const title = document.getElementById('reply-guardian-banner-title');
-    const detail = document.getElementById('reply-guardian-banner-detail');
-    const retry = document.getElementById('reply-guardian-retry-btn');
-    const dismiss = document.getElementById('reply-guardian-dismiss-btn');
-    const pip = document.getElementById('reply-guardian-pip-btn');
-    const interrupted = task.status === 'interrupted' || task.status === 'failed';
-
-    if (title) title.textContent = interrupted ? '上次回复未完成' : '回复守护中';
-    if (detail) detail.textContent = interrupted
-      ? '记录仍在，可以使用当前聊天内容继续生成'
-      : `${task.stageLabel || '正在等待回复'} · 可以暂时切换应用`;
-    setButtonVisible(retry, interrupted);
-    setButtonVisible(dismiss, interrupted);
-    setButtonVisible(pip, !interrupted && !!(window.ReplyGuardianPiP && window.ReplyGuardianPiP.isSupported()));
   }
 
   async function notifyCompleted(task) {
@@ -133,9 +93,6 @@
     const task = event.detail && event.detail.task;
     if (!task) return;
     await refreshDiagnostics();
-    if (task.chatId === (window.state && window.state.activeChatId)) {
-      await renderChatBanner(task.chatId);
-    }
     if (task.status === 'completed') {
       if (window.ReplyGuardianPiP) window.ReplyGuardianPiP.markCompleted();
       await notifyCompleted(task);
@@ -148,15 +105,11 @@
     const enabledSwitch = document.getElementById('reply-guardian-enabled-switch');
     const notificationSwitch = document.getElementById('reply-guardian-notification-switch');
     const refreshButton = document.getElementById('reply-guardian-refresh-btn');
-    const retryButton = document.getElementById('reply-guardian-retry-btn');
-    const dismissButton = document.getElementById('reply-guardian-dismiss-btn');
-    const pipButton = document.getElementById('reply-guardian-pip-btn');
 
     if (enabledSwitch) {
       enabledSwitch.checked = settings().enabled;
       enabledSwitch.addEventListener('change', async event => {
         await saveSettings({ enabled: event.target.checked });
-        await renderChatBanner(window.state && window.state.activeChatId);
         await refreshDiagnostics();
       });
     }
@@ -167,39 +120,6 @@
       });
     }
     if (refreshButton) refreshButton.addEventListener('click', refreshDiagnostics);
-    if (retryButton) {
-      retryButton.addEventListener('click', async () => {
-        if (!currentBannerTaskId || !window.ReplyTaskStore) return;
-        await window.ReplyTaskStore.prepareRetry(currentBannerTaskId);
-        currentBannerTaskId = null;
-        await renderChatBanner(window.state && window.state.activeChatId);
-        if (typeof window.triggerAiResponse === 'function') {
-          window.triggerAiResponse();
-        }
-      });
-    }
-    if (dismissButton) {
-      dismissButton.addEventListener('click', async () => {
-        if (!currentBannerTaskId || !window.ReplyTaskStore) return;
-        await window.ReplyTaskStore.dismiss(currentBannerTaskId);
-        currentBannerTaskId = null;
-        await renderChatBanner(window.state && window.state.activeChatId);
-      });
-    }
-    if (pipButton) {
-      pipButton.addEventListener('click', async () => {
-        const chat = window.state && window.state.chats && window.state.chats[window.state.activeChatId];
-        try {
-          await window.ReplyGuardianPiP.open(chat && chat.name);
-        } catch (error) {
-          console.warn('[回复守护] 等待小窗打开失败:', error);
-          setButtonVisible(pipButton, false);
-          if (typeof window.showCustomAlert === 'function') {
-            window.showCustomAlert('无法打开等待小窗', '当前浏览器或 PWA 模式暂不支持画中画。回复任务仍会继续保存。');
-          }
-        }
-      });
-    }
   }
 
   function bindLifecycle() {
@@ -209,7 +129,6 @@
         await window.ReplyTaskStore.markBackgrounded();
       } else {
         await refreshDiagnostics();
-        await renderChatBanner(window.state && window.state.activeChatId);
       }
     });
     window.addEventListener('pagehide', () => {
@@ -234,12 +153,10 @@
     await window.ReplyTaskStore.recoverPreviousSession();
     await window.ReplyTaskStore.cleanup();
     await refreshDiagnostics();
-    await renderChatBanner(window.state.activeChatId);
     // 快速重载时旧页面心跳可能仍短暂存在；租约过期后再检查一次。
     window.setTimeout(async () => {
       await window.ReplyTaskStore.recoverPreviousSession();
       await refreshDiagnostics();
-      await renderChatBanner(window.state && window.state.activeChatId);
     }, 12500);
   }
 
@@ -247,7 +164,6 @@
     init,
     settings,
     detectCapabilities,
-    refreshDiagnostics,
-    renderChatBanner
+    refreshDiagnostics
   };
 })();

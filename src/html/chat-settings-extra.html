@@ -254,10 +254,10 @@
              </div>
               <div class="settings-item tts-settings" id="tts-provider-group">
                   <label for="tts-provider-select">语音服务</label>
-                  <div class="settings-right"><select id="tts-provider-select" class="settings-select"><option value="minimax">MiniMax</option><option value="elevenlabs">ElevenLabs</option></select></div>
+                  <div class="settings-right"><select id="tts-provider-select" class="settings-select"><option value="minimax">MiniMax</option><option value="elevenlabs">ElevenLabs</option><option value="fish">Fish Audio</option></select></div>
               </div>
-             <div class="settings-item" id="ai-voice-id-group">
-                 <label>语音 ID</label>
+             <div class="settings-item tts-settings" id="ai-voice-id-group">
+                 <label for="ai-voice-id-input">语音 ID</label>
                  <div class="settings-right">
                     <input type="text" id="ai-voice-id-input" placeholder="minimax voice_id">
                  </div>
@@ -279,10 +279,49 @@
                   <div class="settings-item"><label for="elevenlabs-sound-preset">参数预设</label><div class="settings-right"><select id="elevenlabs-sound-preset" class="settings-select"><option value="">声音参数预设</option></select></div></div>
                   <div class="tts-actions"><button type="button" class="form-button" id="elevenlabs-preset-save">保存参数</button><button type="button" class="form-button" id="elevenlabs-preset-apply">应用参数</button><button type="button" class="form-button" id="elevenlabs-preset-delete">删除预设</button></div>
                 </details>
-                <div class="settings-item"><label>聊天流式播放</label><label class="toggle-switch"><input type="checkbox" id="tts-stream-switch"><span class="slider"></span></label></div><p class="tts-usage">支持时边接收边播放；其他浏览器使用同一次请求的完整音频。分段语音顺序播放。</p><div class="settings-item"><label>长文本分段</label><label class="toggle-switch"><input type="checkbox" id="tts-split-long-switch"><span class="slider"></span></label></div>
-                <p class="tts-usage">超出模型限制时按句分段；多段下载为 ZIP 音频包，不截断正文。</p>
+              </div>
+              <div class="tts-settings" id="fish-role-options" hidden>
+                <div class="settings-item"><label for="fish-voice-search">搜索 Fish 音色</label><div class="settings-right"><input type="search" id="fish-voice-search" placeholder="输入音色名称"></div></div>
+                <div class="settings-item"><label for="fish-voice-scope">音色范围</label><div class="settings-right"><select id="fish-voice-scope" class="settings-select"><option value="public">公开音色</option><option value="mine">我的音色（含私有）</option></select></div></div>
+                <div class="tts-actions"><button type="button" class="form-button" id="fish-voice-fetch">获取音色</button><button type="button" class="form-button" id="fish-voice-next" hidden>加载更多</button></div>
+                <div class="settings-item"><label for="fish-voice-select">选择音色</label><div class="settings-right tts-controls"><select id="fish-voice-select" class="settings-select"><option value="">选择音色，或手填 ID / 链接</option></select></div></div>
+                <div class="tts-actions"><button type="button" class="form-button" id="fish-voice-detail">查看详情</button><button type="button" class="form-button" id="fish-voice-sample">播放示例</button><button type="button" class="form-button" id="fish-sample-stop">停止示例</button><button type="button" class="form-button" id="fish-favorite-add">收藏音色</button></div>
+                <p class="tts-status" id="fish-voice-description"></p><audio id="fish-sample-player" hidden playsinline></audio>
+                <details><summary>收藏与声音参数</summary>
+                  <div class="settings-item"><label for="fish-favorite-select">收藏音色</label><div class="settings-right"><select id="fish-favorite-select" class="settings-select"><option value="">收藏的 Fish 音色</option></select></div></div>
+                  <div class="tts-actions"><button type="button" class="form-button" id="fish-favorite-remove">取消收藏</button></div>
+                  <div class="settings-item"><label for="fish-role-model">角色模型</label><div class="settings-right"><input type="text" id="fish-role-model" placeholder="留空跟随 API 设置"></div></div>
+                  <div class="settings-item"><label for="fish-temperature">表现力</label><div class="settings-right"><input type="number" min="0" max="1" step="0.05" id="fish-temperature" placeholder="默认 0.7"></div></div>
+                  <div class="settings-item"><label for="fish-top-p">多样性</label><div class="settings-right"><input type="number" min="0" max="1" step="0.05" id="fish-top-p" placeholder="默认 0.7"></div></div>
+                  <div class="settings-item"><label for="fish-volume">音量增益</label><div class="settings-right"><input type="number" min="-20" max="20" step="1" id="fish-volume" placeholder="默认 0 dB"></div></div>
+                  <div class="settings-item"><label for="fish-latency">延迟模式</label><div class="settings-right"><select id="fish-latency" class="settings-select"><option value="">服务默认</option><option value="normal">正常 · 优先音质</option><option value="balanced">平衡</option><option value="low">低延迟</option></select></div></div>
+                  <div class="settings-item"><label for="fish-normalize">数字日期转读音</label><div class="settings-right"><select id="fish-normalize" class="settings-select"><option value="">服务默认</option><option value="true">开启</option><option value="false">关闭</option></select></div></div>
+                  <div class="settings-item"><label for="fish-quality-guard">质量检查</label><label class="toggle-switch"><input type="checkbox" id="fish-quality-guard"><span class="slider"></span></label></div>
+                  <p class="tts-usage">质量检查由模型决定是否支持。情绪、停顿和笑声标签随文本发送，是否生效取决于所选模型。语言选项用于数字和日期读法，不能保证改变口音。</p>
+                  <details><summary>更多 Fish 参数</summary>
+                    <div class="tts-text-row"><textarea id="fish-advanced-json" class="tts-wide-input" rows="4" aria-label="Fish 高级参数 JSON" placeholder='{"chunk_length":300,"prosody":{"normalize_loudness":true}}'></textarea></div>
+                    <p class="tts-usage">可设置分块、音量归一化、重复惩罚、生成上限、MP3 码率、发音词典和参考音频。多人对话可填 reference_id 数组，文本配合 &lt;|speaker:0|&gt; 标签。上面的语速和声音参数优先。<a href="https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech" target="_blank" rel="noopener noreferrer">查看参数说明</a></p>
+                  </details>
+                  <div class="settings-item"><label for="fish-sound-preset">声音参数预设</label><div class="settings-right"><select id="fish-sound-preset" class="settings-select"><option value="">Fish 声音参数预设</option></select></div></div>
+                  <div class="tts-actions"><button type="button" class="form-button" id="fish-preset-save">保存参数</button><button type="button" class="form-button" id="fish-preset-apply">应用参数</button><button type="button" class="form-button" id="fish-preset-delete">删除预设</button></div>
+                </details>
+                <details><summary>创建与管理自己的音色</summary>
+                  <p class="tts-usage">创建时才上传录音，默认私有。修改和删除前，请获取“我的音色”并选中目标，再点击“查看详情”载入名称和简介。</p>
+                  <div class="settings-item"><label for="fish-own-title">音色名称</label><div class="settings-right"><input type="text" id="fish-own-title" placeholder="我的音色"></div></div>
+                  <div class="tts-text-row"><textarea id="fish-own-description" class="tts-wide-input" rows="2" aria-label="Fish 音色简介" placeholder="音色简介"></textarea></div>
+                  <div class="tts-text-row"><label for="fish-own-files">参考录音（1～20 段，每段小于 20 MB）</label><input type="file" accept="audio/*" multiple id="fish-own-files"></div>
+                  <div class="tts-text-row"><textarea id="fish-own-texts" class="tts-wide-input" rows="3" aria-label="Fish 参考录音对应文字" placeholder="可留空；填写时每段录音对应一行，顺序与文件一致"></textarea></div>
+                  <div class="tts-actions"><button type="button" class="form-button" id="fish-own-create">上传并创建私有音色</button><button type="button" class="form-button" id="fish-own-update">更新名称与简介</button><button type="button" class="form-button" id="fish-own-delete">删除云端音色</button></div>
+                  <p class="tts-usage">音色发布、声音设计等平台操作可前往 <a href="https://fish.audio/app/" target="_blank" rel="noopener noreferrer">Fish 官网</a>；浏览器不能直连的接口不会显示为已接通。</p>
+                </details>
               </div>
               <div class="tts-settings" id="tts-common-options">
+                <div id="tts-extended-playback">
+                <div class="settings-item"><label>聊天流式播放</label><label class="toggle-switch"><input type="checkbox" id="tts-stream-switch"><span class="slider"></span></label></div>
+                <p class="tts-usage">Fish / ElevenLabs 支持时边接收边播放；其他浏览器使用同一次请求的完整音频。手机若阻止自动播放，请再次点击播放。</p>
+                <div class="settings-item"><label>长文本分段</label><label class="toggle-switch"><input type="checkbox" id="tts-split-long-switch"><span class="slider"></span></label></div>
+                <p class="tts-usage">ElevenLabs 按模型限制分段，Fish 按约 1000 字分段。多段下载为 ZIP 音频包，正文完整保留。</p>
+                </div>
                 <div class="settings-item"><label>保存生成音频</label><label class="toggle-switch"><input type="checkbox" id="tts-save-audio-switch"><span class="slider"></span></label></div>
                 <p class="tts-usage">默认仅临时缓存。开启后保存到该条聊天消息，会增加本地存储和备份大小。</p>
                 <details><summary>试听角色语音</summary>
@@ -292,10 +331,10 @@
                 </details>
                 <div class="tts-actions"><button type="button" class="form-button" id="tts-clear-saved-audio">清理已保存音频</button></div><p class="tts-status" id="tts-role-status" role="status" aria-live="polite"></p>
               </div>
-             <div class="settings-item" id="ai-voice-lang-group">
-                <label>语音语言/方言</label>
+             <div class="settings-item tts-settings" id="ai-voice-lang-group">
+                <label for="ai-voice-lang-select">语音语言/方言</label>
                 <div class="settings-right">
-                  <select id="ai-voice-lang-select" class="settings-select" style="width: 100%; text-align: right;">
+                  <select id="ai-voice-lang-select" class="settings-select">
                     <option value=""> 自动识别 (Auto)</option>
                     <hr disabled>
                     <option value="zh-CN">国语/普通话 (Chinese)</option>
@@ -324,10 +363,10 @@
                  </select>
                </div>
             </div>
-             <div class="settings-item" id="ai-voice-speed-group">
+             <div class="settings-item tts-settings" id="ai-voice-speed-group">
                <label>语音速度</label>
                <div class="settings-right">
-                 <input type="number" id="ai-voice-speed-input" min="0.5" max="2.0" step="0.1" value="1.0" style="width: 80px; text-align: right; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--secondary-bg); color: var(--text-color);">
+                 <input type="number" id="ai-voice-speed-input" min="0.5" max="2.0" step="0.1" value="1.0">
                  <span style="margin-left: 5px; color: var(--text-secondary); font-size: 12px;">x</span>
                </div>
              </div>
@@ -353,6 +392,7 @@
                    <select id="voice-understanding-mode-select" class="settings-select voice-settings-select">
                      <option value="auto">自动选择</option>
                      <option value="transcription">后台转文字</option>
+                     <option value="fish">Fish 转文字（独立计费）</option>
                      <option value="gemini">Gemini 音频理解</option>
                      <option value="browser">浏览器识别（旧方式）</option>
                      <option value="none">仅发送原声</option>
@@ -402,6 +442,7 @@
                      <option value="same">跟随聊天设置</option>
                      <option value="auto">自动选择</option>
                      <option value="transcription">后台转文字</option>
+                     <option value="fish">Fish 转文字（独立计费）</option>
                      <option value="gemini">Gemini 音频理解</option>
                      <option value="browser">浏览器识别（旧方式）</option>
                      <option value="none">仅记录原声</option>
@@ -441,7 +482,7 @@
 <div class="settings-item" id="bilingual-mode-group" style="display: flex; justify-content: space-between; align-items: center;">
     <div style="flex: 1; padding-right: 10px;">
         <label style="margin-bottom: 2px;">启用语言与翻译</label>
-        <div class="settings-desc">可自动或手动指定角色输出语言、翻译语言和语音朗读内容</div>
+        <div class="settings-desc">可强制指定角色输出语言，并单独设置翻译语言和语音朗读内容</div>
     </div>
     <label class="toggle-switch" style="margin: 0;"> 
         <input type="checkbox" id="bilingual-mode-toggle"> 
@@ -458,6 +499,7 @@
                 <option value="persona">根据角色设定并保持</option>
                 <option value="user">跟随用户语言</option>
                 <option value="fixed">手动指定</option>
+                <option value="forced">强制指定语言</option>
             </select>
         </div>
     </div>
@@ -467,6 +509,9 @@
             <input type="text" id="language-output-input" class="language-policy-input" autocomplete="off" placeholder="搜索或直接描述语言、方言">
             <div id="language-output-suggestions" class="language-suggestions"></div>
         </div>
+    </div>
+    <div class="settings-item-block" id="language-output-force-hint" style="display: none;">
+        <div class="settings-desc" role="status">角色对白和语音原文将始终使用指定语言，优先于角色设定、用户消息和高级语言切换规则。要更换语言，请修改此设置；译文和旁白语言仍按各自设置。</div>
     </div>
     <div class="settings-item language-policy-row">
         <label for="language-translation-mode-select">翻译语言</label>
@@ -665,7 +710,7 @@
                 <div id="time-awareness-preset-summary" class="time-awareness-summary"></div>
 
                 <button type="button" id="time-awareness-advanced-toggle" class="time-awareness-disclosure" aria-expanded="false">
-                    <span>高级时间感知设置</span>
+                    <span>高级时间感知设置（含提示词）</span>
                     <span class="time-awareness-disclosure-state">展开</span>
                 </button>
 
@@ -747,8 +792,8 @@
                         </select>
                     </div>
                     <div id="time-awareness-prompt-editor" class="time-awareness-prompt-editor" hidden>
-                        <div class="time-awareness-variable-hint">留空时自动回退内置规则。可用变量：{{当前时间}} {{时间段}} {{离开时长}} {{上次互动时间}} {{角色名}} {{用户昵称}} {{双方关系}} {{最近对话状态}}</div>
-                        <textarea id="time-awareness-custom-prompt" class="time-awareness-textarea" rows="7" placeholder="写下角色在用户回来时应如何反应……"></textarea>
+                        <div class="time-awareness-variable-hint">“完全替换”仅替换档位规则，角色反应权限仍生效；留空时回退内置规则。续聊请开启上方“允许继续尚未结束的话题”。可用变量：{{当前时间}} {{时间段}} {{离开时长}} {{上次互动时间}} {{角色名}} {{用户昵称}} {{双方关系}} {{最近对话状态}}</div>
+                        <textarea id="time-awareness-custom-prompt" class="time-awareness-textarea" rows="7" placeholder="例如：时间经过不代表上一段话题已经结束。结合上下文自然回应尚未回答的问题或未完成的话题，无需用户重复提醒。是否问候、提及间隔或开启新话题，由角色依据人设和当前消息决定。"></textarea>
                         <div class="time-awareness-actions">
                             <button type="button" id="time-awareness-reset-prompt-btn">恢复档位默认</button>
                             <button type="button" id="time-awareness-copy-prompt-btn">复制</button>
@@ -800,20 +845,39 @@
             <div class="settings-item-block" id="time-zone-group" style="display: none;">
                 <label for="time-zone-select">我的时区</label>
                 <div style="margin-top: 10px; width: 100%;">
-                    <input type="search" id="time-zone-search-input" placeholder="搜索城市 / 时区..." class="settings-textarea" style="height: 36px; padding: 8px; margin-bottom: 8px;">
+                    <input type="search" id="time-zone-search-input" aria-label="搜索我的城市或时区" aria-controls="time-zone-search-results" placeholder="搜索城市 / 时区，如北京、Tokyo…" class="settings-textarea time-zone-search">
+                    <div id="time-zone-search-results" class="time-zone-search-results" role="group" aria-label="我的时区搜索结果" hidden></div>
                     <select id="time-zone-select" class="settings-select" style="width: 100%; padding: 10px; background-color: #f5f5f7;"></select>
                 </div>
                 <div id="character-time-zone-group" class="role-time-zone-control">
                     <label for="character-time-zone-select">角色所在地 / 时区</label>
-                    <select id="character-time-zone-select" class="settings-select"><option value="">跟随我的时区</option></select>
-                    <div class="settings-desc time-awareness-inline-desc">选择一次即可自动换算双方时间，包括跨日和夏令时。</div>
+                    <input type="search" id="character-time-zone-search-input" aria-label="搜索角色城市或时区" aria-controls="character-time-zone-search-results" placeholder="搜索角色城市 / 时区…" class="settings-textarea time-zone-search">
+                    <div id="character-time-zone-search-results" class="time-zone-search-results" role="group" aria-label="角色时区搜索结果" hidden></div>
+                    <select id="character-time-zone-select" class="settings-select"><option value="">未设置（按人设与剧情判断）</option><option value="follow-user">跟随我的时区</option></select>
+                    <div class="settings-desc time-awareness-inline-desc">可留空，不会默认跟随你的时区，也不会自动调用 AI。只有主动选择跟随或具体时区后，才换算角色时间；不影响互动间隔感知。</div>
+                    <details id="time-zone-ai-panel" class="time-zone-ai-panel">
+                        <summary>AI 推荐角色时区</summary>
+                        <p class="settings-desc">根据角色人设和选中的世界书推荐所在地与时区，确认后填入。</p>
+                        <label class="time-zone-source"><input type="checkbox" id="time-zone-ai-persona" checked>读取角色人设（默认）</label>
+                        <label for="time-zone-book-search">选择要读取的世界书</label>
+                        <input type="search" id="time-zone-book-search" class="settings-textarea time-zone-search" placeholder="搜索世界书名称…">
+                        <div id="time-zone-ai-books" class="time-zone-ai-books"></div>
+                        <div class="time-awareness-actions"><button type="button" id="time-zone-ai-recommend">生成时区推荐</button></div>
+                        <p id="time-zone-ai-status" class="settings-desc" role="status" aria-live="polite"></p>
+                        <div id="time-zone-ai-result" class="time-zone-ai-result" hidden>
+                            <strong id="time-zone-ai-location"></strong>
+                            <div id="time-zone-ai-zone"></div>
+                            <p id="time-zone-ai-reason"></p>
+                            <div class="time-awareness-actions"><button type="button" id="time-zone-ai-apply">使用这个时区</button></div>
+                        </div>
+                    </details>
                     <div id="role-time-preview" class="role-time-preview">
                         <span class="role-time-preview-label">我的时间</span><span id="role-time-preview-user">—</span>
                         <span class="role-time-preview-label">角色时间</span><span id="role-time-preview-character">—</span>
                         <span class="role-time-preview-label">当前时差</span><span id="role-time-preview-difference">—</span>
                     </div>
                 </div>
-                <div id="group-time-zone-hint" class="settings-desc time-awareness-inline-desc" hidden>各成员沿用自己的角色时区，可在群成员设置中修改。</div>
+                <div id="group-time-zone-hint" class="settings-desc time-awareness-inline-desc" hidden>各成员使用自己设置的角色时区；未设置的成员按人设与剧情判断，不默认跟随用户。可在群成员设置中修改。</div>
             </div>
 
             <!-- 自定义时间 -->

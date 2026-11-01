@@ -708,6 +708,7 @@
     // 加载预设
     state.apiConfig = {
       id: 'main',
+      embeddingConfig: state.apiConfig.embeddingConfig,
       ...window.ttsProvider.apiFields({ ...state.apiConfig, ...preset }),
       proxyUrl: preset.proxyUrl,
       apiKey: preset.apiKey,

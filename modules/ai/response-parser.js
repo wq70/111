@@ -118,7 +118,7 @@
     return '';
   }
 
-  async function readOpenAiStreamResponse(response, onChunk) {
+  async function readOpenAiStreamResponse(response, onChunk, onMetadata) {
     const reader = response.body?.getReader();
     if (!reader) {
       throw new Error('当前响应不支持流式读取。');
@@ -140,6 +140,7 @@
 
         try {
           const json = JSON.parse(payload);
+          if (typeof onMetadata === 'function') onMetadata(json);
           const deltaText = getStreamDeltaText(json.choices?.[0]?.delta);
           if (!deltaText) continue;
 

@@ -325,14 +325,31 @@ class StructuredMemoryManager {
 
   // ==================== 生成总结 Prompt ====================
 
-  buildSummaryPrompt(chat, formattedHistory, timeRangeStr) {
+  async buildSummaryPromptForRequest(chat, formattedHistory, timeRangeStr) {
+      const session = window.PromptMacros?.session();
+      if (!session) return this.buildSummaryPrompt(chat, formattedHistory, timeRangeStr);
+      const overrides = {};
+      const book = window.state?.worldBooks?.find(wb => wb.name === '总结设定');
+      if (book && Array.isArray(book.content)) {
+        overrides.summaryWorldBook = (await Promise.all(book.content.filter(entry => entry.enabled !== false)
+          .map(entry => session.render(entry.content, 'worldbooks')))).filter(Boolean).join('\n');
+      }
+      if (window.state?.globalSettings?.customSummaryPromptEnabled) {
+        const entries = window.composeStoredPromptEntries?.('summary');
+        const raw = entries?.trim() ? entries : window.state.globalSettings.customSummaryPrompt;
+        if (raw?.trim()) overrides.customTemplate = await session.prompt(raw, 'summary');
+      }
+      return this.buildSummaryPrompt(chat, formattedHistory, timeRangeStr, overrides);
+  }
+
+  buildSummaryPrompt(chat, formattedHistory, timeRangeStr, overrides = {}) {
       const userNickname = chat.settings.myNickname || (window.state && window.state.qzoneSettings ? window.state.qzoneSettings.nickname : '用户') || '用户';
 
       let summarySettingContext = '';
       if (window.state && window.state.worldBooks) {
         const summaryWorldBook = window.state.worldBooks.find(wb => wb.name === '总结设定');
         if (summaryWorldBook) {
-          const enabledEntries = summaryWorldBook.content
+          const enabledEntries = overrides.summaryWorldBook !== undefined ? overrides.summaryWorldBook : summaryWorldBook.content
             .filter(e => e.enabled !== false).map(e => e.content).join('\n');
           if (enabledEntries) summarySettingContext = `\n# 【总结规则 (最高优先级)】\n${enabledEntries}\n`;
         }
@@ -366,15 +383,15 @@ class StructuredMemoryManager {
       }
 
       // 检查是否有用户自定义的结构化总结提示词
-      if (window.state && window.state.globalSettings &&
-          window.state.globalSettings.customSummaryPromptEnabled) {
+      if (overrides.customTemplate !== undefined || (window.state && window.state.globalSettings &&
+          window.state.globalSettings.customSummaryPromptEnabled)) {
         const entriesPrompt = typeof window.composeStoredPromptEntries === 'function'
           ? window.composeStoredPromptEntries('summary')
           : null;
-        const customSummaryPrompt = entriesPrompt && entriesPrompt.trim()
+        const customSummaryPrompt = overrides.customTemplate !== undefined ? overrides.customTemplate : entriesPrompt && entriesPrompt.trim()
           ? entriesPrompt
           : window.state.globalSettings.customSummaryPrompt;
-        if (customSummaryPrompt && customSummaryPrompt.trim()) {
+        if (overrides.customTemplate !== undefined || (customSummaryPrompt && customSummaryPrompt.trim())) {
         // 使用用户自定义提示词，替换占位符变量
         return customSummaryPrompt
           .replace(/\{\{角色名\}\}/g, chat.originalName)

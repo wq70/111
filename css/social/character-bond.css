@@ -105,6 +105,12 @@
 .character-bond-summary-card { padding: 14px 16px; border-radius: 12px; background: var(--secondary-bg, #f5f5f7); }
 .character-bond-summary-card strong { display: block; font-size: 16px; margin-bottom: 6px; }
 .character-bond-summary-card p { margin: 4px 0; color: var(--text-secondary, #777); font-size: 12px; line-height: 1.5; }
+.character-spark-card-editor { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color, #ddd); }
+.character-spark-card-editor label { display: block; margin-bottom: 7px; color: var(--text-color, #333); font-size: 13px; }
+.character-spark-card-controls { display: flex; gap: 8px; align-items: center; }
+.character-spark-card-controls input { box-sizing: border-box; width: 100%; min-width: 0; flex: 1; padding: 8px 10px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--bg-color, #fff); color: var(--text-color, #222); font: inherit; }
+.character-spark-card-controls button { min-height: 36px; }
+#character-bond-modal button:disabled { opacity: .55; cursor: default; }
 .shared-pet-form { display: grid; gap: 12px; }
 .shared-pet-avatar-row { display: flex; align-items: center; gap: 12px; min-width: 0; }
 #shared-pet-avatar-preview { width: 54px; height: 54px; border-radius: 16px; object-fit: cover; background: var(--secondary-bg, #eee); flex: 0 0 auto; }

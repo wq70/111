@@ -75,6 +75,7 @@
       // 1. 加载预设 (这会覆盖当前的 config)
       state.apiConfig = {
         id: 'main',
+        embeddingConfig: state.apiConfig.embeddingConfig,
         ...window.ttsProvider.apiFields({ ...state.apiConfig, ...preset }),
         proxyUrl: preset.proxyUrl,
         apiKey: preset.apiKey,
@@ -242,6 +243,8 @@
 
   function renderApiSettings(forcePresetId = null) {
     window.ttsSettings.loadApi();
+    window.EmbeddingApiSettings?.render();
+    window.PromptMacroSettings?.render();
 
     document.getElementById('proxy-url').value = state.apiConfig.proxyUrl || '';
     document.getElementById('api-key').value = state.apiConfig.apiKey || '';
@@ -752,13 +755,14 @@
     }
 
 
-    const novelaiEnabled = localStorage.getItem('novelai-enabled') === 'true';
-    const novelaiModel = localStorage.getItem('novelai-model') || 'nai-diffusion-4-5-full';
-    const novelaiApiKey = localStorage.getItem('novelai-api-key') || '';
+    const novelaiEnabled = (localStorage.getItem('novelai-enabled') ?? String(state.apiConfig.novelaiEnabled || false)) === 'true';
+    const novelaiModel = localStorage.getItem('novelai-model') || state.apiConfig.novelaiModel || 'nai-diffusion-4-5-full';
+    const novelaiApiKey = localStorage.getItem('novelai-api-key') ?? state.apiConfig.novelaiApiKey ?? '';
     document.getElementById('novelai-switch').checked = novelaiEnabled;
     document.getElementById('novelai-model').value = novelaiModel;
     document.getElementById('novelai-api-key').value = novelaiApiKey;
     document.getElementById('novelai-details').style.display = novelaiEnabled ? 'block' : 'none';
+    window.NovelAISettings?.load();
 
     // Google Imagen 设置加载
     const googleImagenEnabled = localStorage.getItem('google-imagen-enabled') === 'true';

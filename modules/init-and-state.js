@@ -108,6 +108,8 @@ if (!window.__appBootstrapStarted) {
     const defaultGlobalSettings = {
       id: 'main',
       showStatusBar: false,
+      lockInterfaceZoom: false,
+      allowPreviewZoom: true,
       wallpaper: 'linear-gradient(135deg, #89f7fe, #66a6ff)',
       fontUrl: '',
       fontLocalData: '',
@@ -127,6 +129,8 @@ if (!window.__appBootstrapStarted) {
       customChatPromptOffline: '',         // 自定义线下模式提示词内容
       customChatPromptGroupOffline: '',    // 自定义群聊线下模式提示词内容
       customPromptCollections: null,       // 条目式提示词；为空时继续读取上述旧字符串
+      promptMacros: { enabled: false, offMode: 'preserve', scopes: { presets: true, worldbooks: true, prompts: true }, rules: [] },
+      modelRouteObservation: false,
       enableQzoneActions: false,          // 新增：全局动态开关，默认关闭
       enableViewMyPhone: false,           // 新增：全局查看User手机开关，默认关闭
       enableCrossChat: true,              // 新增：全局跨聊天消息开关（群聊↔私聊），默认开启
@@ -171,6 +175,9 @@ if (!window.__appBootstrapStarted) {
       detachStatusBar: false,
       enableMinimalChatUI: false,
       chatActionButtonsOrder: null,
+      chatHeaderButtonsOrder: null,
+      chatSelectionButtonsOrder: null,
+      messageActionsOrder: null,
       shoppingCategoryCount: 3,
       shoppingProductCount: 8,
       chatRenderWindow: 50,
@@ -202,6 +209,7 @@ if (!window.__appBootstrapStarted) {
       ...defaultGlobalSettings,
       ...(loadedGlobalSettings || {})
     };
+    window.applyInterfaceZoomSettings?.();
 
     // 确保 systemNotification 配置完整
     if (!state.globalSettings.systemNotification) {

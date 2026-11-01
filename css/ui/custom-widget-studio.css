@@ -52,6 +52,8 @@
 .free-widget-custom { position:relative; padding:3px; }
 .cw-free-view { display:block; width:100%; height:100%; overflow:hidden; border-radius:15px; background:#fff; }
 .is-editing .free-widget-custom iframe { pointer-events:none; }
-.cw-free-manage { position:absolute; top:7px; right:7px; z-index:2; display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:#29292ecb; color:#fff; font-size:18px; line-height:1; box-shadow:0 1px 4px #0005; }
+/* 管理入口随桌面编辑状态显示，正常使用及截图时不遮挡作品。 */
+.cw-free-manage { position:absolute; top:7px; right:7px; z-index:2; display:none; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; background:#29292ecb; color:#fff; font-size:18px; line-height:1; box-shadow:0 1px 4px #0005; }
+.is-editing .cw-free-manage { display:flex; }
 .free-widget-custom-entry { width:100%; margin-bottom:8px; border:1px solid #e5e5ea; border-radius:10px; background:#fff; padding:10px 12px; font-size:13px; text-align:left; }
 @media(max-width:375px) { .cw-dialog { padding-inline:10px; } .cw-actions { gap:4px; } .cw-dialog button { padding:6px 7px; font-size:11px; } .cw-field-creator { grid-template-columns:minmax(0,1fr) 68px auto; gap:4px; } .cw-field-creator button { padding-inline:5px; } }

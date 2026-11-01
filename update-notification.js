@@ -2,7 +2,7 @@
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '10.2-role-time-zone'; // 当前更新版本号
+    this.currentVersion = '11.1-20261101'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -23,30 +23,40 @@ class UpdateNotification {
       <div class="update-item important-note">注意：首次打开最好使用魔法</div>
       <div class="update-item tips">有任何问题请通过DC私信联系 <a href="https://discord.com/users/1353222930875551804" target="_blank" style="color: #4A9EFF;">点击前往</a>，其他渠道可能无法及时回复</div>
       <div class="update-item important-note">使用提示：请留意 API 设置页面的小人菜单，新增功能入口都在这里哦。</div>
-      <div class="update-divider">10.2 更新日志</div>
-      <div class="update-item">1. 升级渲染器功能：新增普通文字、关键词、整行、起止标记等匹配方式，支持随机替换、对照替换、格式整理，以及高亮、标签、折叠、卡片、遮罩等展示效果。</div>
-      <div class="update-item">2. 完善渲染规则管理：新增搜索、分组、批量启停、调整执行顺序、暂时停用和撤销最近修改，支持测试预览、查看处理过程及保存测试样本。</div>
-      <div class="update-item">3. 细化规则生效范围：可分别设置用户或角色消息、单聊或群聊、正文或心声，并选择在显示、发送给 AI、复制、文本导出时处理；支持保护代码块和链接。</div>
-      <div class="update-item">4. 新增“和模型聊聊”：可以单独讨论角色回复哪里不合适、希望怎样调整，沟通内容独立保存，不作为角色剧情聊天记录。</div>
-      <div class="update-item">5. 新增带意向重新生成：可填写要求或选择快捷标签，先生成候选回复，查看满意后再采用，也可撤销采用；群聊支持只调整指定成员的回复。</div>
-      <div class="update-item">6. 新增生成偏好管理：调整要求可选择仅本次、下一次主动回复、当前聊天持续生效或全局持续生效，并支持编辑、启停和删除。</div>
-      <div class="update-item">7. 修复重新生成失败后原回复丢失的问题，并避免重复点击同时发起多次重生成请求。</div>
-      <div class="update-item">8. 新增音乐多人同步：一起听时可以选择多个角色，让他们同步感知歌曲、歌词及播放操作，分别累计实际参与的听歌时长。</div>
-      <div class="update-item">9. 修复角色备注修改的提示词冲突：明确区分角色本名、当前备注，以及备注由用户还是角色修改，减少角色误认修改来源的问题。</div>
-      <div class="update-item">10. 优化向量记忆提取：默认一次提交全部待处理消息，可自行开启分批并设置每批数量；新增精简、适量、详细三种记录程度。</div>
-      <div class="update-item">11. 完善提取进度与恢复：显示处理进度、请求次数及接口返回的用量，支持暂停、继续和重试；失败后保留已成功保存的部分，避免重复提取或错误推进进度。</div>
-      <div class="update-item">12. 优化记忆日期和事件判断：区分事件发生时间与保存时间，结合来源消息解释“昨天、明天”等相对日期；无依据时标记时间不明，减少将旧事件误记为今天的问题。</div>
-      <div class="update-item">13. 优化记忆去重与计划更新：减少不同日期的相似经历被误合并，支持关联计划后续的完成、取消等状态，并保留更新记录。</div>
-      <div class="update-item">14. 新增记忆日期修复与撤销：可按原文依据修复旧日期，修复前保存备份；支持批量平移日期及撤销上次调整。</div>
-      <div class="update-item">15. 新增普通记忆梳理：可关联旧约定与后续结果，整理成角色概况；支持查看、编辑、选择应用建议和撤销操作，并设置自动整理或手动应用及不同读取方式。梳理使用总结接口，会产生 API 用量。</div>
-      <div class="update-item">16. 新增记忆与世界时间联动：新消息可保存发送当时的世界时间，后续修改日期或延迟提取不会改写已保存的时间依据；支持独立时区、流逝倍率、暂停及时间线共享设置。</div>
-      <div class="update-item">17. 新增 ElevenLabs 语音服务：角色可独立选择 MiniMax 或 ElevenLabs，支持获取、搜索、收藏音色，生成试听，以及保存声音参数预设；聊天语音和语音／视频通话均接入角色配置。</div>
-      <div class="update-item">18. 完善语音播放与保存：新增可选流式播放、长文本分段、生成音频持久保存、重新生成及清理入口；多段语音可下载为 ZIP 音频包。</div>
-      <div class="update-item">19. 修复语音相关问题：改善真实录音初始化异常、通话切换聊天后音色混用，以及消息编辑或删除后对应语音继续播放的问题。</div>
-      <div class="update-item">20. 优化字体设置：支持明确切换默认、网络和本地字体来源，预览与正式设置分离；新增加载状态、失败提示、重新加载和退出未保存提醒，完善字体、字号应用范围及预设保存。</div>
-      <div class="update-item">21. 修复字体恢复和缓存问题：改善本地字体重启恢复、旧外观导入、快速切换字体及重新加载仍使用旧缓存的情况。</div>
-      <div class="update-item">22. 完善记忆备份与导入导出：新增概况、时间规则及相关记录随备份保存；修复相同时间戳记忆编辑、删除可能选错条目，以及精炼旧记忆后跳过尚未总结聊天的问题。</div>
-      <div class="update-item">23. 修复时间感知中用户与角色时间混用的问题：现在会分别提供双方的当地时间，避免你这边说“早安”，角色那边明明是晚上却也当成早晨。聊天设置中新增“角色所在地 / 时区”，可查看双方当前时间和时差，自动处理跨日及夏令时，默认跟随你的时区；群聊成员也可单独设置，并同步适配主动消息、语音／视频通话和一起看等场景。自定义世界时间仍支持暂停和流逝倍率。</div>
+      <div class="update-divider">11.1 更新日志</div>
+      <div class="update-item important-note">新增与完善</div>
+      <div class="update-item">1.新增 Fish Audio 语音，支持角色语音消息、语音／视频通话朗读，可独立设置模型、音色和声音参数。</div>
+      <div class="update-item">2.Fish 支持音色搜索、收藏、示例试听及私有音色管理，兼容部分中转接口；新增 Fish 录音转文字选项。</div>
+      <div class="update-item">3.NovelAI 生图支持自定义官网、公益站及中转站接口，新增模型拉取、搜索、手动填写和连接保存，完善多种图片返回格式的兼容。</div>
+      <div class="update-item">4.新增全局统一向量 API。角色可选择跟随全局、单独配置或使用原有默认方式，各角色的记忆仍然独立。</div>
+      <div class="update-item">5.新增向量记忆“AI 整合”，可整理全部七类记忆或单独一类，支持预览、反馈重写，确认后再替换。</div>
+      <div class="update-item">6.完善向量模型切换处理，避免新旧模型的向量混用；旧记忆正文保留，可手动补全或重建向量。</div>
+      <div class="update-item">7.新增随机头部与自定义宏规则，可用于预设、世界书和提示词，支持固定文字、随机候选、参数模板及高级脚本。</div>
+      <div class="update-item">8.宏规则支持排序、独立启停、导入导出和发送内容预览，可设置关闭后保留原文或跳过对应条目。</div>
+      <div class="update-item">9.新增“模型路由观察”，可对照请求模型与接口返回的模型标识，查看近期记录，不增加额外模型请求。</div>
+      <div class="update-item">10.完善时区搜索，支持中文城市名和英文时区；新增根据角色人设及所选世界书推荐时区，确认后使用。</div>
+      <div class="update-item">11.调整角色时间判断：未设置角色时区时按人设与剧情判断；也可明确选择跟随用户或指定时区。</div>
+      <div class="update-item">12.语言与翻译新增“强制指定语言”模式，加强指定语言的输出要求；译文和旁白仍可分别设置。</div>
+      <div class="update-item">13.新增聊天顶栏、多选工具栏和长按消息菜单排序，支持拖动调整、自动保存及恢复默认。</div>
+      <div class="update-item">14.长按消息菜单新增“删除（通知 AI）”和“彻底删除”，无需先进入多选。</div>
+      <div class="update-item">15.新增锁定界面缩放，可单独允许图片预览缩放，减少操作时误放大整个页面。</div>
+      <div class="update-item">16.升级手机调试控制台，新增搜索、日志分类、请求状态与耗时查看，支持复制和导出 TXT／JSON。</div>
+      <div class="update-item">17.完善服务器消息推送，支持自定义请求方式、鉴权、请求头和消息模板，新增测试入口及返回结果查看。</div>
+      <div class="update-item">18.新增模型搜索选择窗口，主、副、后台、识图及情侣空间 API 的模型可按名称搜索；修复重新拉取模型后选中值不正确的问题。</div>
+      <div class="update-item important-note">问题修复与体验优化</div>
+      <div class="update-item">19.修复角色火花中断后无法正常恢复的问题，完善恢复期限、扣卡和保存失败处理，新增自定义恢复卡数量。</div>
+      <div class="update-item">20.修复从聊天列表打开火花详情或切换角色后，可能操作到其他角色的问题。</div>
+      <div class="update-item">21.恢复聊天乐谱卡片的演奏功能，兼容原有八种音色，完善重复点击和播放失败提示。</div>
+      <div class="update-item">22.修复情侣空间记账生成、评论和点赞请求在退出或切换角色后，结果可能发往错误页面的问题。</div>
+      <div class="update-item">23.优化多选工具栏的手机布局，补充文字标签，按钮可随屏幕宽度换行；调整音乐播放器“多人同步”按钮位置。</div>
+      <div class="update-item">24.自定义小组件的管理按钮改为仅在桌面编辑状态下显示，日常使用和截图时不再遮挡内容。</div>
+      <div class="update-item">25.移除聊天页的“回复守护”提示横幅，保留后台任务记录及相关设置。</div>
+      <div class="update-item">26.完善新增配置的保存与恢复，包括 Fish 配置、NovelAI 连接和按钮排序等。</div>
+      <div class="update-item important-note">使用说明</div>
+      <div class="update-item tips">• Fish 需自行配置 Key；额度及免费资格以服务账号为准，录音转文字独立计费。</div>
+      <div class="update-item tips">• 第三方语音、生图接口的可用功能取决于站点支持情况。</div>
+      <div class="update-item tips">• 模型观察依据接口自报标识，只供参考，不能据此确认上游实际模型。</div>
+      <div class="update-item tips">• AI 记忆整合和向量重建会产生 API 用量。</div>
       <div class="update-divider">共同更新 · 反馈中心试用</div>
       <div class="update-item">新增私密反馈和公开反馈入口，可提交建议、报错并附带截图；公开内容经审核后展示。作者回复后，可回到原浏览器查看并继续交流。</div>
       <div class="update-item tips">反馈投稿需要联网完成安全验证。中国大陆网络下，验证可能无法加载，投稿暂不保证稳定可用；遇到问题可稍后重试，或继续使用原有反馈渠道。</div>
@@ -57,7 +67,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://img.baibai.cv/f/mwOEhK/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">10.2 更新</div>
+            <div class="update-title">11.1 更新</div>
           </div>
           
           <div class="update-notification-body">

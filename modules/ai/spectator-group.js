@@ -50,6 +50,9 @@
       const historySlice = chat.history.filter(m => !m.isExcluded && m.type !== 'thought_chain_block').slice(-maxMemory);
       const filteredHistory = await filterHistoryWithDoNotSendRules(historySlice, chatId);
 
+      const macroSession = window.PromptMacros?.session();
+      const renderMacroEntry = (text, scope) => macroSession ? macroSession.render(text, scope) : Promise.resolve(text);
+      const routeObservation = window.ModelRouteObserver?.start(model);
       let worldBookContent = '';
       // 获取所有应该使用的世界书ID（包括手动选择的和全局的）
       let allWorldBookIds = [...(chat.settings.linkedWorldBookIds || [])];
@@ -61,19 +64,21 @@
       });
 
       if (allWorldBookIds.length > 0) {
-        const linkedContents = allWorldBookIds.map(bookId => {
+        const linkedContents = (await Promise.all(allWorldBookIds.map(async bookId => {
           const worldBook = state.worldBooks.find(wb => wb.id === bookId);
           if (!worldBook || !Array.isArray(worldBook.content)) return '';
-          const formattedEntries = worldBook.content
+          const formattedEntries = (await Promise.all(worldBook.content
             .filter(entry => entry.enabled !== false)
-            .map(entry => {
+            .map(async entry => {
+              const content = await renderMacroEntry(entry.content, 'worldbooks');
+              if (!content) return '';
               let entryString = `\n### 条目: ${entry.comment || '无备注'}\n`;
 
-              entryString += `**内容:**\n${entry.content}`;
+              entryString += `**内容:**\n${content}`;
               return entryString;
-            }).join('');
+            }))).join('');
           return formattedEntries ? `\n\n## 世界书: ${worldBook.name}\n${formattedEntries}` : '';
-        }).filter(Boolean).join('');
+        }))).filter(Boolean).join('');
         if (linkedContents) {
           worldBookContent = `# --- 世界书 (World Book) ---
 # 【最高优先级指令：绝对真理】
@@ -156,7 +161,7 @@ ${linkedContents}
         'stickerContext': stickerContext
       };
       
-      systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMap);
+      systemPrompt = replaceTemplateVars(macroSession ? await macroSession.prompt(systemPromptTemplate, 'spectator') : systemPromptTemplate, contextMap);
 
       systemPrompt = processPromptWithSettings(systemPrompt, 'spectator');
 
@@ -219,6 +224,8 @@ ${linkedContents}
       }
 
       const data = await response.json();
+      routeObservation?.observe(data);
+      window.ModelRouteObserver?.record(chat, routeObservation);
       const aiResponseContent = getGeminiResponseText(data);
       lastRawAiResponse = aiResponseContent;
       const messagesArray = parseAiResponse(aiResponseContent);

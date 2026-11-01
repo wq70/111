@@ -257,7 +257,7 @@ async function executeStructuredSummary(chat, messages, updateTimestamp = false)
     return window.MemoryExtractionSupport.formatMessage(msg, chat);
   }).filter(Boolean).join('\n');
 
-  const systemPrompt = window.structuredMemoryManager.buildSummaryPrompt(chat, formattedHistory, timeRangeStr);
+  const systemPrompt = await (window.structuredMemoryManager.buildSummaryPromptForRequest || window.structuredMemoryManager.buildSummaryPrompt).call(window.structuredMemoryManager, chat, formattedHistory, timeRangeStr);
 
   // 调用API
   const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;

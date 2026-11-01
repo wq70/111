@@ -182,6 +182,10 @@
         generationGuidance = await window.GenerationAdjustments.prepare(chat, options);
         systemPrompt += generationGuidance.block;
       }
+      // 放在模板及本轮指导之后，确保自定义模板和线下模式也应用强制语言。
+      if (window.languagePolicy?.buildEnforcementPrompt) {
+        systemPrompt += window.languagePolicy.buildEnforcementPrompt(chat);
+      }
       let isGemini = proxyUrl === GEMINI_API_URL;
       let geminiConfig = options.candidateContent ? null : toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload)
 
@@ -202,6 +206,7 @@
         : [];
       // 工具调用包含结构化增量；当前聊天流解析器只处理文本，所以 MCP 回合使用非流式请求。
       const useStream = !isGemini && !!state.globalSettings.enableApiStream && availableMcpTools.length === 0;
+      const routeObservation = !options.candidateContent ? window.ModelRouteObserver?.start(model) : null;
 
       // 记录API请求数据
       const requestData = {
@@ -352,6 +357,7 @@
         response = apiResponse;
         if (!apiResponse.ok) await throwApiError(apiResponse);
         const data = await apiResponse.json();
+        routeObservation?.observe(data);
         responsePayload = data;
 
         if (isGemini) {
@@ -429,10 +435,11 @@
         if (useStream) {
           aiResponseContent = await readOpenAiStreamResponse(response, streamedText => {
             updateTemporaryStreamMessage(streamedText);
-          });
+          }, chunk => routeObservation?.observe(chunk));
           responsePayload = { stream: true, content: aiResponseContent };
         } else {
           const data = await response.json();
+          routeObservation?.observe(data);
           aiResponseContent = getGeminiResponseText(data);
           responsePayload = data;
         }
@@ -458,6 +465,8 @@
         responseStatusText: response.statusText
       };
       responseData.durationMs = responseData.responseTimestamp - responseData.timestamp;
+      const routeResult = window.ModelRouteObserver?.record(chat, routeObservation);
+      if (routeResult) responseData.modelRouteObservation = routeResult;
 
       // 方案4：只有在全局设置中启用API历史记录时才保存
       if (state.globalSettings.enableApiHistory) {

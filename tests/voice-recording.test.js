@@ -21,7 +21,8 @@ function fixture(readyState) {
     showToast: message => notices.push(message),
     console
   });
-  vm.runInContext(source, context);
+  // Expose the clip processing boundary only inside this isolated test context.
+  vm.runInContext(source.replace('window.voiceRecording = {', 'window.voiceRecording = { __processClip: processClip,'), context);
   return { window, button, listeners, notices };
 }
 
@@ -58,4 +59,21 @@ test('初始化后创建、替换状态和切换聊天时，读取当前 window.
   f.window.state.activeChatId = null;
   assert.doesNotThrow(() => f.window.voiceRecording.refreshAvailability());
   assert.equal(f.button.title, '录制真实语音');
+});
+
+test('聊天与通话可独立选择 Fish 转写，使用全局 Fish 配置，失败保留原声', async () => {
+  const f = fixture('interactive'), clip = { blob: new Blob([Uint8Array.of(1)], { type: 'audio/wav' }), duration: 1 };
+  const api = { fishApiKey: 'test-only', fishTranscriptionModel: 'fish-audio/transcribe-1' }, calls = [];
+  f.window.state = { apiConfig: api }; f.window.fishTts = { transcribe: async (config, audio) => { calls.push({ config, audio }); return '你好'; } };
+  const chat = { settings: { voiceUnderstandingMode: 'fish', voiceCallUnderstandingMode: 'same' } };
+  const a = await f.window.voiceRecording.__processClip(clip, chat, false);
+  const b = await f.window.voiceRecording.__processClip(clip, chat, true);
+  assert.equal(a.text, '你好'); assert.equal(b.resolvedMode, 'fish'); assert.equal(calls.length, 2);
+  assert.equal(calls[0].config, api); assert.equal(calls[0].audio, clip.blob); assert.equal(chat.settings.fishApiKey, undefined);
+  chat.settings.voiceUnderstandingMode = 'none'; chat.settings.voiceCallUnderstandingMode = 'fish';
+  assert.equal((await f.window.voiceRecording.__processClip(clip, chat, false)).resolvedMode, 'none');
+  assert.equal((await f.window.voiceRecording.__processClip(clip, chat, true)).text, '你好');
+  f.window.fishTts.transcribe = async () => { throw new Error('Fish 额度不足'); };
+  const failed = await f.window.voiceRecording.__processClip(clip, chat, true);
+  assert.equal(failed.blob, clip.blob); assert.equal(failed.duration, 1); assert.match(failed.error, /额度不足/);
 });

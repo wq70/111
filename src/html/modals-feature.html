@@ -640,7 +640,7 @@
 
             <div class="form-group">
                 <label style="color: #333;">提示词相关性 (CFG Scale)</label>
-                <input type="number" id="nai-cfg-scale" value="5" min="1" max="20" step="0.5" style="background-color: #f8f9fa; color: #333; border: 1px solid #ccc; padding: 8px; width: 100%; border-radius: 4px;">
+                <input type="number" id="nai-cfg-scale" value="5" min="0" max="10" step="0.5" style="background-color: #f8f9fa; color: #333; border: 1px solid #ccc; padding: 8px; width: 100%; border-radius: 4px;">
                 <small style="color: #666;">推荐值: 5 (控制图像与提示词的相关程度)</small>
             </div>
 
@@ -658,7 +658,7 @@
 
             <div class="form-group">
                 <label style="color: #333;">随机种子 (Seed)</label>
-                <input type="number" id="nai-seed" value="-1" min="-1" max="9999999999" style="background-color: #f8f9fa; color: #333; border: 1px solid #ccc; padding: 8px; width: 100%; border-radius: 4px;">
+                <input type="number" id="nai-seed" value="-1" min="-1" max="4294967295" style="background-color: #f8f9fa; color: #333; border: 1px solid #ccc; padding: 8px; width: 100%; border-radius: 4px;">
                 <small style="color: #666;">-1 表示随机，固定种子可复现相同图像</small>
             </div>
 
@@ -831,6 +831,15 @@
           <p id="character-spark-record"></p>
           <p>自然日内你发送可见消息、角色给出可见回复，才算一次有效互动；宠物、隐藏消息和后台系统消息不计入。</p>
           <button id="restore-character-spark-btn" class="character-bond-action" type="button" hidden>使用恢复卡</button>
+          <p id="character-spark-recovery-note" hidden></p>
+          <div class="character-spark-card-editor">
+            <label for="character-spark-restore-cards">自定义恢复卡数量</label>
+            <div class="character-spark-card-controls">
+              <input id="character-spark-restore-cards" type="number" min="0" step="1" inputmode="numeric" aria-describedby="character-spark-card-hint">
+              <button id="save-character-spark-cards-btn" class="character-bond-action" type="button">保存数量</button>
+            </div>
+            <p id="character-spark-card-hint">仅调整当前角色持有的恢复卡，填0可清空；保存数量不会自动使用。</p>
+          </div>
         </div>
         <div id="shared-pet-panel" hidden>
           <div id="shared-pet-disabled-note">请先在聊天设置中打开“共同宠物”开关。关闭时宠物不会出现或回复，已有数据不会删除。</div>

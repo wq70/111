@@ -56,13 +56,60 @@
         viewThoughtChainBtn.style.display = foundHiddenThought ? 'block' : 'none';
     }
 
+    document.getElementById('delete-message-btn').style.display = 'flex';
+    document.getElementById('erase-message-btn').style.display = 'flex';
+    if (typeof applyButtonOrder === 'function') applyButtonOrder();
     document.getElementById('message-actions-modal').classList.add('visible');
   }
 
   function hideMessageActions() {
     document.getElementById('message-actions-modal').classList.remove('visible');
+    document.getElementById('delete-message-btn').style.display = 'none';
+    document.getElementById('erase-message-btn').style.display = 'none';
     activeMessageTimestamp = null;
   }
+
+  // Snapshot both the conversation and timestamps before awaiting confirmation.
+  // The same deletion path serves the long-press menu and multi-selection toolbar.
+  async function deleteChatMessages(timestamps, erase = false) {
+    const chatId = state.activeChatId;
+    const chat = state.chats[chatId];
+    const targets = new Set(timestamps);
+    if (!chat || !chat.history.some(msg => targets.has(msg.timestamp))) return;
+    const confirmed = await showCustomConfirm(
+      erase ? '彻底删除消息' : '删除消息',
+      erase ? `确定从聊天记录中永久删除这 ${targets.size} 条消息吗？此操作不可恢复，不会额外发送删除提示给AI。`
+        : `确定要删除这 ${targets.size} 条消息吗？这会通知AI这些消息已被删除。`,
+      { confirmButtonClass: 'btn-danger', confirmText: erase ? '确认彻底删除' : '确认删除' }
+    );
+    if (!confirmed || state.chats[chatId] !== chat) return;
+    if (!chat.history.some(msg => targets.has(msg.timestamp))) return;
+    const polls = chat.history.filter(msg => targets.has(msg.timestamp) && msg.type === 'poll')
+      .map(msg => `关于“${msg.question}”的投票(时间戳: ${msg.timestamp})`);
+    chat.history = chat.history.filter(msg => !targets.has(msg.timestamp));
+    if (!erase) {
+      let reason = '一些之前的消息已被用户删除。';
+      if (polls.length) reason += ` 其中包括以下投票：${polls.join('；')}。`;
+      reason += ' 你应该像它们从未存在过一样继续对话，并相应地调整你的记忆和行为，不要再提及这些被删除的内容。';
+      chat.history.push({ role: 'system', content: `[系统提示：${reason}]`, timestamp: Date.now(), isHidden: true });
+    }
+    await db.chats.put(chat);
+    if (state.activeChatId === chatId) {
+      exitSelectionMode();
+      await renderChatInterface(chatId);
+    }
+    renderChatList();
+  }
+
+  window.deleteChatMessages = deleteChatMessages;
+  [['delete-message-btn', false], ['erase-message-btn', true]].forEach(([id, erase]) => {
+    document.getElementById(id)?.addEventListener('click', () => {
+      const timestamp = activeMessageTimestamp;
+      if (timestamp == null) return;
+      hideMessageActions();
+      deleteChatMessages([timestamp], erase);
+    });
+  });
 
   document.getElementById('download-ai-voice-btn')?.addEventListener('click', () => {
     const timestamp = activeMessageTimestamp;

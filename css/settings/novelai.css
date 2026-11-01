@@ -1,0 +1,26 @@
+#novelai-details {
+  --nai-surface:#fff; --nai-field:#fff; --nai-line:#ddd; --nai-text:#333; --nai-muted:#666;
+  background:var(--nai-surface) !important;
+  color:var(--nai-text);
+  border-top:0.5px solid var(--nai-line);
+}
+#phone-screen.dark-mode #novelai-details {
+  --nai-surface:#1c1c1e; --nai-field:#2c2c2e; --nai-line:#48484a; --nai-text:#f5f5f7; --nai-muted:#aaaab3;
+}
+#api-settings-screen.api-scheme-2 #novelai-details {
+  --nai-surface:var(--api-sakura-surface-soft); --nai-field:var(--api-sakura-surface); --nai-line:var(--api-sakura-border); --nai-text:var(--api-sakura-text); --nai-muted:var(--api-sakura-muted);
+}
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 #novelai-details {
+  --nai-surface:var(--api-sakura-surface); --nai-field:var(--api-sakura-surface-soft);
+}
+#novelai-details .nai-field { display:block; padding:12px 15px; }
+#novelai-details .nai-field > label { display:block; margin-bottom:7px; font-size:14px; }
+#novelai-details .nai-field input, #novelai-details .nai-field select { width:100%; min-width:0; box-sizing:border-box; padding:9px; border:1px solid var(--nai-line); border-radius:7px; background:var(--nai-field); color:var(--nai-text); font-size:14px; }
+#novelai-details .nai-model-row { display:flex; gap:8px; align-items:center; }
+#novelai-details .nai-model-row input { flex:1; width:0; }
+#novelai-details .nai-model-row button { flex-shrink:0; }
+#novelai-details small, #novelai-status { display:block; margin-top:7px; font-size:12px; line-height:1.6; color:var(--nai-muted); overflow-wrap:anywhere; }
+#novelai-details details { padding:8px 15px; }
+#novelai-details summary { cursor:pointer; font-size:14px; }
+#novelai-details details .nai-field { padding:10px 0; }
+#novelai-status { padding:0 15px 10px; margin:0; }

@@ -4,6 +4,9 @@
     const chat = options.previewChat || state.chats[chatId];
     if (!chat) return;
     const isPreview = options.preview === true;
+    let macroSession;
+    const renderMacroEntry = (text, scope) => macroSession ? macroSession.render(text, scope) : Promise.resolve(text);
+    const renderMacroPrompt = (text, scope) => macroSession ? macroSession.prompt(text, scope) : Promise.resolve(text);
     let generationGuidance = null;
     if (!isPreview && window.GenerationAdjustments) {
       if (window.GenerationAdjustments.isBusy(chatId)) return;
@@ -59,6 +62,7 @@
     }
     let needsImmediateReaction = false;
     try {
+      macroSession = window.PromptMacros?.session();
       if (!isPreview && window.GenerationAdjustments) window.GenerationAdjustments.begin(chatId);
       // 获取API配置（优先使用角色独立配置）
       let apiConfig = state.apiConfig;
@@ -621,22 +625,24 @@ ${transcriptText}
       });
 
       if (allWorldBookIds.length > 0) {
-        const linkedContents = allWorldBookIds.map(bookId => {
+        const linkedContents = (await Promise.all(allWorldBookIds.map(async bookId => {
           const worldBook = state.worldBooks.find(wb => wb.id === bookId);
           if (!worldBook || !Array.isArray(worldBook.content)) return '';
 
 
-          const formattedEntries = worldBook.content
+          const formattedEntries = (await Promise.all(worldBook.content
             .filter(entry => entry.enabled !== false)
-            .map(entry => {
+            .map(async entry => {
+              const content = await renderMacroEntry(entry.content, 'worldbooks');
+              if (!content) return '';
               let entryString = `\n### 条目: ${entry.comment || '无备注'}\n`;
 
-              entryString += `**内容:**\n${entry.content}`;
+              entryString += `**内容:**\n${content}`;
               return entryString;
-            }).join('');
+            }))).join('');
 
           return formattedEntries ? `\n\n## 世界书: ${worldBook.name}\n${formattedEntries}` : '';
-        }).filter(Boolean).join('');
+        }))).filter(Boolean).join('');
 
         if (linkedContents) {
           worldBookContent = `# --- 世界书 (World Book) ---
@@ -1159,7 +1165,7 @@ ${linkedContents}
           'bilingualAlertVoice': bilingualAlertVoice
         };
 
-        systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMap);
+        systemPrompt = replaceTemplateVars(await renderMacroPrompt(systemPromptTemplate, chat.settings.isOfflineMode ? 'group_offline' : 'group'), contextMap);
         if (groupTimeAwarenessContext && !systemPrompt.includes(groupTimeAwarenessContext)) {
           systemPrompt += `\n\n${groupTimeAwarenessContext}`;
         }
@@ -1403,9 +1409,12 @@ ${linkedContents}
 
             const selectedPreset = state.presets.find(p => p.id === chat.settings.offlinePresetId);
             if (selectedPreset && Array.isArray(selectedPreset.content)) {
-              const enabledEntries = selectedPreset.content
+              const enabledEntries = (await Promise.all(selectedPreset.content
                 .filter(entry => entry.enabled !== false)
-                .map(entry => `- ${entry.content}`)
+                .map(async entry => {
+                  const content = await renderMacroEntry(entry.content, 'presets');
+                  return content ? `- ${content}` : '';
+                }))).filter(Boolean)
                 .join('\n');
               if (enabledEntries) {
 
@@ -1540,7 +1549,7 @@ ${enabledEntries}
             'maxLength': maxLength
           };
 
-          systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMapOffline);
+          systemPrompt = replaceTemplateVars(await renderMacroPrompt(systemPromptTemplate, 'offline'), contextMapOffline);
           if (offlineTimePerceptionContext && !systemPrompt.includes(offlineTimePerceptionContext)) {
             systemPrompt += `\n\n${offlineTimePerceptionContext}`;
           }
@@ -2055,7 +2064,7 @@ ${taskListString}
 
           // 新增：构建心声prompt部分
           const thoughtsPrompt = enableThoughts ? `
-${getActiveThoughtsPrompt()}
+${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 ` : '';
           // 新增：判断是否启用动态功能
           const enableQzoneActions = chat.settings.enableQzoneActions !== null
@@ -2394,7 +2403,7 @@ ${getActiveThoughtsPrompt()}
             'myAvatarLibrary': myAvatarLibrary
           };
 
-          systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMapSingle);
+          systemPrompt = replaceTemplateVars(await renderMacroPrompt(systemPromptTemplate, 'single'), contextMapSingle);
           if (timeContext && !systemPrompt.includes(timeContext)) {
             systemPrompt += `\n\n${timeContext}`;
           }
@@ -2666,6 +2675,10 @@ ${getActiveThoughtsPrompt()}
         generationGuidance = await window.GenerationAdjustments.prepare(chat, options);
         systemPrompt += generationGuidance.block;
       }
+      // 放在模板及本轮指导之后，确保自定义模板和线下模式也应用强制语言。
+      if (window.languagePolicy?.buildEnforcementPrompt) {
+        systemPrompt += window.languagePolicy.buildEnforcementPrompt(chat);
+      }
       let isGemini = proxyUrl === GEMINI_API_URL;
       let geminiConfig = options.candidateContent ? null : toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload)
 
@@ -2686,6 +2699,7 @@ ${getActiveThoughtsPrompt()}
         : [];
       // 工具调用包含结构化增量；当前聊天流解析器只处理文本，所以 MCP 回合使用非流式请求。
       const useStream = !isGemini && !!state.globalSettings.enableApiStream && availableMcpTools.length === 0;
+      const routeObservation = !options.candidateContent ? window.ModelRouteObserver?.start(model) : null;
 
       // 记录API请求数据
       const requestData = {
@@ -2836,6 +2850,7 @@ ${getActiveThoughtsPrompt()}
         response = apiResponse;
         if (!apiResponse.ok) await throwApiError(apiResponse);
         const data = await apiResponse.json();
+        routeObservation?.observe(data);
         responsePayload = data;
 
         if (isGemini) {
@@ -2913,10 +2928,11 @@ ${getActiveThoughtsPrompt()}
         if (useStream) {
           aiResponseContent = await readOpenAiStreamResponse(response, streamedText => {
             updateTemporaryStreamMessage(streamedText);
-          });
+          }, chunk => routeObservation?.observe(chunk));
           responsePayload = { stream: true, content: aiResponseContent };
         } else {
           const data = await response.json();
+          routeObservation?.observe(data);
           aiResponseContent = getGeminiResponseText(data);
           responsePayload = data;
         }
@@ -2942,6 +2958,8 @@ ${getActiveThoughtsPrompt()}
         responseStatusText: response.statusText
       };
       responseData.durationMs = responseData.responseTimestamp - responseData.timestamp;
+      const routeResult = window.ModelRouteObserver?.record(chat, routeObservation);
+      if (routeResult) responseData.modelRouteObservation = routeResult;
 
       // 方案4：只有在全局设置中启用API历史记录时才保存
       if (state.globalSettings.enableApiHistory) {

@@ -2772,7 +2772,122 @@
     }
   }
 
+  // 恢复旧版乐谱演奏：保留音色、默认节奏及按钮状态，不使用一起听播放器。
+  async function playSynthScore(btnElement, notesJson, instrumentType = 'piano') {
+    if (!btnElement || btnElement.disabled) return;
+
+    let synth = null;
+    const resetButton = () => {
+      btnElement.textContent = '▶';
+      btnElement.classList.remove('playing');
+      btnElement.disabled = false;
+    };
+    btnElement.disabled = true;
+
+    try {
+      let rawNotes;
+      try {
+        rawNotes = typeof notesJson === 'string' ? JSON.parse(notesJson) : notesJson;
+      } catch (_) {
+        throw new Error('乐谱数据格式有误，暂时无法播放');
+      }
+      if (!Array.isArray(rawNotes)) throw new Error('乐谱数据格式有误，暂时无法播放');
+      const notes = rawNotes.map(item => typeof item === 'string'
+        ? { n: item, d: '8n' }
+        : { n: item?.n, d: item?.d || '4n' })
+        .filter(note => typeof note.n === 'string' && /^[A-G][#b]?[0-9]$/.test(note.n));
+      if (notes.length === 0) throw new Error('这份乐谱没有可播放的音符');
+
+      const Tone = window.Tone;
+      if (!Tone) throw new Error('音频组件未加载，请联网刷新后重试');
+
+      // 在用户点击中解锁音频，完成后再安排音符。
+      await Tone.start();
+      if (Tone.getContext().state !== 'running') {
+        throw new Error('浏览器尚未允许声音播放，请再次点击播放按钮');
+      }
+      const score = notes.map(note => {
+        const seconds = Tone.Time(note.d).toSeconds();
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+          throw new Error('乐谱中的音符时长有误，暂时无法播放');
+        }
+        return { ...note, seconds };
+      });
+
+      // 与旧实现相同的八种合成音色。
+      const presets = {
+        piano: {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 },
+          volume: -8
+        },
+        guitar: {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.01, decay: 0.3, sustain: 0.1, release: 1 },
+          volume: -5
+        },
+        violin: {
+          oscillator: { type: 'sawtooth' },
+          envelope: { attack: 0.2, decay: 0.1, sustain: 0.8, release: 1.5 },
+          volume: -10
+        },
+        flute: {
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.1, decay: 0.1, sustain: 0.9, release: 0.5 },
+          volume: -8
+        },
+        guzheng: {
+          oscillator: { type: 'triangle' },
+          envelope: { attack: 0.005, decay: 0.4, sustain: 0, release: 1.5 },
+          volume: -5
+        },
+        kalimba: {
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.001, decay: 0.1, sustain: 0, release: 1.2 },
+          volume: -8
+        },
+        synth: {
+          oscillator: { type: 'sawtooth' },
+          envelope: { attack: 0.05, decay: 0.2, sustain: 0.4, release: 2 },
+          volume: -8
+        },
+        chiptune: {
+          oscillator: { type: 'square' },
+          envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 },
+          volume: -8
+        }
+      };
+      const preset = Object.prototype.hasOwnProperty.call(presets, instrumentType)
+        ? presets[instrumentType] : presets.piano;
+      // 每张乐谱独立合成，避免同时点击不同卡片时互相改变音色。
+      synth = new Tone.PolySynth(Tone.Synth);
+      synth.toDestination();
+      synth.volume.value = preset.volume;
+      synth.set({ oscillator: preset.oscillator, envelope: preset.envelope });
+
+      btnElement.textContent = '❚❚';
+      btnElement.classList.add('playing');
+      const now = Tone.now();
+      let accumulatedTime = 0;
+      for (const note of score) {
+        synth.triggerAttackRelease(note.n, note.d, now + accumulatedTime);
+        accumulatedTime += note.seconds;
+      }
+
+      setTimeout(resetButton, accumulatedTime * 1000 + 500);
+      // 保留余音，再释放本次播放的音频节点。
+      setTimeout(() => synth.dispose(),
+        (accumulatedTime + Math.max(0.5, preset.envelope.release) + 0.5) * 1000);
+    } catch (error) {
+      if (synth) synth.dispose();
+      resetButton();
+      console.error('乐谱播放失败:', error);
+      showToast(error.message || '乐谱暂时无法播放，请稍后重试', 'error');
+    }
+  }
+
   // ========== 导出到全局作用域 ==========
+  window.playSynthScore = playSynthScore;
   window.applyLyricsBarPosition = applyLyricsBarPosition;
   window.getLrcContent = getLrcContent;
   window.saveGlobalPlaylist = saveGlobalPlaylist;

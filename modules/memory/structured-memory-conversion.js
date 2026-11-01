@@ -84,7 +84,7 @@ async function convertLongTermMemoryToStructured(chatId) {
       }).join('\n');
 
       const timeRangeStr = `长期记忆库 第 ${batchIndex + 1}/${totalBatches} 批 (共 ${batchMemories.length} 条)`;
-      const systemPrompt = window.structuredMemoryManager.buildSummaryPrompt(chat, formattedMemories, timeRangeStr);
+      const systemPrompt = await (window.structuredMemoryManager.buildSummaryPromptForRequest || window.structuredMemoryManager.buildSummaryPrompt).call(window.structuredMemoryManager, chat, formattedMemories, timeRangeStr);
 
       try {
         let isGemini = proxyUrl.includes('generativelanguage');
@@ -212,7 +212,7 @@ async function triggerStructuredMemorySummary(chatId, forceUpdate = false) {
     return window.MemoryExtractionSupport.formatMessage(msg, chat);
   }).filter(Boolean).join('\n');
 
-  const systemPrompt = window.structuredMemoryManager.buildSummaryPrompt(chat, formattedHistory, timeRangeStr);
+  const systemPrompt = await (window.structuredMemoryManager.buildSummaryPromptForRequest || window.structuredMemoryManager.buildSummaryPrompt).call(window.structuredMemoryManager, chat, formattedHistory, timeRangeStr);
 
   try {
     const useSecondaryApi = state.apiConfig.secondaryProxyUrl && state.apiConfig.secondaryApiKey && state.apiConfig.secondaryModel;

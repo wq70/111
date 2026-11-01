@@ -398,6 +398,11 @@
         return { ...recording, text: recording.recognizedText, resolvedMode: mode, error: '' };
       }
       if (mode === 'transcription') return { ...recording, text: await transcribeWithCompatibleApi(recording.blob, chat), resolvedMode: mode, error: '' };
+      if (mode === 'fish') {
+        if (!window.fishTts) throw new Error('Fish 语音模块尚未加载，请刷新页面');
+        const wav = await normalizeToWav(recording.blob);
+        return { ...recording, text: await window.fishTts.transcribe(window.state?.apiConfig || {}, wav), resolvedMode: mode, error: '' };
+      }
       if (mode === 'gemini') return { ...recording, text: await understandWithGemini(recording.blob), resolvedMode: mode, error: '' };
       return { ...recording, text: '', resolvedMode: 'none', error: '' };
     } catch (error) {

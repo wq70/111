@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const defaults = {
+    ...window.fishTts?.defaults,
     elevenlabsApiKey: '', elevenlabsBaseUrl: 'https://api.elevenlabs.io',
     elevenlabsModel: 'eleven_multilingual_v2', elevenlabsCallModel: '',
     elevenlabsVoiceLibrary: [], elevenlabsSoundPresets: []
@@ -28,8 +29,9 @@
     'es-MX': 'es-ES', 'pt-PT': 'pt-BR'
   };
   const abortError = () => new DOMException('语音请求已取消', 'AbortError');
-  function provider(chat) { return chat?.settings?.ttsProvider === 'elevenlabs' ? 'elevenlabs' : 'minimax'; }
+  function provider(chat) { return ['elevenlabs', 'fish'].includes(chat?.settings?.ttsProvider) ? chat.settings.ttsProvider : 'minimax'; }
   function voiceId(chat, fallback = '') {
+    if (provider(chat) === 'fish') return window.fishTts.voiceId(chat?.settings?.fishVoiceId);
     return provider(chat) === 'elevenlabs' ? (chat?.settings?.elevenlabsVoiceId || '')
       : (fallback || chat?.settings?.minimaxVoiceId || '');
   }
@@ -76,7 +78,9 @@
       streaming: settings.ttsStreaming === true,
       speed: Number(settings[name + 'TtsSpeed'] ?? settings.ttsSpeed ?? 1)
     };
-    if (name === 'elevenlabs') {
+    if (name === 'fish' || (name === 'elevenlabs' && window.fishTts?.isElevenCompatibility(api.elevenlabsBaseUrl))) {
+      Object.assign(config, window.fishTts.resolve(settings, api, config.context, name === 'elevenlabs'), { provider: 'fish' });
+    } else if (name === 'elevenlabs') {
       Object.assign(config, {
         baseUrl: api.elevenlabsBaseUrl || defaults.elevenlabsBaseUrl, apiKey: api.elevenlabsApiKey || '',
         model: settings.elevenlabsModel || (config.context === 'call' && api.elevenlabsCallModel) || api.elevenlabsModel || defaults.elevenlabsModel,
@@ -93,12 +97,13 @@
   }
   function validate(config) {
     if (!config.apiKey || (config.provider === 'minimax' && !config.groupId)) {
-      throw new Error(`请先在 API 设置中配置 ${config.provider === 'elevenlabs' ? 'ElevenLabs' : 'MiniMax'} 语音服务`);
+      throw new Error(`请先在 API 设置中配置 ${config.provider === 'fish' ? 'Fish' : config.provider === 'elevenlabs' ? 'ElevenLabs' : 'MiniMax'} 语音服务`);
     }
-    if (!config.voiceId) throw new Error('请先在角色设置中填写或选择语音 ID');
+    if (!config.voiceId && config.provider !== 'fish') throw new Error('请先在角色设置中填写或选择语音 ID');
     baseUrl(config.baseUrl);
     const min = config.provider === 'elevenlabs' ? 0.7 : 0.5, max = config.provider === 'elevenlabs' ? 1.2 : 2;
     if (!Number.isFinite(config.speed) || config.speed < min || config.speed > max) throw new Error(`此语音服务支持的语速范围为 ${min}～${max}`);
+    if (config.provider === 'fish') window.fishTts.validate(config);
     if (config.provider === 'elevenlabs') {
       const capability = models.get(config.accountId)?.find(model => model.model_id === config.model);
       if (capability?.can_do_text_to_speech === false) throw new Error('所选模型不支持文本转语音');
@@ -115,7 +120,7 @@
   function cacheKey(config, text) {
     return 'tts_provider_' + JSON.stringify([config.provider, config.accountId, config.baseUrl, config.model,
       config.voiceId, config.language, config.context === 'call' && config.provider === 'minimax', config.speed,
-      config.voiceSettings || {}, text]);
+      config.voiceSettings || {}, config.fishOptions || {}, config.fishProtocol || '', config.fishSpeechUrl || '', text]);
   }
   function cleanText(text, chat, context = 'chat') {
     let value = String(text || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
@@ -127,7 +132,7 @@
   function segments(text, chat, config) {
     let parts = [{ text, language: config.language }];
     // MiniMax chat bubbles already select their text; calls retain the full content.
-    if ((config.provider === 'elevenlabs' || config.context === 'call') && chat?.settings?.enableBilingualMode && window.languagePolicy) {
+    if ((config.provider !== 'minimax' || config.context === 'call') && chat?.settings?.enableBilingualMode && window.languagePolicy) {
       const policy = window.languagePolicy.getPolicy(chat), split = window.languagePolicy.splitContent(text);
       const sourceLanguage = chat.settings.ttsLanguage || languageAliases[policy.outputLanguage] || policy.outputLanguage || '';
       const targetLanguage = languageAliases[translationLanguage(policy)] || translationLanguage(policy) || '';
@@ -142,7 +147,7 @@
     const capability = models.get(config.accountId)?.find(model => model.model_id === config.model);
     const fallbackLimit = config.model === 'eleven_flash_v2_5' ? 40000 : config.model === 'eleven_v3' ? 5000 : 10000;
     const modelLimit = Number(capability?.maximum_text_length_per_request);
-    const limit = config.provider === 'elevenlabs' ? (Number.isInteger(modelLimit) && modelLimit > 0 ? modelLimit : fallbackLimit) : Infinity;
+    const limit = config.provider === 'fish' ? (config.splitLongText ? 1000 : Infinity) : config.provider === 'elevenlabs' ? (Number.isInteger(modelLimit) && modelLimit > 0 ? modelLimit : fallbackLimit) : Infinity;
     return parts.flatMap(part => {
       const value = cleanText(part.text, chat, config.context);
       if (!value) return [];
@@ -165,9 +170,9 @@
     let detail = '';
     try {
       const data = await response.json();
-      detail = data.base_resp?.status_msg || (typeof data.detail === 'string' ? data.detail : data.detail?.message || data.detail?.status) || data.message || '';
+      detail = data.error?.message || data.base_resp?.status_msg || (typeof data.detail === 'string' ? data.detail : data.detail?.message || data.detail?.status) || data.message || '';
     } catch (_) { }
-    const labels = { 401: 'Key 无效或未提供', 403: '账户、音色或模型权限不足', 404: '接口、模型或音色不存在', 429: '请求限流、并发受限或额度不足', 422: '文本或参数不被接口接受' };
+    const labels = { 401: 'Key 无效或未提供', 402: '额度不足或免费资格已结束', 403: '账户、音色或模型权限不足', 404: '接口、模型或音色不存在', 429: '请求限流、并发受限或额度不足', 422: '文本或参数不被接口接受' };
     const error = new Error(`${service}：${labels[response.status] || '请求失败'}（${response.status}）${detail ? ' · ' + String(detail).slice(0, 350) : ''}`);
     error.status = response.status;
     return error;
@@ -184,7 +189,10 @@
   async function requestAudio(config, text, signal, onChunk) {
     validate(config);
     let url, body, headers;
-    if (config.provider === 'elevenlabs') {
+    if (config.provider === 'fish') {
+      const request = window.fishTts.request(config, text);
+      url = new URL(request.url); headers = request.headers; body = request.body;
+    } else if (config.provider === 'elevenlabs') {
       // Even Multilingual v2 cannot promise Cantonese merely by selecting zh-HK.
       if (config.language === 'zh-HK' || config.language.startsWith('yue')) throw new Error('当前音色配置不能保证粤语朗读，请选择自动识别并测试支持方言的模型');
       url = new URL(endpoint(config.baseUrl, '/v1/text-to-speech/' + encodeURIComponent(config.voiceId) + (config.streaming ? '/stream' : '')));
@@ -204,12 +212,17 @@
       if (config.context !== 'call') body.language_boost = boosts[config.language] || 'auto';
     }
     usage.requests++; usage.characters += Array.from(text).length; notifyUsage();
-    const response = await fetch(url.href, { method: 'POST', headers, body: JSON.stringify(body), signal, cache: 'no-store' });
-    if (!response.ok) throw await responseError(response, config.provider === 'elevenlabs' ? 'ElevenLabs' : 'MiniMax');
+    let response;
+    try { response = await fetch(url.href, { method: 'POST', headers, body: JSON.stringify(body), signal, cache: 'no-store' }); }
+    catch (error) {
+      if (config.provider === 'fish' && error.name !== 'AbortError') throw new Error('Fish 连接失败，请检查网络与接口地址；自定义地址需要允许浏览器跨域请求。');
+      throw error;
+    }
+    if (!response.ok) throw await responseError(response, config.provider === 'fish' ? 'Fish' : config.provider === 'elevenlabs' ? 'ElevenLabs' : 'MiniMax');
     let blob;
-    if (config.provider === 'elevenlabs') {
+    if (config.provider !== 'minimax') {
       const type = response.headers.get('content-type') || '';
-      if (/json|text\/|html/i.test(type)) throw new Error('ElevenLabs 返回了非音频内容，请检查接口地址和参数');
+      if (/json|text\/|html/i.test(type)) throw new Error('语音服务返回了非音频内容，请检查接口地址和参数');
       if (config.streaming && response.body?.getReader) {
         const reader = response.body.getReader(), chunks = [];
         try {
@@ -297,6 +310,7 @@
   }
   async function listModels(apiConfig, signal) {
     const config = resolve({ settings: { ttsProvider: 'elevenlabs' } }, { apiConfig });
+    if (config.provider === 'fish') return (await window.fishTts.listModels({ fishApiKey: config.apiKey, fishBaseUrl: config.baseUrl }, signal)).map(row => ({ model_id: row.id, name: row.id, can_do_text_to_speech: true }));
     if (!config.apiKey) throw new Error('请填写 ElevenLabs API Key');
     const response = await fetchMetadata(endpoint(config.baseUrl, '/v1/models'), config.apiKey, signal);
     if (!response.ok) throw await responseError(response, 'ElevenLabs');
@@ -307,6 +321,11 @@
   }
   async function listVoices(apiConfig, search = '', nextPage = '', signal) {
     const config = resolve({ settings: { ttsProvider: 'elevenlabs' } }, { apiConfig });
+    if (config.provider === 'fish') {
+      const page = Number(nextPage) || 1;
+      const data = await window.fishTts.listVoices({ fishApiKey: config.apiKey, fishBaseUrl: config.baseUrl }, { search, page, signal });
+      return { voices: data.voices.map(row => ({ voice_id: row._id, name: row.title, preview_url: row.samples?.[0]?.audio })), has_more: data.hasMore, next_page_token: data.hasMore ? String(page + 1) : '' };
+    }
     if (!config.apiKey) throw new Error('请先在 API 设置中填写 ElevenLabs Key 并保存');
     const url = new URL(endpoint(config.baseUrl, '/v2/voices'));
     url.searchParams.set('page_size', '50');

@@ -9,9 +9,9 @@ function fixture() {
   const requests = [], toasts = [], alerts = [];
   const player = { dataset: {}, paused: true, src: '', async play() { this.paused = false; }, pause() { this.paused = true; }, removeAttribute() {}, load() {} };
   const c = { state: { activeChatId: 'a', chats: { a: { id: 'a', settings: { ttsProvider: 'elevenlabs', elevenlabsVoiceId: 'a-voice' } } },
-    apiConfig: { elevenlabsApiKey: 'key', minimaxApiKey: 'mini-key', minimaxGroupId: 'group' }, ttsCache: new Map() },
+    apiConfig: { elevenlabsApiKey: 'key', minimaxApiKey: 'mini-key', minimaxGroupId: 'group', fishApiKey: 'fish-test-only' }, ttsCache: new Map() },
     localStorage: { getItem: () => null }, document: { getElementById: () => player, querySelectorAll: () => [] },
-    Map, Set, URL, Blob, DOMException, AbortController, Uint8Array, console: { error() {} }, setTimeout, clearTimeout,
+    Map, Set, URL, Blob, DOMException, AbortController, Uint8Array, console: { error() {} }, setTimeout, clearTimeout, FormData, URLSearchParams,
     fetch: async (url, options) => {
       requests.push(JSON.parse(options.body));
       if (url.includes('/t2a_v2')) return new Response(JSON.stringify({ base_resp: { status_code: 0 }, data: { audio: '49443301' } }));
@@ -21,7 +21,7 @@ function fixture() {
     showToast: text => { const toast = { text, addEventListener: (_event, fn) => { toast.click = fn; } }; toasts.push(toast); return toast; }, addEventListener() {} };
   c.window = c; vm.createContext(c);
   vm.runInContext(source('modules/chat/language-policy.js'), c);
-  vm.runInContext(source('modules/tts-provider.js'), c); vm.runInContext(source('modules/tts-audio.js'), c);
+  vm.runInContext(source('modules/fish-tts-provider.js'), c); vm.runInContext(source('modules/tts-provider.js'), c); vm.runInContext(source('modules/tts-audio.js'), c);
   return { c, player, requests, toasts, alerts };
 }
 test('通话队列保持顺序和原角色配置；切换当前聊天不会串音色，删除只取消对应消息', async () => {
@@ -32,7 +32,7 @@ test('通话队列保持顺序和原角色配置；切换当前聊天不会串�
   await turn();
   f.c.state.activeChatId = 'b'; f.c.state.chats.a.settings.elevenlabsVoiceId = 'changed';
   f.c.cancelCallMessageTts('a', 2); f.player.onended(); await turn();
-  assert.deepEqual(f.requests.map(r => r.text), ['保留一', '保留三']);
+  assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['保留一', '保留三']);
   assert.equal(f.player.dataset.currentText, '保留三');
   f.c.stopTtsQueue(); assert.equal(f.player.paused, true); assert.equal(f.player.onended, null);
 });
@@ -43,6 +43,16 @@ test('ElevenLabs 音频解码失败停止队列，并可查看经过转义的完
   f.toasts[0].click(); assert.match(f.alerts[0].text, /浏览器无法播放/);
   assert.equal(f.player.paused, true);
 });
+
+test('Fish 通话使用入队时的音色和参数；播放失败停止队列，不重复合成', async () => {
+  const f = fixture(), chat = f.c.state.chats.a;
+  chat.settings = { ttsProvider: 'fish', fishVoiceId: 'original', fishVoiceSettings: { temperature: 0.4 } };
+  f.c.playVideoCallPureTTS('Fish 一', '', 'a', 1); f.c.playVideoCallPureTTS('Fish 二', '', 'a', 2);
+  chat.settings.fishVoiceId = 'changed'; chat.settings.fishVoiceSettings.temperature = 0.9;
+  await turn(); assert.equal(f.requests[0].voice, 'original');
+  f.player.onended(); await turn(); assert.equal(f.requests[1].voice, 'original'); assert.equal(f.requests[1].provider.options['fish-audio'].temperature, 0.4);
+  f.player.onerror(); await turn(); assert.equal(f.requests.length, 2); assert.equal(f.player.paused, true); assert.match(f.toasts[0].text, /停止/);
+});
 test('保存设置模板时保留旧角色语速和默认语言，以及各服务独立语速', () => {
   const f = fixture(); vm.runInContext(source('modules/chat-settings-presets.js'), f.c);
   f.c.state.chats.a.settings = { minimaxVoiceId: 'old', ttsSpeed: 1.6 };
@@ -51,7 +61,7 @@ test('保存设置模板时保留旧角色语速和默认语言，以及各服�
   preset = f.c.getCurrentChatSettings(); assert.equal(preset.elevenlabsTtsSpeed, 0.8); assert.equal(preset.minimaxTtsSpeed, 1.7);
 });
 
-for (const provider of ['minimax', 'elevenlabs']) {
+for (const provider of ['minimax', 'elevenlabs', 'fish']) {
   for (const mode of ['source', 'translation', 'both']) {
     for (const input of ['Hello〖你好〗', 'Hello【你好】', 'Hello\n〖你\n好〗']) {
       test(`${provider} 通话按 ${mode} 朗读，保留完整内容：${JSON.stringify(input)}`, async () => {
@@ -64,7 +74,7 @@ for (const provider of ['minimax', 'elevenlabs']) {
         if (mode === 'both') { f.player.onended(); await turn(); }
         const translation = input.includes('\n好') ? '你\n好' : '你好';
         const expected = mode === 'both' ? ['Hello', translation] : [mode === 'source' ? 'Hello' : translation];
-        assert.deepEqual(f.requests.map(r => r.text), expected);
+        assert.deepEqual(f.requests.map(r => r.input ?? r.text), expected);
         assert.equal(chat.history[0].content, input);
         f.c.stopTtsQueue();
       });
@@ -77,12 +87,12 @@ test('MiniMax 通话多段译文按设置提取，动作清理发生在译文选
   chat.settings = { minimaxVoiceId: 'mini-voice', enableBilingualMode: true, languagePolicy: { ttsReadMode: 'translation' } };
   f.c.playVideoCallPureTTS('(laughs) Hello【（笑）你好】 Goodbye〖再见〗', '', 'a', 1);
   await turn();
-  assert.deepEqual(f.requests.map(r => r.text), ['你好 再见']);
+  assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['你好 再见']);
   f.c.stopTtsQueue();
 });
 
 test('通话队列只保留朗读配置，不保留整份聊天历史和记忆', async () => {
-  for (const provider of ['minimax', 'elevenlabs']) {
+  for (const provider of ['minimax', 'elevenlabs', 'fish']) {
     const f = fixture();
     const chat = f.c.state.chats.a;
     chat.history = [{ content: '图片和长聊天历史' }];
@@ -98,7 +108,7 @@ test('通话队列只保留朗读配置，不保留整份聊天历史和记忆',
     f.c.playVideoCallPureTTS('Goodbye〖再见〗', '', 'a', 2);
     chat.settings.languagePolicy.ttsReadMode = 'source';
     await turn(); f.player.onended(); await turn();
-    assert.deepEqual(f.requests.map(request => request.text), ['你好', '再见']);
+    assert.deepEqual(f.requests.map(request => request.input ?? request.text), ['你好', '再见']);
     assert.equal(contexts.length, 2);
     for (const snapshot of contexts) {
       assert.equal(Object.hasOwn(snapshot, 'history'), false);
@@ -114,12 +124,12 @@ test('MiniMax 未开启双语的旧通话也过滤标准和跨行翻译括号，
   f.c.state.chats.a.settings = { minimaxVoiceId: 'mini-voice' };
   f.c.playVideoCallPureTTS('[laughs](quietly)（笑）Hello〖你\n好〗 Goodbye【再\n见】', '', 'a', 1);
   await turn();
-  assert.deepEqual(f.requests.map(r => r.text), ['Hello Goodbye']);
+  assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['Hello Goodbye']);
   f.c.stopTtsQueue();
 });
 
 test('通话只读原文时纯译文不请求；只读译文但缺译文时回退原文', async () => {
-  for (const provider of ['minimax', 'elevenlabs']) {
+  for (const provider of ['minimax', 'elevenlabs', 'fish']) {
     const f = fixture(), chat = f.c.state.chats.a;
     chat.settings = { ttsProvider: provider, minimaxVoiceId: 'mini-voice', elevenlabsVoiceId: 'a-voice',
       enableBilingualMode: true, languagePolicy: { ttsReadMode: 'source' } };
@@ -127,7 +137,7 @@ test('通话只读原文时纯译文不请求；只读译文但缺译文时回�
     await turn(); assert.equal(f.requests.length, 0);
     chat.settings.languagePolicy.ttsReadMode = 'translation';
     f.c.playVideoCallPureTTS('Hello', '', 'a', 2);
-    await turn(); assert.deepEqual(f.requests.map(r => r.text), ['Hello']);
+    await turn(); assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['Hello']);
     f.c.stopTtsQueue();
   }
 });
@@ -141,7 +151,7 @@ test('MiniMax 通话朗读方式随入队设置保存；切换聊天或修改设
   chat.settings.languagePolicy.ttsReadMode = 'translation';
   f.c.state.activeChatId = 'b';
   f.player.onended(); await turn();
-  assert.deepEqual(f.requests.map(r => r.text), ['First', 'Second']);
+  assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['First', 'Second']);
   f.c.stopTtsQueue();
 });
 
@@ -154,7 +164,7 @@ test('MiniMax 聊天语音保留已选取的朗读文本，不重复解析双语
 });
 
 test('通话仅读取对话在原文和译文分离后执行，不提前吞掉另一种语言', async () => {
-  for (const provider of ['minimax', 'elevenlabs']) {
+  for (const provider of ['minimax', 'elevenlabs', 'fish']) {
     const f = fixture(), chat = f.c.state.chats.a;
     f.c.document.addEventListener = () => {};
     f.c.console.log = () => {};
@@ -164,7 +174,7 @@ test('通话仅读取对话在原文和译文分离后执行，不提前吞掉�
     chat.videoOptimization = { ttsDialogueOnly: true };
     f.c.playVideoCallPureTTS('He smiles. "Hello"〖他笑了。“你好”〗', '', 'a', 1);
     await turn(); f.player.onended(); await turn();
-    assert.deepEqual(f.requests.map(r => r.text), ['Hello', '你好']);
+    assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['Hello', '你好']);
     f.c.stopTtsQueue();
   }
 });
@@ -176,7 +186,7 @@ test('MiniMax 通话默认只读原文；语言组件缺失时仍过滤译文', 
     if (!available) delete f.c.languagePolicy;
     f.c.playVideoCallPureTTS('Hello〖你好〗', '', 'a', 1);
     await turn();
-    assert.deepEqual(f.requests.map(r => r.text), ['Hello']);
+    assert.deepEqual(f.requests.map(r => r.input ?? r.text), ['Hello']);
     f.c.stopTtsQueue();
   }
 });

@@ -1,6 +1,7 @@
 // ========== 壁纸/外观屏幕渲染 ==========
 
   async function renderWallpaperScreen(forcePresetId = null) {
+    window.renderInterfaceZoomSettings?.();
     console.log('[声音预设DEBUG] renderWallpaperScreen 被调用');
     loadCssPresetsDropdown();
     // 这里传入 forcePresetId
@@ -101,6 +102,7 @@
 
     renderButtonOrderEditor();
     initializeButtonOrderEditor();
+    applyButtonOrder();
 
     // 加载系统通知设置
     loadSystemNotificationSettings();

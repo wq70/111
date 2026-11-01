@@ -326,7 +326,7 @@
           'bilingualAlertVoice': bilingualAlertVoice
         };
 
-        systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMap);
+        systemPrompt = replaceTemplateVars(await renderMacroPrompt(systemPromptTemplate, chat.settings.isOfflineMode ? 'group_offline' : 'group'), contextMap);
         if (groupTimeAwarenessContext && !systemPrompt.includes(groupTimeAwarenessContext)) {
           systemPrompt += `\n\n${groupTimeAwarenessContext}`;
         }
@@ -570,9 +570,12 @@
 
             const selectedPreset = state.presets.find(p => p.id === chat.settings.offlinePresetId);
             if (selectedPreset && Array.isArray(selectedPreset.content)) {
-              const enabledEntries = selectedPreset.content
+              const enabledEntries = (await Promise.all(selectedPreset.content
                 .filter(entry => entry.enabled !== false)
-                .map(entry => `- ${entry.content}`)
+                .map(async entry => {
+                  const content = await renderMacroEntry(entry.content, 'presets');
+                  return content ? `- ${content}` : '';
+                }))).filter(Boolean)
                 .join('\n');
               if (enabledEntries) {
 
@@ -707,7 +710,7 @@ ${enabledEntries}
             'maxLength': maxLength
           };
 
-          systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMapOffline);
+          systemPrompt = replaceTemplateVars(await renderMacroPrompt(systemPromptTemplate, 'offline'), contextMapOffline);
           if (offlineTimePerceptionContext && !systemPrompt.includes(offlineTimePerceptionContext)) {
             systemPrompt += `\n\n${offlineTimePerceptionContext}`;
           }

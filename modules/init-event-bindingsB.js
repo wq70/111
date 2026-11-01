@@ -90,6 +90,12 @@ window.initEventBindingsB = function(state, db) {
                elevenlabsVoiceId: chat.settings.elevenlabsVoiceId || '',
                elevenlabsModel: chat.settings.elevenlabsModel || '',
                elevenlabsVoiceSettings: { ...(chat.settings.elevenlabsVoiceSettings || {}) },
+               fishVoiceId: chat.settings.fishVoiceId || '',
+               fishModel: chat.settings.fishModel || '',
+               fishVoiceSettings: JSON.parse(JSON.stringify(chat.settings.fishVoiceSettings || {})),
+               fishTtsSpeed: chat.settings.fishTtsSpeed ?? (window.ttsProvider.provider(chat) === 'fish' ? chat.settings.ttsSpeed ?? 1 : 1),
+               voiceUnderstandingMode: chat.settings.voiceUnderstandingMode || 'auto',
+               voiceCallUnderstandingMode: chat.settings.voiceCallUnderstandingMode || 'same',
                ttsSpeed: chat.settings.ttsSpeed ?? 1,
                minimaxTtsSpeed: chat.settings.minimaxTtsSpeed ?? (window.ttsProvider.provider(chat) === 'minimax' ? chat.settings.ttsSpeed ?? 1 : 1),
                elevenlabsTtsSpeed: chat.settings.elevenlabsTtsSpeed ?? (window.ttsProvider.provider(chat) === 'elevenlabs' ? chat.settings.ttsSpeed ?? 1 : 1),
@@ -270,8 +276,8 @@ window.initEventBindingsB = function(state, db) {
         if (savedSettings.longTermMemoryLimit !== undefined) chat.settings.longTermMemoryLimit = savedSettings.longTermMemoryLimit;
         chat.settings.enableTts = savedSettings.enableTts;
         chat.settings.minimaxVoiceId = savedSettings.minimaxVoiceId;
-        for (const key of ['ttsProvider', 'elevenlabsVoiceId', 'elevenlabsModel', 'elevenlabsVoiceSettings', 'ttsSpeed', 'minimaxTtsSpeed', 'elevenlabsTtsSpeed', 'ttsSplitLongText', 'ttsStreaming', 'ttsSaveAudio']) {
-          if (Object.prototype.hasOwnProperty.call(savedSettings, key)) chat.settings[key] = savedSettings[key];
+        for (const key of ['fishVoiceId', 'fishModel', 'fishVoiceSettings', 'fishTtsSpeed', 'voiceUnderstandingMode', 'voiceCallUnderstandingMode', 'ttsProvider', 'elevenlabsVoiceId', 'elevenlabsModel', 'elevenlabsVoiceSettings', 'ttsSpeed', 'minimaxTtsSpeed', 'elevenlabsTtsSpeed', 'ttsSplitLongText', 'ttsStreaming', 'ttsSaveAudio']) {
+          if (Object.prototype.hasOwnProperty.call(savedSettings, key)) chat.settings[key] = savedSettings[key] && typeof savedSettings[key] === 'object' ? JSON.parse(JSON.stringify(savedSettings[key])) : savedSettings[key];
         }
 
         chat.settings.ttsLanguage = savedSettings.ttsLanguage;
@@ -1303,62 +1309,12 @@ window.initEventBindingsB = function(state, db) {
 
 
 
-    document.getElementById('selection-soft-delete-btn').addEventListener('click', async () => {
-      if (selectedMessages.size === 0) return;
-      const confirmed = await showCustomConfirm('删除消息', `确定要删除选中的 ${selectedMessages.size} 条消息吗？这会通知AI这些消息已被删除。`, {
-        confirmButtonClass: 'btn-danger'
-      });
-      if (confirmed) {
-        const chat = state.chats[state.activeChatId];
-        let deletedPollsInfo = [];
-        for (const timestamp of selectedMessages) {
-          const msg = chat.history.find(m => m.timestamp === timestamp);
-          if (msg && msg.type === 'poll') {
-            deletedPollsInfo.push(`关于“${msg.question}”的投票(时间戳: ${msg.timestamp})`);
-          }
-        }
-        chat.history = chat.history.filter(msg => !selectedMessages.has(msg.timestamp));
-        let forgetReason = "一些之前的消息已被用户删除。";
-        if (deletedPollsInfo.length > 0) {
-          forgetReason += ` 其中包括以下投票：${deletedPollsInfo.join('；')}。`;
-        }
-        forgetReason += " 你应该像它们从未存在过一样继续对话，并相应地调整你的记忆和行为，不要再提及这些被删除的内容。";
-        const forgetInstruction = {
-          role: 'system',
-          content: `[系统提示：${forgetReason}]`,
-          timestamp: Date.now(),
-          isHidden: true
-        };
-        chat.history.push(forgetInstruction);
-        await db.chats.put(chat);
-        renderChatInterface(state.activeChatId);
-        renderChatList();
-      }
+    document.getElementById('selection-soft-delete-btn').addEventListener('click', () => {
+      deleteChatMessages([...selectedMessages], false);
     });
 
-
-    document.getElementById('selection-erase-btn').addEventListener('click', async () => {
-      if (selectedMessages.size === 0) return;
-      const confirmed = await showCustomConfirm(
-        '彻底删除消息',
-        `这将从历史记录中【永久抹除】这 ${selectedMessages.size} 条消息，AI将完全遗忘它们的存在。确定吗？`, {
-        confirmButtonClass: 'btn-danger',
-        confirmText: '确认抹除'
-      }
-      );
-      if (confirmed) {
-        const chat = state.chats[state.activeChatId];
-
-
-        chat.history = chat.history.filter(msg => !selectedMessages.has(msg.timestamp));
-
-
-        await db.chats.put(chat);
-
-
-        renderChatInterface(state.activeChatId);
-        renderChatList();
-      }
+    document.getElementById('selection-erase-btn').addEventListener('click', () => {
+      deleteChatMessages([...selectedMessages], true);
     });
 
 

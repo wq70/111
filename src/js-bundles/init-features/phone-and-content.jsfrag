@@ -594,23 +594,6 @@
       });
     });
 
-    document.getElementById('time-zone-search-input')?.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase();
-      const selects = [document.getElementById('time-zone-select'), document.getElementById('character-time-zone-select')].filter(Boolean);
-
-
-      for (const option of selects.flatMap(select => Array.from(select.options))) {
-        const optionText = option.textContent.toLowerCase();
-
-
-        if (!option.value || optionText.includes(searchTerm)) {
-          option.style.display = '';
-        } else {
-
-          option.style.display = 'none';
-        }
-      }
-    });
 
 
 

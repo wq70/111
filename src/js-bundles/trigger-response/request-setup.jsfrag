@@ -4,6 +4,9 @@
     const chat = options.previewChat || state.chats[chatId];
     if (!chat) return;
     const isPreview = options.preview === true;
+    let macroSession;
+    const renderMacroEntry = (text, scope) => macroSession ? macroSession.render(text, scope) : Promise.resolve(text);
+    const renderMacroPrompt = (text, scope) => macroSession ? macroSession.prompt(text, scope) : Promise.resolve(text);
     let generationGuidance = null;
     if (!isPreview && window.GenerationAdjustments) {
       if (window.GenerationAdjustments.isBusy(chatId)) return;
@@ -59,6 +62,7 @@
     }
     let needsImmediateReaction = false;
     try {
+      macroSession = window.PromptMacros?.session();
       if (!isPreview && window.GenerationAdjustments) window.GenerationAdjustments.begin(chatId);
       // 获取API配置（优先使用角色独立配置）
       let apiConfig = state.apiConfig;
@@ -621,22 +625,24 @@ ${transcriptText}
       });
 
       if (allWorldBookIds.length > 0) {
-        const linkedContents = allWorldBookIds.map(bookId => {
+        const linkedContents = (await Promise.all(allWorldBookIds.map(async bookId => {
           const worldBook = state.worldBooks.find(wb => wb.id === bookId);
           if (!worldBook || !Array.isArray(worldBook.content)) return '';
 
 
-          const formattedEntries = worldBook.content
+          const formattedEntries = (await Promise.all(worldBook.content
             .filter(entry => entry.enabled !== false)
-            .map(entry => {
+            .map(async entry => {
+              const content = await renderMacroEntry(entry.content, 'worldbooks');
+              if (!content) return '';
               let entryString = `\n### 条目: ${entry.comment || '无备注'}\n`;
 
-              entryString += `**内容:**\n${entry.content}`;
+              entryString += `**内容:**\n${content}`;
               return entryString;
-            }).join('');
+            }))).join('');
 
           return formattedEntries ? `\n\n## 世界书: ${worldBook.name}\n${formattedEntries}` : '';
-        }).filter(Boolean).join('');
+        }))).filter(Boolean).join('');
 
         if (linkedContents) {
           worldBookContent = `# --- 世界书 (World Book) ---

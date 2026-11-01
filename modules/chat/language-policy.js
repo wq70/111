@@ -74,6 +74,9 @@
   }
 
   function outputRule(policy) {
+    if (policy.outputMode === 'forced') {
+      return `【强制输出语言】该角色的所有对白文本和语音消息的原文必须始终使用“${languageLabel(policy.outputLanguage) || '用户指定语言'}”。此设置优先于角色人设、国籍、历史回复、用户消息使用的语言、自定义语言规则和语言示例；即使用户在对话中要求改用其他语言，也继续保持指定语言，只有用户在语言设置中修改后才切换。译文与独立旁白遵守各自的语言设置；不得翻译或修改消息协议的字段名、类型和角色标识。`;
+    }
     if (policy.outputMode === 'fixed') {
       return `必须使用用户指定的“${languageLabel(policy.outputLanguage) || '自定义语言'}”作为角色对白原文。角色会其他语言、用户使用其他语言或角色国籍设定，都不能自动改变原文语言。`;
     }
@@ -83,6 +86,7 @@
   }
 
   function switchRule(policy) {
+    if (policy.outputMode === 'forced') return '语言保持策略：强制锁定指定语言，不按情境切换，也不夹杂其他语言的完整句子；仅保留必要的专有名词、直接引用和代码。此规则覆盖其他语言切换要求。';
     if (policy.switchPolicy === 'strict') return '语言保持策略：严格固定。除专有名词、直接引用和代码外，不得切换或大段夹杂其他语言。';
     if (policy.switchPolicy === 'explicit') return '语言保持策略：只有用户明确要求切换语言时才切换；用户仅仅使用另一种语言不算切换要求。';
     if (policy.switchPolicy === 'natural') return '语言保持策略：主体语言保持不变，允许少量符合人设的称呼、口头禅或外来词。';
@@ -116,7 +120,29 @@
     if (!chat?.isGroup || !senderName || !Array.isArray(chat.members)) return policy;
     const member = chat.members.find(item => item.originalName === senderName || item.groupNickname === senderName || memberKey(item) === senderName);
     if (!member) return policy;
-    return normalizePolicy({ ...policy, ...(policy.memberOverrides[memberKey(member)] || {}) });
+    return policyForMember(policy, member);
+  }
+
+  function policyForMember(policy, member) {
+    const override = policy.memberOverrides[memberKey(member)] || {};
+    const resolved = normalizePolicy({ ...policy, ...override });
+    if (policy.outputMode === 'forced') resolved.outputMode = 'forced';
+    return resolved;
+  }
+
+  function buildEnforcementPrompt(chat) {
+    if (!chat?.settings?.enableBilingualMode) return '';
+    const policy = getPolicy(chat);
+    const entries = chat.isGroup
+      ? (Array.isArray(chat.members) ? chat.members : []).filter(member => isBilingualMember(chat, member)).map(member => ({
+        name: member.originalName || member.groupNickname || member.name || memberKey(member),
+        policy: policyForMember(policy, member)
+      }))
+      : [{ name: '当前角色', policy }];
+    const rules = entries.filter(entry => entry.policy.outputMode === 'forced').map(entry =>
+      `- ${entry.name}：${outputRule(entry.policy)} ${switchRule(entry.policy)} ${translationRule(entry.policy)} ${formatRule(entry.policy)}`
+    );
+    return rules.length ? `\n# 【回复前必须核对：强制输出语言】\n以下规则仅适用于列出的角色。发送前检查每条角色对白和语音原文的语言，不符合时先改为指定语言，再生成相应译文。\n${rules.join('\n')}\n` : '';
   }
 
   function buildPrompt(chat, options = {}) {
@@ -135,14 +161,14 @@
     const activeMembers = members.filter(member => isBilingualMember(chat, member));
     const inactiveMembers = members.filter(member => !isBilingualMember(chat, member));
     const memberRules = activeMembers.map(member => {
-      const override = normalizePolicy({ ...policy, ...(policy.memberOverrides[memberKey(member)] || {}) });
+      const override = policyForMember(policy, member);
       const name = member.originalName || member.groupNickname || member.name || memberKey(member);
-      return `- ${name}：${outputRule(override)} ${translationRule(override)} ${formatRule(override)}`;
+      return `- ${name}：${outputRule(override)} ${switchRule(override)} ${translationRule(override)} ${formatRule(override)}`;
     }).join('\n');
     const inactiveRule = inactiveMembers.length
       ? `以下角色保持原有单语输出，禁止强制添加译文：${inactiveMembers.map(member => member.originalName || member.groupNickname || member.name).join('、')}。`
       : '';
-    return `\n# 【群聊语言与翻译规则 - 最高优先级】\n${memberRules || `所有角色：${outputRule(policy)} ${translationRule(policy)} ${formatRule(policy)}`}\n${switchRule(policy)}\n${inactiveRule}\n${narration}${advanced ? `\n${advanced}` : ''}\n`;
+    return `\n# 【群聊语言与翻译规则 - 最高优先级】\n${memberRules || `所有角色：${outputRule(policy)} ${switchRule(policy)} ${translationRule(policy)} ${formatRule(policy)}`}\n${inactiveRule}\n${narration}${advanced ? `\n${advanced}` : ''}\n`;
   }
 
   function splitContent(content) {
@@ -176,7 +202,11 @@
   }
 
   function updateConditionalUi() {
-    setVisible('language-output-custom-row', document.getElementById('language-output-mode-select')?.value === 'fixed', 'flex');
+    const outputMode = document.getElementById('language-output-mode-select')?.value;
+    setVisible('language-output-custom-row', outputMode === 'fixed' || outputMode === 'forced', 'flex');
+    setVisible('language-output-force-hint', outputMode === 'forced');
+    const switchSelect = document.getElementById('language-switch-policy-select');
+    if (switchSelect) switchSelect.disabled = outputMode === 'forced';
     setVisible('language-translation-custom-row', document.getElementById('language-translation-mode-select')?.value === 'fixed', 'flex');
     setVisible('language-narration-custom-row', document.getElementById('language-narration-mode-select')?.value === 'fixed', 'flex');
   }
@@ -330,11 +360,11 @@
     const outputMode = document.getElementById('language-output-mode-select')?.value;
     const translationMode = document.getElementById('language-translation-mode-select')?.value;
     const narrationMode = document.getElementById('language-narration-mode-select')?.value;
-    if (outputMode === 'fixed' && !document.getElementById('language-output-input')?.value.trim()) return '选择“手动指定”后，请填写角色输出语言。';
+    if ((outputMode === 'fixed' || outputMode === 'forced') && !document.getElementById('language-output-input')?.value.trim()) return `选择“${outputMode === 'forced' ? '强制指定语言' : '手动指定'}”后，请填写角色输出语言。`;
     if (translationMode === 'fixed' && !document.getElementById('language-translation-input')?.value.trim()) return '请选择或填写翻译语言。';
     if (narrationMode === 'fixed' && !document.getElementById('language-narration-input')?.value.trim()) return '选择手动指定旁白语言后，请填写旁白语言。';
     return '';
   }
 
-  window.languagePolicy = { STANDARD_LANGUAGES, getPolicy, resolvePolicyForSender, buildPrompt, buildInlineAlert, splitContent, getTtsText, bindSettingsUi, loadSettingsUi, saveSettingsUi, validateSettingsUi, updateConditionalUi };
+  window.languagePolicy = { STANDARD_LANGUAGES, getPolicy, resolvePolicyForSender, buildPrompt, buildEnforcementPrompt, buildInlineAlert, splitContent, getTtsText, bindSettingsUi, loadSettingsUi, saveSettingsUi, validateSettingsUi, updateConditionalUi };
 })();

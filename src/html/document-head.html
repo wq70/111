@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>EPhone</title>
+  <script src="modules/tools/mobile-console.js"></script>
   <!-- 从 style.css 拆分出的模块（共13块） -->
   <link rel="stylesheet" href="css/base.css?v=0.0.52-ios-layout-rollback">
   <link rel="stylesheet" href="css/chat-ui.css?v=0.0.52-ios-layout-rollback">
@@ -27,6 +28,7 @@
   <link rel="stylesheet" href="css/chat/settings.css?v=0.0.36">
   <link rel="stylesheet" href="css/chat/language-settings.css?v=0.0.38">
   <link rel="stylesheet" href="css/settings/ios-controls.css?v=0.0.36">
+  <link rel="stylesheet" href="css/settings/model-search.css">
   <link rel="stylesheet" href="css/media/reading-and-home.css?v=0.0.36">
   <link rel="stylesheet" href="css/finance/alipay.css?v=0.0.36">
   <link rel="stylesheet" href="css/finance/funds.css?v=0.0.36">
@@ -42,6 +44,7 @@
   <link rel="stylesheet" href="css/social/reddit.css?v=0.0.36">
   <link rel="stylesheet" href="css/components/toast.css?v=0.0.36">
   <link rel="stylesheet" href="css/settings/layout.css?v=0.0.36">
+  <link rel="stylesheet" href="css/settings/push-server.css">
   <link rel="stylesheet" href="css/phone/cphone-browser.css?v=0.0.36">
   <link rel="stylesheet" href="css/phone/cphone-notes.css?v=0.0.36">
   <link rel="stylesheet" href="css/phone/cphone-layout.css?v=0.0.36">
@@ -92,7 +95,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=20261002-role-time-zone" defer></script>
+  <script src="update-notification.js?v=20261101-release" defer></script>
   <script src="modules/memory/thought-chain-manager.js?v=0.0.36" defer></script>
   <script src="modules/online/manager.js?v=0.0.36" defer></script>
   <script src="modules/online/integration.js?v=0.0.36" defer></script>
@@ -108,6 +111,12 @@
   <!-- 拆分后的模块（按依赖顺序加载） -->
   <!-- 第一层：全局工具函数（DOMContentLoaded 之前） -->
   <script src="modules/utils.js?v=20261001-normal-memory" defer></script>
+  <script src="modules/ai/prompt-macros.js" defer></script>
+  <script src="modules/ai/model-route-observer.js" defer></script>
+  <link rel="stylesheet" href="css/settings/prompt-macros.css">
+  <script src="modules/settings/prompt-macro-settings.js" defer></script>
+  <link rel="stylesheet" href="css/ui/zoom-lock.css">
+  <script src="modules/ui/zoom-lock.js" defer></script>
   <script src="modules/translations.js?v=0.0.36" defer></script>
   <!-- 第二层：UI 通用组件 -->
   <script src="modules/ui-modals.js?v=20261003-memory-editor" defer></script>
@@ -152,6 +161,9 @@
   <script src="modules/memory/memory-screen.js?v=0.0.36" defer></script>
   <script src="modules/video-voice-call.js?v=20261002-role-time-zone" defer></script>
   <script src="modules/message-actions.js?v=elevenlabs-20261001" defer></script>
+  <link rel="stylesheet" href="css/settings/novelai.css?v=20261101">
+  <script src="modules/media/image/novelai-connection.js?v=20261101" defer></script>
+  <script src="modules/media/image/novelai-settings.js?v=20261101" defer></script>
   <script src="modules/media/image/nai-presets.js?v=0.0.36-perf1" defer></script>
   <script src="modules/media/image/generation-providers.js?v=0.0.36-perf1" defer></script>
   <script src="modules/media/image/generation-exports.js?v=0.0.36-perf1" defer></script>
@@ -168,6 +180,7 @@
   <script src="modules/data/backup/automatic-backup.js?v=0.0.36" defer></script>
   <script src="modules/settings/prompt-templates.js?v=20261001-remark-source" defer></script>
   <script src="modules/settings/prompt-entry-manager.js?v=0.0.43" defer></script>
+  <script src="modules/settings/embedding-api.js?v=20261023" defer></script>
   <script src="modules/settings/api-presets.js?v=0.0.36" defer></script>
   <script src="modules/settings/sound-presets.js?v=0.0.36" defer></script>
   <script src="modules/settings/appearance-screen.js?v=0.0.36" defer></script>
@@ -227,7 +240,9 @@
   <script src="modules/social/douban/management.js?v=0.0.36" defer></script>
   <!-- 第七层：其余功能 -->
   <link rel="stylesheet" href="css/settings/tts-settings.css?v=elevenlabs-20261001">
-  <script src="modules/tts-provider.js?v=20261003-call-tts-translation" defer></script>
+  <script src="modules/fish-tts-provider.js?v=fish-20261101" defer></script>
+  <script src="modules/tts-provider.js?v=fish-20261101" defer></script>
+  <script src="modules/fish-tts-settings.js?v=fish-20261101" defer></script>
   <script src="modules/tts-settings.js?v=elevenlabs-20261001" defer></script>
   <script src="modules/tts-audio.js?v=20261003-call-tts-translation" defer></script>
   <script src="modules/appearance-theme.js?v=fonts-20261001" defer></script>
@@ -292,6 +307,7 @@
   <!-- PIN/城市（依赖 DOM） -->
   <script src="modules/init-pin-city.js?v=0.0.36" defer></script>
   <!-- 事件绑定和功能（依赖 state, db） -->
+  <script src="modules/settings/model-search.js" defer></script>
   <script src="modules/init-event-bindingsA.js?v=20261002-role-time-preview" defer></script>
   <script src="modules/init-event-bindingsB.js?v=20261002-role-time-zone" defer></script>
   <script src="modules/init-features.js?v=20261002-role-time-zone" defer></script>
@@ -337,5 +353,6 @@
   <link rel="stylesheet" href="css/settings/style-scheme-2.css?v=0.0.41-api-style-layout">
   <link rel="stylesheet" href="css/couple-invite.css?v=0.0.36">
   <link rel="stylesheet" href="css/floating-ball.css?v=0.0.36">
+  <link rel="stylesheet" href="css/chat/action-layout.css">
 </head>
 <body>

@@ -91,6 +91,7 @@
   function renderPhotoViewer() {
     if (photoViewerState.currentIndex === -1) return;
     const imageEl = document.getElementById('photo-viewer-image');
+    window.prepareLockedImagePreview?.(document.querySelector('#photo-viewer-modal .photo-viewer-content'), imageEl);
     const prevBtn = document.getElementById('photo-viewer-prev-btn');
     const nextBtn = document.getElementById('photo-viewer-next-btn');
     imageEl.style.opacity = 0;

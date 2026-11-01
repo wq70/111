@@ -155,6 +155,8 @@
     let activeWatchTogetherMessageTimestamp = null;
 
     function showWatchTogetherMessageActions(timestamp) {
+      document.getElementById('delete-message-btn').style.display = 'none';
+      document.getElementById('erase-message-btn').style.display = 'none';
       activeWatchTogetherMessageTimestamp = timestamp;
       const message = watchTogetherState.messages.find(m => m.timestamp === timestamp);
       if (!message) return;

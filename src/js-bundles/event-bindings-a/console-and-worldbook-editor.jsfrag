@@ -99,7 +99,7 @@
         const transcriptEl = bubble ? bubble.querySelector('.voice-transcript') : null;
 
 
-        if ((voiceBody.dataset.voiceId || voiceBody.dataset.ttsProvider === 'elevenlabs') && transcriptEl && transcriptEl.style.display === 'block') {
+        if ((voiceBody.dataset.voiceId || ['elevenlabs', 'fish'].includes(voiceBody.dataset.ttsProvider)) && transcriptEl && transcriptEl.style.display === 'block') {
 
 
           if (chat.isGroup) {
@@ -525,19 +525,6 @@
       window.MemoryWorldTimeUI?.mount(chat);
 
 
-      const timezoneSelect = document.getElementById('time-zone-select');
-      document.getElementById('time-zone-search-input').value = '';
-
-      const timezones = Intl.supportedValuesOf('timeZone');
-      timezoneSelect.innerHTML = '';
-      timezones.forEach(tz => {
-        const option = document.createElement('option');
-        option.value = tz;
-        option.textContent = tz;
-        timezoneSelect.appendChild(option);
-      });
-
-      timezoneSelect.value = chat.settings.timeZone || 'Asia/Shanghai';
       window.TimeAwareness?.updateRoleTimePreview(true);
       document.getElementById('enable-synth-music-switch').checked = chat.settings.enableSynthMusic || false;
       document.getElementById('narrator-mode-toggle').checked = chat.settings.enableNarratorMode || false;

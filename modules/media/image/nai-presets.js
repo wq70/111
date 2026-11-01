@@ -270,18 +270,11 @@ function releaseNaiResultObjectUrl() {
     loadNaiPresetsDropdown();
   }
 
-  function saveNovelAISettings() {
-
-    const novelaiEnabled = document.getElementById('novelai-switch').checked;
-    const novelaiModel = document.getElementById('novelai-model').value;
-    const novelaiApiKey = document.getElementById('novelai-api-key').value.trim();
-
-    localStorage.setItem('novelai-enabled', novelaiEnabled);
-    localStorage.setItem('novelai-model', novelaiModel);
-    localStorage.setItem('novelai-api-key', novelaiApiKey);
-
+  async function saveNovelAISettings() {
 
     const settings = {
+      ...getNovelAISettings(),
+      ...window.NovelAISettings.read(),
       resolution: document.getElementById('nai-resolution').value,
       steps: parseInt(document.getElementById('nai-steps').value),
       cfg_scale: parseFloat(document.getElementById('nai-cfg-scale').value),
@@ -297,12 +290,14 @@ function releaseNaiResultObjectUrl() {
       custom_proxy_url: document.getElementById('nai-custom-proxy-url').value
     };
 
-    localStorage.setItem('novelai-settings', JSON.stringify(settings));
+    await window.NovelAISettings.save(settings);
   }
 
   function resetNovelAISettings() {
+    const connection = Object.fromEntries(window.NovelAIConnection.connectionFields.map(key => [key, getNovelAISettings()[key]]));
     localStorage.removeItem('novelai-settings');
+    localStorage.setItem('novelai-settings', JSON.stringify(connection));
     loadNovelAISettings();
-    alert('已恢复默认设置！');
+    alert('已恢复默认生成参数，生图站点连接保持不变。请保存设置。');
   }
 

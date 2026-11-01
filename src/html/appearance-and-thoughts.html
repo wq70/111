@@ -135,6 +135,26 @@
         <div class="settings-header">显示与交互</div>
         <div class="settings-section">
             <div class="settings-item">
+                <div>
+                    <label for="lock-interface-zoom-switch">锁定界面缩放</label>
+                    <div class="settings-desc">默认关闭。开启后禁止整页手势缩放，仍可正常滚动、翻页和拖动。</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="lock-interface-zoom-switch">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item">
+                <div>
+                    <label for="allow-preview-zoom-switch">锁定时允许图片预览缩放</label>
+                    <div class="settings-desc">查看大图时可双指缩放、拖动图片，不改变整个界面的比例。</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="allow-preview-zoom-switch" checked disabled>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-item">
                 <label>夜间模式</label>
                 <label class="toggle-switch">
                     <input type="checkbox" id="theme-toggle-switch">
@@ -350,10 +370,25 @@
                     <label>按钮排序</label>
                     <button id="reset-button-order-btn" class="settings-mini-btn">恢复默认</button>
                 </div>
-                <div class="settings-desc" style="margin: 0 0 10px 0;">拖动下方按钮调整顺序：</div>
+                <div class="settings-desc" style="margin: 0 0 10px 0;">拖动按钮调整顺序，松手自动保存。也可聚焦按钮后按方向键移动。</div>
                 <div id="button-order-editor">
                     <!-- JS 填充 -->
                 </div>
+            </div>
+            <div class="settings-item-block">
+                <div class="button-order-heading"><label>聊天顶栏排序</label><button id="reset-header-button-order-btn" class="settings-mini-btn">恢复默认</button></div>
+                <div class="settings-desc">拖动调整记忆、一起听和设置的顺序。</div>
+                <div id="header-button-order-editor" class="button-order-editor button-order-editor-labeled"></div>
+            </div>
+            <div class="settings-item-block">
+                <div class="button-order-heading"><label>多选顶栏排序</label><button id="reset-selection-button-order-btn" class="settings-mini-btn">恢复默认</button></div>
+                <div class="settings-desc">拖动调整多选操作的顺序，按钮会根据屏幕宽度自动换行。</div>
+                <div id="selection-button-order-editor" class="button-order-editor button-order-editor-labeled"></div>
+            </div>
+            <div class="settings-item-block">
+                <div class="button-order-heading"><label>长按消息菜单排序</label><button id="reset-message-action-order-btn" class="settings-mini-btn">恢复默认</button></div>
+                <div class="settings-desc">拖动调整菜单顺序；仅特定消息可用的操作会按需显示，取消始终在最后。</div>
+                <div id="message-action-order-editor" class="button-order-editor button-order-editor-labeled"></div>
             </div>
         </div>
 

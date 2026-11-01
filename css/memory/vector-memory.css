@@ -401,6 +401,20 @@
 .vm-guide-list {
   margin: 8px 0;
 }
+
+/* 新入口独立放置，保留原工具栏按钮的排列和尺寸。 */
+.vm-consolidation-entry { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.vm-consolidation-entry .vm-toolbar-btn { white-space: nowrap; }
+.vm-consolidation-body { text-align: left; color: var(--text-color, #333); }
+.vm-consolidation-preview { max-height: 30vh; overflow: auto; overflow-x: hidden; margin-bottom: 10px; }
+.vm-consolidation-category { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.vm-consolidation-group + .vm-consolidation-group { margin-top: 10px; }
+.vm-consolidation-item { font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 6px 0; border-bottom: 1px solid var(--border-color, #eee); }
+.vm-consolidation-note { font-size: 12px; color: var(--text-secondary, #666); overflow-wrap: anywhere; }
+#vm-consolidation-feedback { width: 100%; min-width: 0; height: 60px; box-sizing: border-box; padding: 8px; font: inherit; font-size: 13px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; background: var(--card-bg, #fff); color: var(--text-color, #333); resize: vertical; }
+#custom-modal .vm-consolidation-footer { flex-direction: row; gap: 0; }
+#custom-modal .vm-consolidation-footer button { flex: 1; min-width: 0; margin: 0; padding: 10px 4px; font-size: 13px; white-space: nowrap; }
+#custom-modal .vm-consolidation-footer button:disabled { opacity: .6; cursor: default; }
 #vm-embedding-model-input,
 #vm-embedding-model-select {
   min-width: 0;

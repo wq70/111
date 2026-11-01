@@ -29,6 +29,9 @@
       cphoneAppIcons: state.globalSettings.cphoneAppIcons,
       myphoneAppIcons: state.globalSettings.myphoneAppIcons,
       chatActionButtonsOrder: state.globalSettings.chatActionButtonsOrder,
+      chatHeaderButtonsOrder: state.globalSettings.chatHeaderButtonsOrder,
+      chatSelectionButtonsOrder: state.globalSettings.chatSelectionButtonsOrder,
+      messageActionsOrder: state.globalSettings.messageActionsOrder,
       theme: localStorage.getItem('ephone-theme') || 'light',
       showStatusBar: state.globalSettings.showStatusBar,
       notificationSoundUrl: state.globalSettings.notificationSoundUrl,
@@ -97,10 +100,8 @@
       applyStatusBarVisibility();
       applyWidgetData();
 
-      if (data.chatActionButtonsOrder) {
-        renderButtonOrderEditor();
-        applyButtonOrder();
-      }
+      renderButtonOrderEditor();
+      applyButtonOrder();
 
       // 【关键修改】：调用 renderWallpaperScreen 时传入 selectedId
       // 这样下拉框就会被强制设置为当前选中的预设，而不会跳回"请选择"
@@ -124,6 +125,9 @@
       cphoneAppIcons: state.globalSettings.cphoneAppIcons,
       myphoneAppIcons: state.globalSettings.myphoneAppIcons,
       chatActionButtonsOrder: state.globalSettings.chatActionButtonsOrder,
+      chatHeaderButtonsOrder: state.globalSettings.chatHeaderButtonsOrder,
+      chatSelectionButtonsOrder: state.globalSettings.chatSelectionButtonsOrder,
+      messageActionsOrder: state.globalSettings.messageActionsOrder,
       theme: localStorage.getItem('ephone-theme') || 'light',
       showStatusBar: state.globalSettings.showStatusBar,
       notificationSoundUrl: state.globalSettings.notificationSoundUrl,

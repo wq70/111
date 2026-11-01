@@ -1648,23 +1648,6 @@ window.initFeatures = function(state, db) {
       });
     });
 
-    document.getElementById('time-zone-search-input')?.addEventListener('input', (e) => {
-      const searchTerm = e.target.value.toLowerCase();
-      const selects = [document.getElementById('time-zone-select'), document.getElementById('character-time-zone-select')].filter(Boolean);
-
-
-      for (const option of selects.flatMap(select => Array.from(select.options))) {
-        const optionText = option.textContent.toLowerCase();
-
-
-        if (!option.value || optionText.includes(searchTerm)) {
-          option.style.display = '';
-        } else {
-
-          option.style.display = 'none';
-        }
-      }
-    });
 
 
 
@@ -2159,6 +2142,7 @@ window.initFeatures = function(state, db) {
     document.getElementById('openai-image-test-btn')?.addEventListener('click', testOpenAIImageGeneration);
 
     document.getElementById('google-imagen-fetch-models-btn')?.addEventListener('click', fetchGoogleImagenModels);
+    window.NovelAISettings?.init();
 
     document.getElementById('novelai-key-toggle')?.addEventListener('click', function () {
       const input = document.getElementById('novelai-api-key');
@@ -2192,8 +2176,8 @@ window.initFeatures = function(state, db) {
     });
 
 
-    document.getElementById('save-nai-settings-btn')?.addEventListener('click', () => {
-      saveNovelAISettings();
+    document.getElementById('save-nai-settings-btn')?.addEventListener('click', async () => {
+      try { await saveNovelAISettings(); } catch (error) { alert(error.message); return; }
       document.getElementById('novelai-settings-modal').style.display = 'none';
       alert('NovelAI设置已保存！');
     });
@@ -3640,6 +3624,8 @@ ${truthGameHistoryContext}
     let activeTruthGameMessageTimestamp = null;
 
     function showTruthGameMessageActions(timestamp) {
+      document.getElementById('delete-message-btn').style.display = 'none';
+      document.getElementById('erase-message-btn').style.display = 'none';
       activeTruthGameMessageTimestamp = timestamp;
       const message = truthGameState.messages.find(m => m.timestamp === timestamp);
 
@@ -5264,6 +5250,8 @@ ${linkedContents}
     let activeWatchTogetherMessageTimestamp = null;
 
     function showWatchTogetherMessageActions(timestamp) {
+      document.getElementById('delete-message-btn').style.display = 'none';
+      document.getElementById('erase-message-btn').style.display = 'none';
       activeWatchTogetherMessageTimestamp = timestamp;
       const message = watchTogetherState.messages.find(m => m.timestamp === timestamp);
       if (!message) return;

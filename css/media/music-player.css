@@ -1,4 +1,9 @@
 /* 一起听内的多人同步设置；不改变播放器原有尺寸。 */
+.music-session-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
 #music-sync-btn {
     flex-shrink: 0;
     max-width: 70px;

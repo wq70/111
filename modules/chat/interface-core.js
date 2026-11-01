@@ -249,11 +249,6 @@
   async function renderChatInterface(chatId, options = {}) {
     const scrollPosition = options.preserveScroll ? captureChatScrollPosition(chatId) : null;
     const preserveHistoryMode = scrollPosition && !scrollPosition.atBottom && scrollPosition.historyMode;
-    if (window.ReplyGuardian && typeof window.ReplyGuardian.renderChatBanner === 'function') {
-      window.ReplyGuardian.renderChatBanner(chatId).catch(error => {
-        console.warn('[回复守护] 更新聊天状态条失败:', error);
-      });
-    }
     state.isViewingHistoryMode = !!preserveHistoryMode;
     state.historyCenterTimestamp = preserveHistoryMode ? scrollPosition.historyCenterTimestamp : null;
     const returnBtn = document.getElementById('return-to-latest-btn');
@@ -263,6 +258,7 @@
     cleanupWaimaiTimers();
     const chat = state.chats[chatId];
     if (!chat) return;
+    window.PromptMacroSettings?.renderObservations();
     if (window.CharacterBond) {
       window.CharacterBond.ensureChat(chat);
       window.CharacterBond.reconcile(chat);

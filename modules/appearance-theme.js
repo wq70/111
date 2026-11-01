@@ -505,10 +505,8 @@
           applyCustomFont(state.globalSettings.fontUrl);
           applyStatusBarVisibility();
           applyWidgetData();
-          if (data.chatActionButtonsOrder) {
-            renderButtonOrderEditor();
-            applyButtonOrder();
-          }
+          renderButtonOrderEditor();
+          applyButtonOrder();
 
           // 刷新界面
           renderWallpaperScreen();
@@ -639,6 +637,9 @@
         globalFontSize: state.globalSettings.globalFontSize || 16,
         // 布局排序
         chatActionButtonsOrder: state.globalSettings.chatActionButtonsOrder,
+        chatHeaderButtonsOrder: state.globalSettings.chatHeaderButtonsOrder,
+        chatSelectionButtonsOrder: state.globalSettings.chatSelectionButtonsOrder,
+        messageActionsOrder: state.globalSettings.messageActionsOrder,
         // 资源数据 (壁纸/图标)
         wallpaper: state.globalSettings.wallpaper,
         cphoneWallpaper: state.globalSettings.cphoneWallpaper,
@@ -1021,6 +1022,10 @@
       state.globalSettings.alwaysShowMusicIsland = false;
 
       state.globalSettings.chatActionButtonsOrder = null;
+      state.globalSettings.chatHeaderButtonsOrder = null;
+      state.globalSettings.chatSelectionButtonsOrder = null;
+      state.globalSettings.messageActionsOrder = null;
+      applyButtonOrder();
 
       await db.globalSettings.put(state.globalSettings);
 

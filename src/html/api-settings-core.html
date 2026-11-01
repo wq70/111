@@ -113,6 +113,39 @@
             </div>
         </div>
 
+        <div class="settings-header" data-api-category="ai">随机头部与宏规则</div>
+        <div class="settings-section prompt-macro-section">
+            <div class="settings-item">
+                <label for="prompt-macro-enabled">启用随机头部与宏处理</label>
+                <label class="toggle-switch"><input type="checkbox" id="prompt-macro-enabled" aria-controls="prompt-macro-panel"><span class="slider"></span></label>
+            </div>
+            <div id="prompt-macro-panel" class="prompt-macro-panel" hidden>
+                <div class="prompt-macro-intro"><span class="prompt-macro-eyebrow">内置 RANDOM · 默认关闭</span><p>在预设、世界书或提示词中写入随机候选，发送时抽选，原文保持不变。</p><code>{{random::甲::乙::丙}}</code><p>多段表达式可以组合成随机头部。</p></div>
+                <div class="prompt-macro-field-title">生效范围</div>
+                <div id="prompt-macro-scopes" class="prompt-macro-row" aria-label="宏处理生效范围"></div>
+                <label class="prompt-macro-field">总开关关闭时<select id="prompt-macro-off-mode"><option value="preserve">保留原文，不解析</option><option value="omit">不发送含已知宏的对应条目</option></select></label>
+                <p>“不发送”作用于整个条目。旧版整段提示词按一个条目处理；如只需关闭头部，请在条目编辑器中将头部单独成条。</p>
+                <details class="prompt-macro-disclosure"><summary><span>自定义宏规则<small>添加你自己的文字、随机候选与宏处理方式</small></span></summary>
+                    <p>按规则顺序管理。名称不可重复；未知宏保留原文。高级脚本只接收本条宏的 args（参数数组）和 text（原表达式），例如 <code>return args.join('-');</code>，运行超时会停止本次发送。</p>
+                    <div id="prompt-macro-rules"></div>
+                    <div class="prompt-macro-row prompt-macro-actions"><button type="button" id="prompt-macro-add" class="settings-mini-btn prompt-macro-primary">新增规则</button><button type="button" id="prompt-macro-import" class="settings-mini-btn">导入规则</button><button type="button" id="prompt-macro-export" class="settings-mini-btn">导出规则</button><input type="file" id="prompt-macro-import-file" accept=".json,application/json" hidden></div>
+                </details>
+                <details class="prompt-macro-disclosure"><summary><span>发送内容预览<small>试试当前规则，无需发送请求</small></span></summary>
+                    <div class="prompt-macro-row"><select id="prompt-macro-preview-scope" aria-label="预览来源"><option value="prompts">提示词</option><option value="presets">预设</option><option value="worldbooks">世界书</option></select><button type="button" id="prompt-macro-preview-button" class="settings-mini-btn prompt-macro-primary">预览一次</button></div>
+                    <label class="prompt-macro-field-title" for="prompt-macro-preview-input">原始内容</label>
+                    <textarea id="prompt-macro-preview-input" aria-label="待预览内容" spellcheck="false">{{random::晴天::微风::星夜}}</textarea>
+                    <div class="prompt-macro-field-title">本次结果</div>
+                    <pre id="prompt-macro-preview-output" class="prompt-macro-output" aria-live="polite">点击预览查看本次展开结果。</pre>
+                </details>
+                <p id="prompt-macro-status" role="status" aria-live="polite"></p>
+            </div>
+        </div>
+        <div class="settings-header" data-api-category="ai">🧭 模型路由观察 · 趣味参考</div>
+        <div class="settings-section prompt-macro-section">
+            <div class="settings-item"><label for="model-route-enabled">观察接口报告的模型</label><label class="toggle-switch"><input type="checkbox" id="model-route-enabled" aria-controls="model-route-panel"><span class="slider"></span></label></div>
+            <div id="model-route-panel" class="prompt-macro-panel" hidden><p>默认关闭。开启后记录请求模型与接口返回的模型标识，聊天标题下可查看最近结果。不额外请求或询问模型身份；接口未提供时显示“无法判断”。标识一致也不能排除隐藏路由。</p><details class="prompt-macro-disclosure"><summary><span>最近的观察结果<small>请求模型与接口报告，一起对照查看</small></span></summary><div id="model-route-results"></div></details></div>
+        </div>
+
         <!-- 参数设置 -->
         <div class="settings-header" data-api-category="api">参数设置</div>
         <div class="settings-section">
@@ -260,6 +293,38 @@
                     <button id="fetch-secondary-models-btn" class="settings-mini-btn">拉取</button>
                 </div>
             </div>
+        </div>
+
+        <div class="settings-header" data-api-category="ai">向量记忆 API（全局）</div>
+        <div class="settings-section">
+            <div class="settings-item">
+                <label for="global-embedding-enabled">启用统一向量接口</label>
+                <label class="toggle-switch"><input type="checkbox" id="global-embedding-enabled"><span class="slider"></span></label>
+            </div>
+            <div id="global-embedding-fields" hidden>
+                <div class="settings-item">
+                    <label for="global-embedding-endpoint">反代地址</label>
+                    <div class="settings-right"><input type="text" id="global-embedding-endpoint" placeholder="https://api.example.com 或 /v1 结尾"></div>
+                </div>
+                <div class="settings-item">
+                    <label for="global-embedding-apikey">API Key</label>
+                    <div class="settings-right"><input type="password" id="global-embedding-apikey" placeholder="填写此向量接口的 Key" autocomplete="off"></div>
+                </div>
+                <div class="settings-item">
+                    <label for="global-embedding-model">向量模型</label>
+                    <div class="settings-right"><input type="text" id="global-embedding-model" placeholder="text-embedding-3-small"></div>
+                </div>
+                <div class="settings-item">
+                    <label for="global-embedding-models">拉取模型</label>
+                    <div class="settings-right">
+                        <select id="global-embedding-models" class="settings-select" style="flex:1;min-width:0;width:auto;"></select>
+                        <button id="global-embedding-fetch" class="settings-mini-btn" type="button">拉取</button>
+                    </div>
+                </div>
+                <button id="global-embedding-test" class="settings-full-btn" type="button">测试向量接口</button>
+            </div>
+            <div id="global-embedding-status" class="settings-desc" role="status" aria-live="polite"></div>
+            <div class="settings-desc">只供向量记忆使用，各角色记忆仍然独立。已有独立接口继续生效；其他角色可跟随此设置。关闭时恢复原有默认方式。切换聊天 API 预设不会更改此配置。</div>
         </div>
 
         <!-- 后台活动 API 设置 -->
@@ -475,7 +540,38 @@
                 <div class="tts-actions"><button type="button" class="form-button" id="elevenlabs-test-generate">生成试听</button><button type="button" class="form-button" id="elevenlabs-test-play">播放试听</button><button type="button" class="form-button" id="elevenlabs-test-stop">停止</button></div>
             </details>
             <p class="tts-status" id="elevenlabs-api-status" role="status" aria-live="polite">检查连接不生成音频；试听会产生 API 用量。</p>
-            <p class="tts-usage" id="tts-session-usage"></p><audio id="tts-preview-player" hidden></audio>
+            <p class="tts-usage" id="tts-session-usage"></p><audio id="tts-preview-player" hidden playsinline></audio>
+        </div>
+
+        <div class="settings-header" data-api-category="service">Fish Audio 语音</div>
+        <div class="settings-section tts-settings" id="fish-api-settings">
+            <div class="settings-item"><label for="fish-protocol">连接方式</label><div class="settings-right"><select id="fish-protocol" class="settings-select"><option value="fish">Fish 官网 / 同格式镜像</option><option value="openai">中转站 · OpenAI 兼容</option><option value="native">中转站 · Fish 原生</option></select></div></div>
+            <div class="settings-item"><label for="fish-api-key">API Key</label><div class="settings-right"><input type="password" id="fish-api-key" placeholder="你自己的 Fish Key" autocomplete="off"></div></div>
+            <div class="tts-actions tts-key-actions"><button type="button" class="form-button" id="fish-key-show">显示</button><button type="button" class="form-button" id="fish-key-clear">清空</button></div>
+            <div class="settings-item"><label for="fish-model-select">模型</label><div class="settings-right tts-controls"><select id="fish-model-select" class="settings-select"><option value="fish-audio/s2.1-pro-free">S2.1 Pro Free · 免费资格以账户为准</option><option value="fish-audio/s2.1-pro">S2.1 Pro · 付费</option><option value="fish-audio/s2-pro">S2 Pro · 付费</option><option value="fish-audio/s1">S1 · 付费旧模型</option></select></div></div>
+            <div class="settings-item"><label for="fish-model-input">模型 ID</label><div class="settings-right"><input type="text" id="fish-model-input" placeholder="fish-audio/s2.1-pro-free"></div></div>
+            <div class="tts-actions"><button type="button" class="form-button" id="fish-model-fetch">获取模型</button><button type="button" class="form-button" id="fish-connect-test">检查账户连接</button></div>
+            <details><summary>接口与通话设置</summary>
+                <div class="settings-item"><label for="fish-base-url">接口地址</label><div class="settings-right"><input type="url" id="fish-base-url" placeholder="https://api.fish.audio"></div></div>
+                <div id="fish-relay-options" hidden>
+                    <div class="settings-item"><label for="fish-speech-url">完整合成地址</label><div class="settings-right"><input type="url" id="fish-speech-url" placeholder="可留空，按接口地址自动拼接"></div></div>
+                    <div class="settings-item"><label for="fish-management-base-url">音色管理地址</label><div class="settings-right"><input type="url" id="fish-management-base-url" placeholder="可留空，跟随中转站"></div></div>
+                    <p class="tts-usage">填写中转站的地址、Key 和模型原名，模型名会原样发送。OpenAI 格式自动接 /v1/audio/speech，Fish 原生格式接 /v1/tts；路径特殊时填写完整合成地址，将直接使用该地址及查询参数。</p>
+                    <p class="tts-usage">音色列表、音色管理、模型目录和转写是否可用，取决于中转站开放了哪些接口；不支持音色列表时可以手填音色 ID。管理地址使用同一个中转 Key，默认不会转发到官网。高级声音参数需要中转站支持 Fish 扩展。浏览器直连还需要中转站允许跨域，Fish 原生格式需允许 model 请求头。</p>
+                </div>
+                <div class="settings-item"><label for="fish-call-model">通话模型</label><div class="settings-right"><input type="text" id="fish-call-model" placeholder="留空跟随默认模型"></div></div>
+                <div class="settings-item"><label for="fish-transcription-model">转写模型</label><div class="settings-right"><input type="text" id="fish-transcription-model" placeholder="fish-audio/transcribe-1"></div></div>
+                <p class="tts-usage">录音和通话的理解方式可单独选“Fish 转文字”，使用这里的 Key。转写独立计费，不随免费合成模型自动开启。</p>
+                <p class="tts-usage">默认直接连接 Fish，使用允许浏览器跨域的音频接口，无需部署后端。也接受以 /compat/v1 结尾的地址。自定义网关需支持相同接口和跨域。</p>
+                <p class="tts-usage">已有 ElevenLabs 配置若填写 Fish 官方 /compat/elevenlabs 地址，也会自动使用可直连的 Fish 请求；更多 Fish 参数请切换到独立 Fish 服务。</p>
+            </details>
+            <details><summary>测试 Fish 语音</summary>
+                <div class="settings-item"><label for="fish-test-voice">音色 ID / 链接</label><div class="settings-right"><input type="text" id="fish-test-voice" placeholder="留空使用默认音色"></div></div>
+                <div class="tts-text-row"><textarea id="fish-test-text" class="tts-wide-input" rows="2" aria-label="Fish API 试听文本">你好，这是一条 Fish 语音测试。</textarea></div>
+                <div class="tts-actions"><button type="button" class="form-button" id="fish-test-generate">生成试听</button><button type="button" class="form-button" id="fish-test-play">播放试听</button><button type="button" class="form-button" id="fish-test-stop">停止</button></div>
+            </details>
+            <p class="tts-status" id="fish-api-status" role="status" aria-live="polite">保存 API 设置后，在角色语音服务中选择 Fish Audio。试听会调用你的账户；免费政策与额度以 Fish 为准。</p>
+            <p class="tts-usage">Key 只在当前设备保存并发送给所填接口；导出含 API 配置的备份也会包含 Key，请妥善保管。<a href="https://fish.audio/app/developers/" target="_blank" rel="noopener noreferrer">获取自己的 Key</a></p>
         </div>
 
         <!-- 生图设置 (AI & NovelAI) -->

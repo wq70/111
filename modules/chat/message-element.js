@@ -456,7 +456,7 @@
         } else {
           // AI的语音消息（通常使用TTS）
           const canPlayTTS = !chat.isGroup && chat.settings.enableTts !== false;
-          const voiceId = window.ttsProvider.provider(chat) === 'elevenlabs'
+          const voiceId = window.ttsProvider.provider(chat) !== 'minimax'
             ? window.ttsProvider.voiceId(chat) : chat.settings.minimaxVoiceId || 'female-shaonv-jingpin';
           const voiceIdAttribute = canPlayTTS ? `data-tts-provider="${window.ttsProvider.provider(chat)}" data-voice-id="${String(voiceId).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char])}"` : '';
           
@@ -765,7 +765,6 @@
     } else if (msg.type === 'synth_music') {
       bubble.classList.add('is-card-like', 'is-music-synth');
 
-      const notesJson = JSON.stringify(msg.notes).replace(/"/g, '"');
       // 获取乐器类型，默认为 piano
       const instrumentType = msg.instrument || 'piano';
 
@@ -778,7 +777,7 @@
                     ${msg.reason} (${instrumentType})
                 </div>
             </div>
-            <button class="synth-play-btn" onclick="playSynthScore(this, '${notesJson}', '${instrumentType}')">
+            <button class="synth-play-btn">
                 ▶
             </button>
         </div>
@@ -890,6 +889,13 @@
                     ${contentHtml}
                 </div>
             `;
+    if (msg.type === 'synth_music') {
+      const playButton = bubble.querySelector('.synth-play-btn');
+      if (playButton) {
+        playButton.addEventListener('click', () =>
+          window.playSynthScore(playButton, msg.notes, msg.instrument || 'piano'));
+      }
+    }
     if ((msg.type === 'naiimag' || msg.type === 'googleimag' || msg.type === 'openaiimag') && msg.imageUrl && msg.imageUrl.startsWith('data:image')) {
       if (state.apiConfig.imgbbEnable && state.apiConfig.imgbbApiKey) {
 

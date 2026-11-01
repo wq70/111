@@ -1,5 +1,39 @@
 // ========== Finance (记账) AI Integration ==========
 
+function logCoupleSpaceFinanceError(label, error) {
+  // 移动端控制台会将 Error 对象序列化为 {}，显式输出错误信息。
+  const detail = error && error.message ? `${error.name || 'Error'}: ${error.message}` : String(error);
+  console.error(label, detail);
+}
+
+function createCoupleSpaceFinanceReply(charId) {
+  const iframe = document.getElementById('couple-space-iframe');
+  if (!iframe || !iframe.contentWindow) return null;
+  const targetWindow = iframe.contentWindow;
+  const source = iframe.src;
+  const isCurrent = () => {
+    const screen = document.getElementById('couple-space-screen');
+    return iframe.isConnected && document.getElementById('couple-space-iframe') === iframe &&
+      iframe.contentWindow === targetWindow && iframe.src === source &&
+      source.includes(COUPLE_SPACE_IFRAME_PATH) &&
+      localStorage.getItem('coupleSpaceLastId') === charId && screen && screen.classList.contains('active');
+  };
+  if (!isCurrent()) return null;
+
+  return message => {
+    // await 期间可能已退出、重进或切换角色，只允许回复原来的有效页面。
+    if (!isCurrent()) return false;
+    try {
+      targetWindow.postMessage(message, '*');
+      return true;
+    } catch (error) {
+      // 发送失败不再向同一窗口补发错误，避免二次异常。
+      logCoupleSpaceFinanceError('Finance result delivery error:', error);
+      return false;
+    }
+  };
+}
+
 function handleCoupleSpaceFinanceChanged(data) {
   localStorage.setItem('coupleFinance_' + data.charId, JSON.stringify(data.items || []));
 }
@@ -11,58 +45,58 @@ function handleCoupleSpaceFinanceSettingsChanged(data) {
 }
 
 async function handleCoupleSpaceFinanceAiRequest(data) {
-  const iframe = document.getElementById('couple-space-iframe');
-  if (!iframe || !iframe.contentWindow) return;
+  const reply = createCoupleSpaceFinanceReply(data.charId);
+  if (!reply) return;
   const chat = state.chats[data.charId];
   if (!chat) {
-    iframe.contentWindow.postMessage({ type: 'coupleSpaceFinanceAiResult', error: true }, '*');
+    reply({ type: 'coupleSpaceFinanceAiResult', error: true });
     return;
   }
   try {
     const { proxyUrl, apiKey, model } = getCoupleSpaceApiConfig();
     if (!proxyUrl || !model) {
-      iframe.contentWindow.postMessage({ type: 'coupleSpaceFinanceAiResult', error: true }, '*');
+      reply({ type: 'coupleSpaceFinanceAiResult', error: true });
       return;
     }
     const result = await generateCoupleSpaceFinanceAi(chat, data);
-    iframe.contentWindow.postMessage({
+    reply({
       type: 'coupleSpaceFinanceAiResult',
       finType: result.type,
       amount: result.amount,
       category: result.category,
       title: result.title,
       note: result.note
-    }, '*');
+    });
   } catch(err) {
-    console.error('Finance AI error:', err);
-    iframe.contentWindow.postMessage({ type: 'coupleSpaceFinanceAiResult', error: true }, '*');
+    logCoupleSpaceFinanceError('Finance AI error:', err);
+    reply({ type: 'coupleSpaceFinanceAiResult', error: true });
   }
 }
 
 async function handleCoupleSpaceFinanceCommentRequest(data) {
-  const iframe = document.getElementById('couple-space-iframe');
-  if (!iframe || !iframe.contentWindow) return;
+  const reply = createCoupleSpaceFinanceReply(data.charId);
+  if (!reply) return;
   const chat = state.chats[data.charId];
   if (!chat) {
-    iframe.contentWindow.postMessage({ type: 'coupleSpaceFinanceCommentResult', itemId: data.itemId, error: true }, '*');
+    reply({ type: 'coupleSpaceFinanceCommentResult', itemId: data.itemId, error: true });
     return;
   }
   try {
     const comment = await generateCoupleSpaceFinanceComment(chat, data);
-    iframe.contentWindow.postMessage({
+    reply({
       type: 'coupleSpaceFinanceCommentResult',
       itemId: data.itemId,
       comment: comment
-    }, '*');
+    });
   } catch(err) {
-    console.error('Finance comment AI error:', err);
-    iframe.contentWindow.postMessage({ type: 'coupleSpaceFinanceCommentResult', itemId: data.itemId, error: true }, '*');
+    logCoupleSpaceFinanceError('Finance comment AI error:', err);
+    reply({ type: 'coupleSpaceFinanceCommentResult', itemId: data.itemId, error: true });
   }
 }
 
 async function handleCoupleSpaceFinanceHeartRequest(data) {
-  const iframe = document.getElementById('couple-space-iframe');
-  if (!iframe || !iframe.contentWindow) return;
+  const reply = createCoupleSpaceFinanceReply(data.charId);
+  if (!reply) return;
   const chat = state.chats[data.charId];
   if (!chat) return;
   try {
@@ -88,13 +122,13 @@ async function handleCoupleSpaceFinanceHeartRequest(data) {
     if (!response.ok) return;
     const respData = await response.json();
     const answer = getGeminiResponseText(respData).trim().toLowerCase();
-    iframe.contentWindow.postMessage({
+    reply({
       type: 'coupleSpaceFinanceHeartResult',
       itemId: data.itemId,
       liked: answer.includes('yes')
-    }, '*');
+    });
   } catch(e) {
-    console.error('Finance heart AI error:', e);
+    logCoupleSpaceFinanceError('Finance heart AI error:', e);
   }
 }
 

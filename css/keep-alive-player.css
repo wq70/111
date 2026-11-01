@@ -168,71 +168,6 @@
     line-height: 1.4;
     overflow-wrap: anywhere;
 }
-.reply-guardian-banner {
-    flex: 0 0 auto;
-    box-sizing: border-box;
-    margin: 0 10px 6px;
-    padding: 8px 10px;
-    border: 1px solid rgba(0, 122, 255, 0.14);
-    border-radius: 10px;
-    background: var(--secondary-bg, #fff);
-    background: color-mix(in srgb, var(--secondary-bg, #fff) 92%, #007aff 8%);
-    color: var(--text-color, #1c1c1e);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-.reply-guardian-banner[hidden] {
-    display: none !important;
-}
-.reply-guardian-banner-main {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-    gap: 8px;
-}
-.reply-guardian-dot {
-    width: 7px;
-    height: 7px;
-    flex: 0 0 auto;
-    border-radius: 50%;
-    background: #34c759;
-    box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.13);
-}
-.reply-guardian-banner[data-state="interrupted"] .reply-guardian-dot,
-.reply-guardian-banner[data-state="failed"] .reply-guardian-dot {
-    background: #ff9f0a;
-    box-shadow: 0 0 0 3px rgba(255, 159, 10, 0.14);
-}
-.reply-guardian-copy {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    flex-direction: column;
-    gap: 1px;
-}
-#reply-guardian-banner-title {
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-#reply-guardian-banner-detail {
-    color: var(--text-secondary, #8e8e93);
-    font-size: 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.reply-guardian-actions {
-    display: flex;
-    flex: 0 0 auto;
-    gap: 5px;
-}
-.reply-guardian-actions button,
 .sc-secondary-btn {
     appearance: none;
     -webkit-appearance: none;
@@ -266,39 +201,13 @@
     text-align: center;
     overflow-wrap: anywhere;
 }
-#phone-screen.dark-mode .reply-guardian-banner {
-    border-color: rgba(10, 132, 255, 0.25);
-    background: rgba(10, 132, 255, 0.08);
-}
-#phone-screen.dark-mode .reply-guardian-actions button {
-    background: #2c2c2e;
-    color: #64a8ff;
-}
-
 @media (max-width: 390px) {
-    .reply-guardian-banner {
-        margin-inline: 8px;
-        padding: 7px 8px;
-    }
-    .reply-guardian-actions button {
-        padding-inline: 7px;
-    }
     .reply-guardian-diagnostic-row {
         align-items: center;
     }
 }
 
 @media (max-width: 340px) {
-    #reply-guardian-banner-detail {
-        max-width: 142px;
-    }
-    .reply-guardian-actions {
-        gap: 3px;
-    }
-    .reply-guardian-actions button {
-        font-size: 10px;
-        padding: 5px 6px;
-    }
     .sc-player-device {
         width: calc(100vw - 32px);
         padding: 14px;

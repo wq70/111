@@ -175,7 +175,7 @@
           else { if (callTtsAbortController === controller) callTtsAbortController = null; processNextTts(); }
         };
         player.onended = next;
-        player.onerror = item.config.provider === 'elevenlabs'
+        player.onerror = item.config.provider !== 'minimax'
           ? () => fail(new Error('浏览器无法播放返回的音频，请检查音色、模型或接口地址')) : next;
         await player.play();
       };
@@ -183,7 +183,7 @@
         if (error.name === 'AbortError' || generation !== callTtsGeneration) return;
         revokeCallTtsUrl();
         console.error('TTS生成或播放失败:', error);
-        if (item.config.provider === 'elevenlabs') {
+        if (item.config.provider !== 'minimax') {
           stopTtsQueue();
           reportTtsError('通话朗读已停止', error);
         } else { processNextTts(); }
@@ -193,7 +193,7 @@
     } catch (error) {
       if (error.name !== 'AbortError' && generation === callTtsGeneration) {
         revokeCallTtsUrl();
-        if (item.config.provider === 'elevenlabs') { stopTtsQueue(); reportTtsError('通话朗读已停止', error); }
+        if (item.config.provider !== 'minimax') { stopTtsQueue(); reportTtsError('通话朗读已停止', error); }
         else { console.error('TTS生成失败:', error); processNextTts(); }
       }
     }
@@ -278,7 +278,7 @@
     const fallback = service === 'minimax' && (!body.dataset.ttsProvider || body.dataset.ttsProvider === service)
       ? body.dataset.voiceId : '';
     const config = window.ttsProvider.resolve(chat, { voiceId: fallback });
-    const raw = decodeURIComponent(service === 'elevenlabs' && body.dataset.originalContent
+    const raw = decodeURIComponent(service !== 'minimax' && body.dataset.originalContent
       ? body.dataset.originalContent : body.dataset.text || '');
     const parts = window.ttsProvider.segments(raw, chat, config);
     if (!parts.length) throw new Error('没有可朗读的文本');
@@ -371,7 +371,7 @@
       const request = saved.length ? null : messageTtsRequest(bodyElement, chat);
       const text = request?.text || decodeURIComponent(bodyElement.dataset.text || '');
       const voiceId = request?.voiceId || '', blobs = [];
-      if (request?.config.provider === 'elevenlabs' && request.config.streaming && request.parts.length === 1) {
+      if (request && request.config.provider !== 'minimax' && request.config.streaming && request.parts.length === 1) {
         player.dataset.currentText = text; player.dataset.currentVoiceId = voiceId; player.dataset.currentMessageKey = messageKey;
         chatTtsStream = openTtsStream(player, () => generation === chatTtsGeneration && !controller.signal.aborted,
           () => { currentTtsMessageKey = ''; revokeChatTtsUrl(); }, button);

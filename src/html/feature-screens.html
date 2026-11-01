@@ -799,8 +799,10 @@
         <div class="form-group"><label for="member-persona-input">人设</label><textarea id="member-persona-input" rows="4"></textarea></div>
         <div class="form-group role-time-zone-control">
           <label for="member-time-zone-select">角色所在地 / 时区</label>
-          <select id="member-time-zone-select" class="settings-select"><option value="">跟随我的时区</option></select>
-          <div class="settings-desc time-awareness-inline-desc">关联角色会同步此设置；开启群聊时间感知后生效。</div>
+          <input type="search" id="member-time-zone-search-input" aria-label="搜索群成员城市或时区" aria-controls="member-time-zone-search-results" placeholder="搜索城市 / 时区…" class="settings-textarea time-zone-search">
+          <div id="member-time-zone-search-results" class="time-zone-search-results" role="group" aria-label="群成员时区搜索结果" hidden></div>
+          <select id="member-time-zone-select" class="settings-select"><option value="">未设置（按人设与剧情判断）</option><option value="follow-user">跟随我的时区</option></select>
+          <div class="settings-desc time-awareness-inline-desc">可不设置，按人设与剧情判断；关联角色会同步此设置，开启群聊时间感知后生效。</div>
         </div>
         <div class="form-group"><label>头像</label>
           <div class="avatar-upload"><img id="member-avatar-preview"><button onclick="document.getElementById('member-avatar-input').click()">上传头像</button><button class="change-frame-btn" data-type="member">更换头像框</button><input type="file" id="member-avatar-input" accept="image/*"></div>

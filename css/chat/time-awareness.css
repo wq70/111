@@ -23,6 +23,70 @@
   text-overflow: ellipsis;
 }
 
+.time-zone-search {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.time-zone-search-results {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color, #e5e5ea);
+  border-radius: 10px;
+  background: var(--secondary-bg, #fff);
+}
+
+.time-zone-search-results button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 0;
+  border-top: 1px solid var(--border-color, #e5e5ea);
+  background: transparent;
+  text-align: left;
+  color: var(--text-color, #333);
+  font: inherit;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.time-zone-search-results button:hover,
+.time-zone-search-results button[aria-pressed="true"] {
+  background: var(--primary-bg, #f2f2f7);
+}
+
+.time-zone-search-status {
+  padding: 8px 10px;
+  color: var(--text-secondary, #8e8e93);
+  font-size: 12px;
+}
+
+.time-zone-ai-panel {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-color, #e5e5ea);
+  border-radius: 12px;
+  color: var(--text-color, #333);
+  font-size: 13px;
+}
+
+.time-zone-ai-panel summary { cursor: pointer; font-weight: 600; }
+.time-zone-ai-panel p { line-height: 1.6; margin: 10px 0; }
+.time-zone-ai-panel > label { display: block; margin: 10px 0 8px; }
+.time-zone-ai-books { max-height: 180px; overflow-y: auto; }
+.time-zone-source { display: flex; align-items: start; gap: 8px; padding: 8px 0; }
+.time-zone-source input { flex: 0 0 auto; margin-top: 2px; accent-color: var(--accent-color, #007aff); }
+.time-zone-source span { min-width: 0; overflow-wrap: anywhere; }
+.time-zone-ai-result { padding: 10px; border-radius: 8px; background: var(--primary-bg, #f2f2f7); overflow-wrap: anywhere; }
+.time-zone-ai-result > div:first-of-type { margin-top: 5px; }
+.time-zone-search-results[hidden], .time-zone-source[hidden], .time-zone-ai-result[hidden] { display: none; }
+
 #group-time-zone-hint {
   margin-top: 8px;
 }

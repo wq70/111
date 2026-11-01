@@ -3,6 +3,7 @@
 
   const DAY_MS = 86400000;
   const PET_ALLOWED_TYPES = new Set(['text', 'sticker', 'voice_message']);
+  const pendingSparkUpdates = new Set();
 
   function localDayKey(timestamp = Date.now()) {
     const date = new Date(Number(timestamp) || Date.now());
@@ -51,6 +52,8 @@
     if (!chat.spark.days || typeof chat.spark.days !== 'object') chat.spark.days = {};
     if (typeof chat.spark.currentStreak !== 'number') chat.spark.currentStreak = 0;
     if (typeof chat.spark.bestStreak !== 'number') chat.spark.bestStreak = 0;
+    const restoreCards = Number(chat.spark.restoreCards);
+    chat.spark.restoreCards = Number.isSafeInteger(restoreCards) && restoreCards >= 0 ? restoreCards : 0;
     if (!chat.sharedPet || typeof chat.sharedPet !== 'object') {
       chat.sharedPet = {
         schemaVersion: 1,
@@ -88,6 +91,31 @@
     return msg.role === 'assistant' && msg.actorType !== 'pet';
   }
 
+  function sparkRecoveryPlan(spark) {
+    const complete = Object.keys(spark.days).filter(key => key <= localDayKey() && spark.days[key].user && spark.days[key].character).sort();
+    let chain = 0;
+    let previous = null;
+    let anchor = null;
+    for (const key of complete) {
+      const day = dayNumber(key);
+      chain = previous !== null && day === previous + 1 ? chain + 1 : 1;
+      if (chain >= 3) anchor = day;
+      previous = day;
+    }
+    const today = dayNumber(localDayKey());
+    if (anchor === null) return { days: [], message: '没有找到可接回的已点亮记录，无法使用恢复卡。' };
+    if (today - anchor <= 1) return { days: [], message: '当前没有需要恢复的中断日期。' };
+    // 从首个缺失日起算七个自然日，不随重新聊天而延长。
+    if (today - (anchor + 1) >= 7) return { days: [], message: '这次中断已超过7天恢复期限，无法使用恢复卡。' };
+    const completeDays = new Set(complete);
+    const days = [];
+    for (let day = anchor + 1; day < today; day += 1) {
+      const key = new Date(day * DAY_MS).toISOString().slice(0, 10);
+      if (!completeDays.has(key)) days.push(key);
+    }
+    return { days, message: '' };
+  }
+
   function reconcile(chat) {
     if (!ensureChat(chat) || !chat.settings.enableCharacterSpark) return chat && chat.spark;
     const spark = chat.spark;
@@ -120,7 +148,7 @@
       days[key] = { user: true, character: true, protectedBy: spark.protectedDays[key] };
     });
     spark.days = days;
-    const complete = Object.keys(days).filter(key => days[key].user && days[key].character).sort();
+    const complete = Object.keys(days).filter(key => key <= localDayKey() && days[key].user && days[key].character).sort();
     spark.lastCompleteDate = complete.length ? complete[complete.length - 1] : null;
 
     let streak = 0;
@@ -137,8 +165,7 @@
     }
     spark.currentStreak = streak;
     spark.bestStreak = Math.max(spark.bestStreak || 0, completedChain);
-    const gap = spark.lastCompleteDate ? dayNumber(localDayKey()) - dayNumber(spark.lastCompleteDate) : Infinity;
-    spark.status = streak >= 3 ? 'lit' : ((spark.bestStreak || 0) >= 3 && gap <= 7 ? 'recoverable' : 'unlit');
+    spark.status = streak >= 3 ? 'lit' : (sparkRecoveryPlan(spark).days.length ? 'recoverable' : 'unlit');
 
     const earnedWeeks = Math.floor((spark.bestStreak || 0) / 7);
     if (earnedWeeks > (spark.rewardedWeeks || 0)) {
@@ -417,6 +444,7 @@
     const modal = document.getElementById('character-bond-modal');
     if (!modal) return;
     modal.dataset.mode = mode;
+    modal.dataset.chatId = chat.id;
     modal.classList.add('visible');
     document.getElementById('character-bond-modal-title').textContent = mode === 'spark' ? '角色火花' : '共同宠物';
     document.getElementById('character-spark-panel').hidden = mode !== 'spark';
@@ -429,8 +457,7 @@
 
   function renderSparkPanel(chat) {
     const spark = reconcile(chat);
-    const sparkSwitch = document.getElementById('character-spark-switch');
-    const isSparkEnabled = (sparkSwitch && sparkSwitch.isConnected) ? sparkSwitch.checked : Boolean(chat.settings.enableCharacterSpark);
+    const isSparkEnabled = Boolean(chat.settings.enableCharacterSpark);
     const today = spark.days[localDayKey()] || { user: false, character: false };
     const status = !isSparkEnabled ? '火花开关尚未开启' :
       spark.status === 'lit' ? `已点亮，连续 ${spark.currentStreak} 天` :
@@ -439,9 +466,18 @@
     document.getElementById('character-spark-today').textContent = `今日：你${today.user ? '已' : '未'}发送 · 角色${today.character ? '已' : '未'}回复`;
     document.getElementById('character-spark-record').textContent = `最高 ${spark.bestStreak || 0} 天 · 火花值 ${spark.sparks || 0} · 冻结卡 ${spark.freezeCards || 0} · 恢复卡 ${spark.restoreCards || 0}`;
     const restoreButton = document.getElementById('restore-character-spark-btn');
+    const busy = pendingSparkUpdates.has(chat.id);
     restoreButton.hidden = !(isSparkEnabled && spark.status === 'recoverable');
-    restoreButton.disabled = (spark.restoreCards || 0) < 1;
-    restoreButton.textContent = restoreButton.disabled ? '暂无恢复卡' : '使用恢复卡';
+    restoreButton.disabled = busy || spark.restoreCards < 1;
+    restoreButton.textContent = busy ? '正在保存…' : spark.restoreCards < 1 ? '暂无恢复卡' : '使用恢复卡';
+    document.getElementById('character-spark-restore-cards').value = spark.restoreCards;
+    document.getElementById('character-spark-restore-cards').disabled = busy;
+    document.getElementById('save-character-spark-cards-btn').disabled = busy;
+    const recoveryNote = document.getElementById('character-spark-recovery-note');
+    recoveryNote.textContent = spark.status === 'recoverable'
+      ? `使用1张恢复卡，补回${sparkRecoveryPlan(spark).days.length}个中断日期，接回之前的连续记录。首个缺失日起7天内可恢复。`
+      : isSparkEnabled && spark.status !== 'lit' && spark.bestStreak >= 3 ? sparkRecoveryPlan(spark).message : '';
+    recoveryNote.hidden = !recoveryNote.textContent;
   }
 
   function renderPetPanel(chat) {
@@ -521,22 +557,70 @@
     showToast(`${name} 已加入这段单聊`);
   }
 
-  async function restoreSpark(chat) {
-    const spark = reconcile(chat);
-    if (!chat.settings.enableCharacterSpark || spark.status !== 'recoverable' || (spark.restoreCards || 0) < 1 || !spark.lastCompleteDate) return;
-    const last = dayNumber(spark.lastCompleteDate);
-    const today = dayNumber(localDayKey());
-    if (!spark.protectedDays || typeof spark.protectedDays !== 'object') spark.protectedDays = {};
-    for (let value = last + 1; value < today; value += 1) {
-      spark.protectedDays[new Date(value * DAY_MS).toISOString().slice(0, 10)] = 'restore';
+  async function updateSpark(chat, change, successMessage) {
+    if (!chat || chat.isGroup) {
+      showToast('没有找到对应角色，请重新打开火花详情。');
+      return;
     }
-    spark.restoreCards -= 1;
-    reconcile(chat);
-    await db.chats.put(chat);
-    renderSparkPanel(chat);
+    if (pendingSparkUpdates.has(chat.id)) return;
+    pendingSparkUpdates.add(chat.id);
+    try {
+      // 在副本上恢复并扣卡；保存失败时不改变当前角色的卡数和保护日期。
+      const draft = { ...chat, settings: { ...chat.settings },
+        spark: JSON.parse(JSON.stringify(chat.spark || {})),
+        sharedPet: chat.sharedPet ? JSON.parse(JSON.stringify(chat.sharedPet)) : undefined };
+      reconcile(draft);
+      const message = change(draft);
+      if (message) {
+        showToast(message);
+        return;
+      }
+      const modal = document.getElementById('character-bond-modal');
+      if (modal.dataset.chatId === String(chat.id) && modal.dataset.mode === 'spark') renderSparkPanel(chat);
+      await db.chats.put({ ...chat, spark: draft.spark });
+      chat.spark = draft.spark;
+    } catch (error) {
+      console.error('保存角色火花失败', error);
+      showToast('保存失败，本次操作未生效，恢复卡未扣除，请重试。');
+      return;
+    } finally {
+      pendingSparkUpdates.delete(chat.id);
+      const modal = document.getElementById('character-bond-modal');
+      if (modal.dataset.chatId === String(chat.id) && modal.dataset.mode === 'spark') renderSparkPanel(chat);
+    }
     refreshVisibleUi(chat);
+    if (state.activeChatId === chat.id) updateSettingsSummary(chat);
     if (typeof renderChatList === 'function') renderChatList();
-    showToast('角色火花已恢复');
+    showToast(successMessage);
+  }
+
+  async function restoreSpark(chat) {
+    return updateSpark(chat, draft => {
+      if (!draft.settings.enableCharacterSpark) return '请先在聊天设置中开启角色火花。';
+      const spark = draft.spark;
+      if (spark.status === 'lit') return '角色火花已点亮，无需使用恢复卡。';
+      const plan = sparkRecoveryPlan(spark);
+      if (!plan.days.length) return plan.message;
+      if (spark.restoreCards < 1) return '暂无恢复卡，可以在下方自定义数量后保存。';
+      plan.days.forEach(key => { spark.protectedDays[key] = 'restore'; });
+      spark.restoreCards -= 1;
+      reconcile(draft);
+      if (spark.status !== 'lit') return '未能接回连续记录，恢复卡未扣除。';
+      return '';
+    }, '角色火花已恢复');
+  }
+
+  async function saveSparkCards(chat) {
+    const value = document.getElementById('character-spark-restore-cards').value.trim();
+    const count = Number(value);
+    if (!/^\d+$/.test(value) || !Number.isSafeInteger(count)) {
+      showToast('恢复卡数量请填写0或正整数。');
+      return;
+    }
+    return updateSpark(chat, draft => {
+      draft.spark.restoreCards = count;
+      return '';
+    }, '恢复卡数量已保存');
   }
 
   async function feedPet(chat) {
@@ -562,6 +646,7 @@
     if (!modal || modal.dataset.bound === 'true') return;
     modal.dataset.bound = 'true';
     const activeChat = () => state.activeChatId ? state.chats[state.activeChatId] : null;
+    const modalChat = () => state.chats[modal.dataset.chatId] || null;
     document.getElementById('character-spark-details-btn')?.addEventListener('click', () => showBondModal('spark', activeChat()));
     document.getElementById('shared-pet-manage-btn')?.addEventListener('click', () => showBondModal('pet', activeChat()));
     document.getElementById('character-spark-badge')?.addEventListener('click', () => showBondModal('spark', activeChat()));
@@ -569,7 +654,8 @@
     modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('visible'); });
     document.getElementById('cancel-character-bond-modal')?.addEventListener('click', () => modal.classList.remove('visible'));
     document.getElementById('save-shared-pet-btn')?.addEventListener('click', () => savePetFromModal(activeChat()));
-    document.getElementById('restore-character-spark-btn')?.addEventListener('click', () => restoreSpark(activeChat()));
+    document.getElementById('restore-character-spark-btn')?.addEventListener('click', () => restoreSpark(modalChat()));
+    document.getElementById('save-character-spark-cards-btn')?.addEventListener('click', () => saveSparkCards(modalChat()));
     document.getElementById('feed-shared-pet-btn')?.addEventListener('click', () => feedPet(activeChat()));
     document.getElementById('shared-pet-avatar-url')?.addEventListener('input', event => {
       const preview = document.getElementById('shared-pet-avatar-preview');

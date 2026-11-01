@@ -13,6 +13,7 @@
   }
   function readApi() {
     return {
+      ...window.fishTtsSettings?.readApi(),
       elevenlabsApiKey: get('elevenlabs-api-key')?.value.trim() ?? state.apiConfig.elevenlabsApiKey ?? '',
       elevenlabsBaseUrl: get('elevenlabs-base-url')?.value.trim() || window.ttsProvider.defaults.elevenlabsBaseUrl,
       elevenlabsModel: get('elevenlabs-model-input')?.value.trim() || get('elevenlabs-model-select')?.value || window.ttsProvider.defaults.elevenlabsModel,
@@ -27,6 +28,7 @@
     if (get('elevenlabs-model-select')) get('elevenlabs-model-select').value = config.elevenlabsModel;
     info('elevenlabs-api-status', '检查连接不生成音频；试听会产生 API 用量。');
     renderUsage();
+    window.fishTtsSettings?.loadApi();
     bind();
   }
   function snapshotDraft() {
@@ -46,17 +48,20 @@
     }
     const boost = get('elevenlabs-speaker-boost').value;
     if (boost !== '') draft.elevenlabsVoiceSettings.use_speaker_boost = boost === 'true';
+    window.fishTtsSettings?.snapshot(draft);
   }
   function renderProvider(name) {
     if (!draft) return;
     get('tts-provider-select').value = name;
     get('ai-voice-id-input').value = draft[name + 'VoiceId'] || '';
-    get('ai-voice-id-input').placeholder = name === 'elevenlabs' ? 'ElevenLabs voice_id' : 'minimax voice_id';
+    get('ai-voice-id-input').placeholder = name === 'fish' ? 'Fish 音色 ID / 链接，留空用默认音色' : name === 'elevenlabs' ? 'ElevenLabs voice_id' : 'minimax voice_id';
     get('ai-voice-speed-input').value = draft[name + 'TtsSpeed'] ?? 1;
     get('elevenlabs-role-options').hidden = name !== 'elevenlabs' || activeChat?.isGroup;
     get('ai-voice-speed-input').min = name === 'elevenlabs' ? '0.7' : '0.5';
     get('ai-voice-speed-input').max = name === 'elevenlabs' ? '1.2' : '2.0';
-    info('tts-role-status', name === 'elevenlabs' ? '使用 API 设置里保存的 ElevenLabs Key。' : '使用原有 MiniMax 配置。');
+    if (get('tts-extended-playback')) get('tts-extended-playback').hidden = name === 'minimax';
+    window.fishTtsSettings?.render(name, activeChat);
+    info('tts-role-status', name === 'fish' ? '使用 API 设置里保存的 Fish Key；音色 ID 可留空使用默认音色。' : name === 'elevenlabs' ? '使用 API 设置里保存的 ElevenLabs Key。Fish 官方兼容地址会自动转为可跨域的合成请求，支持稳定度与语速，其余 ElevenLabs 声音参数不生效。' : '使用原有 MiniMax 配置。');
   }
   function loadChat(chat) {
     stopPreview();
@@ -66,6 +71,9 @@
     draft.ttsProvider = window.ttsProvider.provider(chat);
     draft.minimaxTtsSpeed = chat.settings.minimaxTtsSpeed ?? (draft.ttsProvider === 'minimax' ? chat.settings.ttsSpeed ?? 1 : 1);
     draft.elevenlabsTtsSpeed = chat.settings.elevenlabsTtsSpeed ?? (draft.ttsProvider === 'elevenlabs' ? chat.settings.ttsSpeed ?? 1 : 1);
+    draft.fishTtsSpeed = chat.settings.fishTtsSpeed ?? (draft.ttsProvider === 'fish' ? chat.settings.ttsSpeed ?? 1 : 1);
+    draft.fishVoiceSettings = JSON.parse(JSON.stringify(chat.settings.fishVoiceSettings || {}));
+    window.fishTtsSettings?.loadChat(draft);
     get('tts-provider-group').hidden = chat.isGroup;
     get('tts-common-options').hidden = chat.isGroup;
     get('ai-voice-speed-input').value = draft.ttsSpeed ?? 1;
@@ -89,7 +97,9 @@
       ttsProvider: name, minimaxVoiceId: draft.minimaxVoiceId || '', elevenlabsVoiceId: draft.elevenlabsVoiceId || '',
       elevenlabsModel: draft.elevenlabsModel, elevenlabsVoiceSettings: { ...draft.elevenlabsVoiceSettings },
       ttsSpeed: draft.ttsSpeed, ttsSplitLongText: draft.ttsSplitLongText, ttsStreaming: draft.ttsStreaming, ttsSaveAudio: draft.ttsSaveAudio,
-      minimaxTtsSpeed: draft.minimaxTtsSpeed, elevenlabsTtsSpeed: draft.elevenlabsTtsSpeed
+      minimaxTtsSpeed: draft.minimaxTtsSpeed, elevenlabsTtsSpeed: draft.elevenlabsTtsSpeed,
+      fishVoiceId: draft.fishVoiceId || '', fishModel: draft.fishModel || '', fishTtsSpeed: draft.fishTtsSpeed,
+      fishVoiceSettings: JSON.parse(JSON.stringify(draft.fishVoiceSettings || {}))
     });
     stopPreview();
   }
@@ -109,6 +119,7 @@
     previewController?.abort(); previewController = null;
     if (preview) { preview.pause(); preview.removeAttribute('src'); preview.onended = null; preview.onerror = null; }
     if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    window.fishTtsSettings?.stopSample();
   }
   async function previewVoice(fromApi = false) {
     if ((typeof videoCallState !== 'undefined' && videoCallState.isActive) || (typeof voiceCallState !== 'undefined' && voiceCallState.isActive)) {
@@ -116,10 +127,10 @@
     }
     stopPreview();
     const controller = new AbortController(); previewController = controller;
-    const status = fromApi ? 'elevenlabs-api-status' : 'tts-role-status';
-    const chat = fromApi ? { settings: { ttsProvider: 'elevenlabs', elevenlabsVoiceId: get('elevenlabs-test-voice').value.trim() } } : draftChat();
+    const status = fromApi === 'fish' ? 'fish-api-status' : fromApi ? 'elevenlabs-api-status' : 'tts-role-status';
+    const chat = fromApi === 'fish' ? { settings: { ttsProvider: 'fish', fishVoiceId: get('fish-test-voice').value.trim() } } : fromApi ? { settings: { ttsProvider: 'elevenlabs', elevenlabsVoiceId: get('elevenlabs-test-voice').value.trim() } } : draftChat();
     const config = window.ttsProvider.resolve(chat, { apiConfig: fromApi ? values() : state.apiConfig });
-    const text = get(fromApi ? 'elevenlabs-test-text' : 'tts-preview-text').value;
+    const text = get(fromApi === 'fish' ? 'fish-test-text' : fromApi ? 'elevenlabs-test-text' : 'tts-preview-text').value;
     const parts = window.ttsProvider.segments(text, chat, config);
     if (!parts.length) throw new Error('请输入试听文本');
     window.ttsProvider.validate(config);
@@ -132,7 +143,7 @@
       previewUrl = URL.createObjectURL(blob); preview = get('tts-preview-player'); preview.src = previewUrl;
       preview.onended = () => {
         if (index + 1 < parts.length) playPart(index + 1).catch(error => handleError(status, error));
-        else { info(status, '试听完成。'); stopPreview(); }
+        else info(status, '试听完成，可点击“播放试听”再次播放。');
       };
       preview.onerror = () => { info(status, '音频已生成，但浏览器无法播放。'); stopPreview(); };
       try { await preview.play(); info(status, '试听播放中。'); }
@@ -191,8 +202,10 @@
       select.dataset.ttsBound = '1';
       select.addEventListener('change', () => {
         const next = select.value;
-        select.value = draft?.ttsProvider === 'elevenlabs' ? 'elevenlabs' : 'minimax';
-        snapshotDraft(); if (draft) draft.ttsProvider = next; stopPreview(); renderProvider(next);
+        select.value = draft?.ttsProvider || 'minimax';
+        try { snapshotDraft(); }
+        catch (error) { info('tts-role-status', error.message); return; }
+        if (draft) draft.ttsProvider = next; stopPreview(); renderProvider(next);
       });
     }
     action('elevenlabs-model-fetch', 'elevenlabs-api-status', async () => {
@@ -291,12 +304,16 @@
       if (screen && !screen.dataset.ttsObserved && typeof MutationObserver !== 'undefined') {
         screen.dataset.ttsObserved = '1';
         new MutationObserver(() => {
-          if (!screen.classList.contains('active')) stopPreview();
+          if (!screen.classList.contains('active')) {
+            stopPreview();
+            if (screenId === 'chat-settings-screen') window.fishTtsSettings?.closeChat();
+          }
         }).observe(screen, { attributes: true, attributeFilter: ['class'] });
       }
     }
   }
-  window.ttsSettings = { readApi, loadApi, loadChat, saveChat, validateChat, stopPreview };
+  window.ttsSettings = { readApi, loadApi, loadChat, saveChat, validateChat, stopPreview, previewVoice,
+    playPreview: async () => { if (!previewUrl || !preview) throw new Error('请先生成试听'); await preview.play(); } };
   window.addEventListener('pagehide', () => { stopPreview(); voiceController?.abort(); });
   window.addEventListener('tts-usage-updated', renderUsage);
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopPreview(); });

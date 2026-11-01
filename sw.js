@@ -58,7 +58,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-  if (event.request.headers.has('xi-api-key') || event.request.headers.get('X-EPhone-Feedback') === '1') return;
+  if (event.request.headers.has('Authorization') || event.request.headers.has('xi-api-key') || event.request.headers.get('X-EPhone-Feedback') === '1') return;
   const url = new URL(event.request.url);
   const own = url.origin === new URL(self.registration.scope).origin;
   const asset = own ? byPath.get(url.pathname) : null;

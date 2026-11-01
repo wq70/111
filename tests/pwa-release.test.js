@@ -42,7 +42,7 @@ function fixture(broken = false) {
       respondWith(value) { response = value; }, waitUntil(value) { pending.push(value); } });
     const result = await response; await Promise.all(pending); return result;
   }
-  return { stores, requests, self, release, lifecycle, request, skips: () => skips };
+  return { stores, requests, self, release, lifecycle, request, handlers, skips: () => skips };
 }
 
 test('完整下载且校验后安装；不强制接管活动页面，网页和 PWA 共用一致资源', async () => {
@@ -75,15 +75,11 @@ test('媒体缓存与发布资源分离；字体重新加载不使用旧缓存�
 test('多窗口更新不能强行切换，单窗口请求才允许激活', async () => {
   const f = fixture(); let answer, pending;
   f.self.clients.matchAll = async () => [{}, {}];
-  const c = { self: f.self }; // 调用已注册的处理器通过重新加载取得；验证协议避免原生窗口依赖。
-  const source = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-  const start = source.indexOf("self.addEventListener('message', event => {\n  if (event.data?.type !== 'ACTIVATE_UPDATE'");
-  const end = source.indexOf('// 4. 推送通知', start);
-  let handler; c.self = { ...f.self, addEventListener: (_, fn) => { handler = fn; } };
-  vm.runInNewContext(source.slice(start, end), c);
+  // Exercise the handler registered by the real worker, independent of CRLF/LF and source formatting.
+  const handler = f.handlers.message[0];
   const event = { data: { type: 'ACTIVATE_UPDATE' }, ports: [{ postMessage(value) { answer = value; } }], waitUntil(value) { pending = value; } };
   handler(event); await pending; assert.equal(answer.ok, false); assert.equal(f.skips(), 0);
-  c.self.clients.matchAll = async () => [{}]; handler(event); await pending; assert.equal(answer.ok, true); assert.equal(f.skips(), 1);
+  f.self.clients.matchAll = async () => [{}]; handler(event); await pending; assert.equal(answer.ok, true); assert.equal(f.skips(), 1);
 });
 
 test('构建的每个发布文件与校验值一致，入口和全部片段都带版本', () => {

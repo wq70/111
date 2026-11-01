@@ -1,21 +1,201 @@
-/* Scoped additions reuse the surrounding settings typography and colors. */
-.tts-settings { min-width: 0; }
-.tts-settings .settings-right { min-width: 0; }
-.tts-settings .tts-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 15px; }
-.tts-settings .tts-actions .form-button { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; font-weight: 400; min-width: 0; }
-.tts-settings .tts-status { margin: 0; padding: 6px 15px 10px; font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
-.tts-settings input, .tts-settings select, .tts-settings textarea { max-width: 100%; box-sizing: border-box; min-width: 0; }
-.tts-settings .tts-wide-input { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--secondary-bg); color: var(--text-color); font: inherit; font-size: 13px; }
-.tts-settings .tts-text-row { padding: 8px 15px; }
-.tts-settings details > summary { padding: 10px 15px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
-.tts-settings [hidden], #tts-provider-group[hidden], #tts-common-options[hidden] { display: none !important; }
-.tts-settings .tts-label { flex: 0 0 auto; white-space: nowrap; }
-.tts-settings .tts-controls { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; }
-.tts-settings .tts-controls select { width: 100%; overflow: hidden; text-overflow: ellipsis; }
-.tts-settings .tts-key-actions { padding-top: 0; justify-content: flex-end; }
-.tts-settings .tts-usage { padding: 0 15px 8px; margin: 0; font-size: 12px; color: var(--text-secondary); }
-@media (max-width: 390px) {
-  .tts-settings .tts-actions { gap: 5px; }
-  .tts-settings .tts-actions .form-button { padding: 6px 8px; }
-  .tts-settings .settings-right { flex: 1; max-width: 65%; }
+/* Shared voice settings: scoped controls follow the active settings theme. */
+.tts-settings {
+  --tts-accent: var(--accent-color, #007aff);
+  --tts-on-accent: #fff;
+  --tts-text: var(--text-primary, #202124);
+  --tts-muted: var(--text-secondary, #777b83);
+  --tts-line: var(--border-color, #e5e7eb);
+  --tts-field: #f6f7f9;
+  --tts-soft: #f1f5fb;
+  min-width: 0;
+  color: var(--tts-text);
 }
+#phone-screen.dark-mode .tts-settings {
+  --tts-field: #28282b;
+  --tts-soft: #252d38;
+  --tts-line: #414145;
+  --tts-text: #f5f5f7;
+  --tts-muted: #aaaab3;
+}
+#api-settings-screen.api-scheme-2 .tts-settings {
+  --tts-accent: var(--api-sakura-accent);
+  --tts-on-accent: #462c35;
+  --tts-text: var(--api-sakura-text);
+  --tts-muted: var(--api-sakura-muted);
+  --tts-line: var(--api-sakura-border);
+  --tts-field: var(--api-sakura-surface-soft);
+  --tts-soft: var(--api-sakura-bg);
+}
+#phone-screen.dark-mode #api-settings-screen.api-scheme-2 .tts-settings {
+  --tts-field: #30272c;
+  --tts-soft: #30272c;
+  --tts-line: #59434c;
+  --tts-text: #f5e6ec;
+  --tts-muted: #c4aab5;
+}
+.tts-settings .settings-item {
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 16px !important;
+  background: transparent;
+}
+.tts-settings .settings-item > label:not(.toggle-switch) {
+  font-size: 14px !important;
+  line-height: 1.5;
+  letter-spacing: 0;
+}
+.tts-settings .settings-right { flex: 1 1 58%; min-width: 0; margin-left: 0; }
+#phone-screen .tts-settings :is(input[type="text"], input[type="password"], input[type="url"], input[type="search"], input[type="number"], select, textarea) {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 38px;
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--tts-line);
+  border-radius: 10px;
+  background: var(--tts-field);
+  color: var(--tts-text) !important;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: left;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.tts-settings input::placeholder, .tts-settings textarea::placeholder { color: var(--tts-muted); opacity: .85; }
+#phone-screen :is(#api-settings-screen, #chat-settings-screen) .tts-settings select {
+  padding: 9px 30px 9px 11px !important;
+  min-height: 38px !important;
+  border: 1px solid var(--tts-line) !important;
+  border-radius: 10px !important;
+  background-color: var(--tts-field) !important;
+  color: var(--tts-text) !important;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath d='m4 5.5 3 3 3-3' fill='none' stroke='%23858a94' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.tts-settings select option { color: var(--tts-text); background: var(--tts-field); }
+.tts-settings :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--tts-accent);
+  outline-offset: 2px;
+  border-color: var(--tts-accent);
+}
+#phone-screen :is(#api-settings-screen, #chat-settings-screen) .tts-settings select:focus-visible {
+  outline: 2px solid var(--tts-accent) !important;
+  outline-offset: 2px;
+  border-color: var(--tts-accent) !important;
+}
+.tts-settings textarea { resize: vertical; min-height: 82px; }
+.tts-settings .tts-wide-input { display: block; width: 100%; }
+.tts-settings .tts-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px 14px; }
+.tts-settings .tts-actions .form-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 36px;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 13px;
+  border: 1px solid var(--tts-line);
+  border-radius: 10px;
+  background: var(--tts-field);
+  color: var(--tts-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: normal;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.tts-settings :is(#fish-test-generate, #elevenlabs-test-generate, #tts-preview-generate, #fish-own-create) {
+  background: var(--tts-accent);
+  color: var(--tts-on-accent);
+  border-color: var(--tts-accent);
+}
+.tts-settings .form-button:is([id$="-delete"], [id$="-clear"], #tts-clear-saved-audio) { color: #d24a43; }
+#phone-screen.dark-mode .tts-settings .form-button:is([id$="-delete"], [id$="-clear"], #tts-clear-saved-audio) { color: #ff8c84; }
+.tts-settings .form-button:focus-visible, .tts-settings summary:focus-visible { outline: 2px solid var(--tts-accent); outline-offset: 2px; }
+.tts-settings .form-button:active { filter: brightness(.94); }
+.tts-settings .form-button:disabled { opacity: .5; cursor: wait; }
+.tts-settings .tts-key-actions { justify-content: flex-end; padding-top: 0; }
+.tts-settings .tts-key-actions .form-button { min-height: 30px; padding: 5px 12px; font-size: 12px; }
+.tts-settings details {
+  min-width: 0;
+  margin: 10px 12px;
+  border: 1px solid var(--tts-line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tts-settings details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  list-style: none;
+  padding: 13px 14px;
+  color: var(--tts-text);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tts-settings summary::-webkit-details-marker { display: none; }
+.tts-settings summary::after {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  margin-right: 3px;
+  border-right: 1.5px solid var(--tts-muted);
+  border-bottom: 1.5px solid var(--tts-muted);
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+}
+.tts-settings details[open] > summary { background: var(--tts-field); border-bottom: 1px solid var(--tts-line); }
+.tts-settings details[open] > summary::after { transform: rotate(45deg); }
+.tts-settings .tts-text-row { padding: 10px 16px; }
+.tts-settings .tts-text-row > label { display: block; margin-bottom: 8px; color: var(--tts-muted); font-size: 12px; line-height: 1.6; }
+.tts-settings input[type="file"] { display: block; width: 100%; min-width: 0; max-width: 100%; font: inherit; font-size: 12px; color: var(--tts-muted); }
+.tts-settings input[type="file"]::file-selector-button {
+  appearance: none;
+  margin: 0 10px 4px 0;
+  padding: 9px 12px;
+  border: 1px solid var(--tts-line);
+  border-radius: 9px;
+  background: var(--tts-field);
+  color: var(--tts-text);
+  font: inherit;
+  cursor: pointer;
+}
+.tts-settings .tts-usage, .tts-settings .tts-status { margin: 0; padding: 4px 16px 12px; font-size: 12px; line-height: 1.7; color: var(--tts-muted); overflow-wrap: anywhere; }
+.tts-settings .tts-status:not(:empty) { margin: 10px 12px; padding: 10px 12px; border-radius: 10px; background: var(--tts-soft); color: var(--tts-text); }
+.tts-settings .tts-status:empty { display: none; }
+.tts-settings a { color: var(--tts-accent); text-decoration: underline; text-underline-offset: 3px; }
+.tts-settings .tts-controls { display: flex; gap: 6px; flex: 1; min-width: 0; justify-content: flex-end; }
+.tts-settings [hidden], #tts-provider-group[hidden], #tts-common-options[hidden] { display: none !important; }
+@media (max-width: 390px) {
+  .tts-settings .settings-item { flex-wrap: wrap; gap: 8px; padding: 12px 14px !important; }
+  .tts-settings .settings-right { flex-basis: 100%; max-width: 100%; }
+  .tts-settings .toggle-switch { margin-left: auto; }
+  .tts-settings .tts-actions { padding-inline: 14px; gap: 7px; }
+  .tts-settings .tts-actions .form-button { padding-inline: 11px; }
+  #phone-screen .tts-settings :is(input[type="text"], input[type="password"], input[type="url"], input[type="search"], input[type="number"], select, textarea) { font-size: 16px; }
+  #phone-screen :is(#api-settings-screen, #chat-settings-screen) .tts-settings select { font-size: 16px !important; }
+}
+@media (prefers-reduced-motion: reduce) { .tts-settings *, .tts-settings *::after { transition: none !important; } }

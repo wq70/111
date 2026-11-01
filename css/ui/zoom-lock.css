@@ -1,0 +1,15 @@
+/* Restrict browser zoom while retaining native horizontal and vertical scrolling. */
+html.interface-zoom-locked {
+    touch-action: pan-x pan-y !important;
+}
+
+html.interface-zoom-locked .locked-image-preview {
+    touch-action: none;
+    overflow: hidden;
+}
+
+html.interface-zoom-locked .locked-image-preview img {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}

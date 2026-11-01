@@ -96,6 +96,10 @@
         messageContent
       });
       handleSystemNotification(chatId, messageContent);
+    } else if (state.globalSettings.systemNotification?.enabled &&
+      (document.hidden || document.visibilityState === 'hidden')) {
+      // 后台仍停留在聊天页面时，只补服务器推送，不改变本机通知规则。
+      void sendPushServerNotification(chatId, messageContent);
     }
   }
 
@@ -391,12 +395,143 @@
     }
   }
 
+  const PUSH_SERVER_DEFAULT_HEADERS = '{\n  "Content-Type": "application/json",\n  "Authorization": "Bearer {{apiKey}}"\n}';
+  const PUSH_SERVER_DEFAULT_BODY = '{\n  "title": "{{title}}",\n  "body": "{{body}}",\n  "icon": "{{icon}}",\n  "tag": "{{tag}}",\n  "data": { "chatId": "{{chatId}}" }\n}';
+
+  function buildPushServerRequest(chatId, messageContent, options = {}) {
+    const config = state.globalSettings.systemNotification;
+    const server = config?.pushServer || {};
+    const chat = state.chats[chatId];
+    const appName = config?.appName || 'EPhone';
+    const values = {
+      title: options.title || (chat ? `${appName} - ${chat.name}` : appName),
+      body: String(messageContent || ''),
+      chatId: chat ? String(chatId) : '',
+      appName,
+      apiKey: String(server.apiKey || '').trim(),
+      icon: chat?.settings?.aiAvatar || chat?.settings?.groupAvatar || 'https://i.postimg.cc/nMbyyt1t/D7CD735A73F5FD1D7B8407E0EB8BBAC0.png',
+      tag: `chat-${chatId || 'test'}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+    };
+    const replace = (template, encode = false) => String(template).replace(/\{\{\s*(\w+)\s*\}\}/g, (_, name) => {
+      if (!Object.prototype.hasOwnProperty.call(values, name)) throw new Error(`未知占位符：${name}`);
+      return encode ? encodeURIComponent(values[name]) : values[name];
+    });
+    const substituteJson = value => {
+      if (typeof value === 'string') return replace(value);
+      if (Array.isArray(value)) return value.map(substituteJson);
+      if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, entry]) => [replace(key), substituteJson(entry)]));
+      return value;
+    };
+
+    if (!String(server.serverUrl || '').trim()) throw new Error('请填写推送服务器的完整接口地址。');
+    let url;
+    try { url = new URL(replace(server.serverUrl.trim(), true)); }
+    catch (error) {
+      if (error.message.startsWith('未知占位符')) throw error;
+      throw new Error('服务器地址格式不正确，请填写完整的 HTTP/HTTPS 接口地址。');
+    }
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error('服务器地址需使用 HTTP/HTTPS；鉴权请填写到请求头中。');
+
+    const method = String(server.requestMethod || 'POST').toUpperCase();
+    if (!['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new Error('不支持的请求方法。');
+    let headerTemplate;
+    try { headerTemplate = JSON.parse(server.headersTemplate ?? PUSH_SERVER_DEFAULT_HEADERS); }
+    catch (_) { throw new Error('请求头必须是有效的 JSON 对象。'); }
+    if (!headerTemplate || Array.isArray(headerTemplate) || typeof headerTemplate !== 'object') throw new Error('请求头必须是 JSON 对象。');
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(headerTemplate)) {
+      if (typeof value !== 'string') throw new Error('请求头的值必须是字符串。');
+      // 默认鉴权在密钥留空时省略；自定义的静态鉴权保持原样。
+      if (/^authorization$/i.test(key) && !values.apiKey && value === 'Bearer {{apiKey}}') continue;
+      try { headers.set(key, replace(value)); }
+      catch (error) {
+        if (error.message.startsWith('未知占位符')) throw error;
+        throw new Error('请求头名称或内容格式不正确。');
+      }
+    }
+    const request = { method, headers, credentials: 'omit' };
+    if (method !== 'GET' && method !== 'HEAD') {
+      const template = server.bodyTemplate ?? PUSH_SERVER_DEFAULT_BODY;
+      const contentType = headers.get('Content-Type') || '';
+      if (template === '') {
+        request.body = '';
+      } else if (/\bapplication\/(?:[\w.-]+\+)?json\b/i.test(contentType)) {
+        let body;
+        try { body = JSON.parse(template); }
+        catch (_) { throw new Error('JSON 请求体格式不正确；占位符请放在字符串中。'); }
+        request.body = JSON.stringify(substituteJson(body));
+      } else {
+        request.body = replace(template, /application\/x-www-form-urlencoded/i.test(contentType));
+      }
+    }
+    // 只用于遮盖测试返回内容，不输出请求地址、消息或鉴权数据到控制台。
+    const secrets = [values.apiKey, ...Array.from(headers).filter(([key]) => /authorization|key|token|secret|cookie/i.test(key)).map(([, value]) => value),
+      ...Array.from(url.searchParams).filter(([key]) => /key|token|secret|password/i.test(key)).map(([, value]) => value)].filter(Boolean);
+    return { url: url.href, request, secrets };
+  }
+
+  async function sendPushServerNotification(chatId, messageContent, options = {}) {
+    const config = state.globalSettings.systemNotification;
+    if (!config?.enabled || !config.pushServer?.enabled) return { skipped: true };
+    if (!options.test && !state.chats[chatId]) return { skipped: true };
+    let timer;
+    let timedOut = false;
+    let requestStarted = false;
+    try {
+      const { url, request, secrets } = buildPushServerRequest(chatId, messageContent, options);
+      const controller = new AbortController();
+      timer = setTimeout(() => { timedOut = true; controller.abort(); }, 10000);
+      requestStarted = true;
+      const keepalive = !request.body || new TextEncoder().encode(request.body).byteLength < 60000;
+      const response = await fetch(url, { ...request, signal: controller.signal, keepalive });
+      let reply = '';
+      if (options.test) {
+        reply = await response.text();
+        for (const secret of secrets) {
+          for (const encoded of [secret, encodeURIComponent(secret)]) reply = reply.split(encoded).join('[已隐藏]');
+        }
+        reply = reply.slice(0, 2000);
+      }
+      if (!response.ok) console.warn('[服务器推送] HTTP 请求失败:', response.status);
+      return { ok: response.ok, status: response.status, reply };
+    } catch (error) {
+      const reason = timedOut ? '请求超时（10 秒），请检查服务器是否可用。' :
+        requestStarted ? '网络请求失败，请检查连接、HTTPS 和服务器的跨域许可（CORS）。' :
+        error.message;
+      // fetch 的原始异常可能包含带密钥的 URL，因此仅记录固定提示。
+      console.warn('[服务器推送] 请求未完成。');
+      return { ok: false, error: reason };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  let pushServerTestRunning = false;
+  async function testPushServerNotification() {
+    const config = state.globalSettings.systemNotification;
+    if (!config?.enabled || !config.pushServer?.enabled || pushServerTestRunning) return;
+    const resultEl = document.getElementById('push-server-test-result');
+    const button = document.getElementById('test-push-server-btn');
+    pushServerTestRunning = true;
+    if (button) button.disabled = true;
+    if (resultEl) { resultEl.hidden = false; resultEl.textContent = '正在测试服务器…'; }
+    try {
+      const result = await sendPushServerNotification(null, '这是一条测试通知 🎉', { test: true });
+      if (resultEl) resultEl.textContent = result.error ||
+        `HTTP ${result.status}：${result.ok ? '服务器已响应，请确认返回结果及设备通知。' : '服务器拒绝了请求。'}\n${result.reply || '（无返回内容）'}`;
+    } finally {
+      pushServerTestRunning = false;
+      if (button) button.disabled = false;
+    }
+  }
+
   // 处理系统通知（每条消息单独通知，不合并）
   async function handleSystemNotification(chatId, messageContent) {
     console.log('[系统通知调试] handleSystemNotification 被调用:', {
       chatId,
       messageContent,
-      config: state.globalSettings.systemNotification
+      enabled: state.globalSettings.systemNotification?.enabled,
+      pushServerEnabled: state.globalSettings.systemNotification?.pushServer?.enabled
     });
 
     const config = state.globalSettings.systemNotification;
@@ -408,6 +543,9 @@
       });
       return;
     }
+
+    // 服务器请求与本机通知独立，不等待网络，也不受本机通知权限影响。
+    void sendPushServerNotification(chatId, messageContent);
 
     // 直接用 Notification.permission 检查权限（最可靠，兼容所有浏览器）
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
@@ -425,6 +563,8 @@
   // 发送测试通知
   async function sendTestNotification() {
     console.log('[系统通知调试] sendTestNotification 被调用');
+
+    void testPushServerNotification();
 
     // 直接用 Notification.permission 检查权限（最可靠，兼容所有浏览器）
     if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
@@ -572,6 +712,20 @@
       });
     }
 
+    for (const [id, key, event] of [
+      ['push-server-request-method', 'requestMethod', 'change'],
+      ['push-server-headers-template', 'headersTemplate', 'input'],
+      ['push-server-body-template', 'bodyTemplate', 'input']
+    ]) {
+      const input = document.getElementById(id);
+      if (input) input.addEventListener(event, () => {
+        state.globalSettings.systemNotification.pushServer[key] = input.value;
+        if (key === 'requestMethod') updatePushServerBodyAvailability();
+      });
+    }
+    const pushTestBtn = document.getElementById('test-push-server-btn');
+    if (pushTestBtn) pushTestBtn.addEventListener('click', testPushServerNotification);
+
     if (vibrationSwitch) {
       vibrationSwitch.addEventListener('change', () => {
         state.globalSettings.systemNotification.vibration.enabled = vibrationSwitch.checked;
@@ -670,6 +824,16 @@
       pushServerApiKey.value = config.pushServer?.apiKey || '';
     }
 
+    for (const [id, value] of [
+      ['push-server-request-method', config.pushServer?.requestMethod || 'POST'],
+      ['push-server-headers-template', config.pushServer?.headersTemplate ?? PUSH_SERVER_DEFAULT_HEADERS],
+      ['push-server-body-template', config.pushServer?.bodyTemplate ?? PUSH_SERVER_DEFAULT_BODY]
+    ]) {
+      const input = document.getElementById(id);
+      if (input) input.value = value;
+    }
+    updatePushServerBodyAvailability();
+
     // 加载震动设置
     if (vibrationSwitch) {
       vibrationSwitch.checked = config.vibration?.enabled || false;
@@ -708,6 +872,12 @@
     }
 
     updateNotificationPermissionStatus();
+  }
+
+  function updatePushServerBodyAvailability() {
+    const method = document.getElementById('push-server-request-method')?.value || 'POST';
+    const body = document.getElementById('push-server-body-template');
+    if (body) body.disabled = method === 'GET' || method === 'HEAD';
   }
 
   // ========== 系统级通知功能结束 ==========

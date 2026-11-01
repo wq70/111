@@ -712,10 +712,10 @@
           if (restoredApiConfig.catboxEnable !== undefined) localStorage.setItem('catbox-enabled', restoredApiConfig.catboxEnable);
 
           // 同步 NovelAI
-          const novelaiSettings = localStorage.getItem('novelai-settings'); // NovelAI配置比较特殊，通常在localStorage，如果备份里有也可以恢复
-          // 注意：你的代码似乎没有把 novelai 的 key 存入 apiConfig 表，而是直接存 localStorage，
-          // 如果你的备份逻辑里没有包含 localStorage 的 novelai 数据，导入后确实会丢失。
-          // 但这里我们主要修复 ImgBB/Minimax/Catbox。
+          if (restoredApiConfig.novelaiSettings) localStorage.setItem('novelai-settings', JSON.stringify(restoredApiConfig.novelaiSettings));
+          if (restoredApiConfig.novelaiApiKey !== undefined) localStorage.setItem('novelai-api-key', restoredApiConfig.novelaiApiKey);
+          if (restoredApiConfig.novelaiModel !== undefined) localStorage.setItem('novelai-model', restoredApiConfig.novelaiModel);
+          if (restoredApiConfig.novelaiEnabled !== undefined) localStorage.setItem('novelai-enabled', String(restoredApiConfig.novelaiEnabled));
         }
         console.log("API 配置已强制同步到本地缓存。");
       } catch (e) {

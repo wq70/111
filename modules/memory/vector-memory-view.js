@@ -12,16 +12,18 @@ function renderVectorMemoryView() {
 }
 
 function bindVectorMemoryEvents(chat, container) {
-  const mutationSelectors = '#vm-add-fragment-btn, #vm-add-core-btn, #vm-import-btn, #vm-batch-delete-btn, #vm-batch-shift-time-btn, #vm-batch-undo-time-btn, .vm-edit-core-btn, .vm-delete-core-btn, .vm-pin-btn, .vm-edit-frag-btn, .vm-delete-frag-btn';
+  const mutationSelectors = '#vm-add-fragment-btn, #vm-add-core-btn, #vm-import-btn, #vm-batch-delete-btn, #vm-batch-shift-time-btn, #vm-batch-undo-time-btn, .vm-edit-core-btn, .vm-delete-core-btn, .vm-pin-btn, .vm-edit-frag-btn, .vm-delete-frag-btn, #vm-consolidate-btn';
   if (container._vmMutationGuard) container.removeEventListener('click', container._vmMutationGuard, true);
   container._vmMutationGuard = event => {
     if (window.vectorMemoryManager._extractionLocks.get(chat) && event.target.closest(mutationSelectors)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      showToast('正在提取，请结束当前任务后修改记忆', 'info');
+      showToast(window.vectorMemoryManager._extractionLocks.get(chat).type === 'consolidation'
+        ? '正在整合，请结束当前任务后修改记忆' : '正在提取，请结束当前任务后修改记忆', 'info');
     }
   };
   container.addEventListener('click', container._vmMutationGuard, true);
+  container.querySelector('#vm-consolidate-btn')?.addEventListener('click', () => openVectorConsolidation(chat));
   container.querySelectorAll('[data-vm-task-action]').forEach(button => {
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -415,6 +417,112 @@ function bindVectorMemoryEvents(chat, container) {
   });
 }
 
+// 沿用现有自定义弹窗；样式只作用于本次整合的主体和按钮。
+function setupVectorConsolidationModal(title, html, buttons) {
+  const body = window._modalBody;
+  const footer = document.querySelector('#custom-modal .custom-modal-footer');
+  window._modalTitle.textContent = title;
+  body.style.cssText = '';
+  footer.style.cssText = '';
+  body.classList.add('vm-consolidation-body');
+  footer.classList.add('vm-consolidation-footer');
+  body.innerHTML = html;
+  footer.innerHTML = buttons;
+  showCustomModal();
+  let closed = false;
+  return () => {
+    if (closed) return;
+    closed = true;
+    window._modalResolve = null;
+    hideCustomModal();
+    body.classList.remove('vm-consolidation-body');
+    footer.classList.remove('vm-consolidation-footer');
+  };
+}
+
+function showVectorConsolidationProgress(runtime, text, cancellable = true) {
+  const close = setupVectorConsolidationModal('AI整合记忆', `<p>${text}</p><p class="vm-consolidation-note">${cancellable
+    ? '旧记忆尚未修改。取消后不会保存本次结果；已发出的请求可能产生费用。' : '正在保存已确认的整合结果。'}</p>`,
+    `<button id="custom-modal-cancel" ${cancellable ? '' : 'disabled'}>${cancellable ? '取消' : '保存中…'}</button>`);
+  window._modalResolve = () => { if (cancellable) { runtime.controller.abort(); close(); } };
+  document.getElementById('custom-modal-cancel').onclick = () => window._modalResolve?.(null);
+  return close;
+}
+
+function showVectorConsolidationPreview(chat, snapshot, rows) {
+  const manager = window.vectorMemoryManager;
+  const escape = value => manager._escapeHtml(String(value || ''));
+  const groups = manager.getConsolidationCategories(snapshot.scope).map(code => {
+    const items = rows.filter(row => row.fragment.category === code);
+    if (!items.length) return '';
+    return `<div class="vm-consolidation-group"><div class="vm-consolidation-category">${escape(manager.DEFAULT_CATEGORIES[code].name)} (${items.length})</div>${items.map(row =>
+      `<div class="vm-consolidation-item">${escape(row.fragment.content)}${row.sourceIds.length > 1 ? `<div class="vm-consolidation-note">合并了 ${row.sourceIds.length} 条原记忆</div>` : ''}</div>`).join('')}</div>`;
+  }).join('');
+  return new Promise(resolve => {
+    const close = setupVectorConsolidationModal('整合完成，请确认',
+      `<p>${snapshot.scope === 'all' ? '全部七类' : escape(manager.DEFAULT_CATEGORIES[snapshot.scope].name)}：${snapshot.originals.length} 条 → ${rows.length} 条</p>
+      <div class="vm-consolidation-preview">${groups}</div>
+      <p class="vm-consolidation-note">确认后替换所选范围。需要调整时，填写反馈让AI重写。</p>
+      <textarea id="vm-consolidation-feedback" aria-label="整合反馈" placeholder="例如：保留那次争吵的原因，不要省略约定日期"></textarea>`,
+      '<button id="custom-modal-cancel">取消</button><button id="vm-consolidation-rewrite">让AI重写</button><button id="custom-modal-confirm" class="confirm-btn btn-danger">确认替换</button>');
+    const finish = action => { close(); resolve(action); };
+    window._modalResolve = () => finish({ action: 'cancel' });
+    document.getElementById('custom-modal-cancel').onclick = () => finish({ action: 'cancel' });
+    document.getElementById('custom-modal-confirm').onclick = () => finish({ action: 'confirm' });
+    document.getElementById('vm-consolidation-rewrite').onclick = () => {
+      const feedback = document.getElementById('vm-consolidation-feedback').value.trim();
+      if (!feedback) { showToast('请先填写需要调整的内容', 'info'); return; }
+      finish({ action: 'rewrite', feedback });
+    };
+  });
+}
+
+async function openVectorConsolidation(chat) {
+  const manager = window.vectorMemoryManager;
+  if (manager._extractionLocks.get(chat)) { showToast('请先结束当前记忆任务', 'info'); return; }
+  if (chat.variableMemory?._metadataEnrichmentCancelled === false) { showToast('请先结束多语言信息补全', 'info'); return; }
+  const runtime = { type: 'consolidation', controller: new AbortController() };
+  manager._extractionLocks.set(chat, runtime);
+  let closeProgress;
+  try {
+    const codes = manager.getConsolidationCategories();
+    const fragments = manager.getAllFragments(chat);
+    const scope = await showChoiceModal('选择AI整合范围', [
+      { text: `全部七类 (${fragments.filter(fragment => codes.includes(fragment.category)).length} 条)`, value: 'all' },
+      ...codes.map(code => ({ text: `${manager.DEFAULT_CATEGORIES[code].name} (${fragments.filter(fragment => fragment.category === code).length} 条)`, value: code }))
+    ]);
+    if (!scope) return;
+    const snapshot = manager.captureConsolidation(chat, scope);
+    let feedback = '';
+    let rows;
+    while (true) {
+      closeProgress = showVectorConsolidationProgress(runtime, '正在整理已有记忆…');
+      rows = await manager.generateConsolidation(chat, snapshot, feedback, runtime.controller.signal);
+      closeProgress(); closeProgress = null;
+      const result = await showVectorConsolidationPreview(chat, snapshot, rows);
+      if (!result || result.action === 'cancel') { showToast('已取消，旧记忆未修改', 'info'); return; }
+      if (result.action === 'confirm') break;
+      feedback = [feedback, result.feedback].filter(Boolean).join('\n');
+    }
+    closeProgress = showVectorConsolidationProgress(runtime, '正在更新向量…');
+    const result = await manager.saveConsolidation(chat, snapshot, rows, runtime.controller.signal, () => {
+      window._modalResolve = () => {};
+      const cancel = document.getElementById('custom-modal-cancel');
+      cancel.disabled = true;
+      cancel.textContent = '保存中…';
+      window._modalBody.innerHTML = '<p>正在保存已确认的整合结果…</p>';
+    });
+    closeProgress(); closeProgress = null;
+    if (state.activeChatId === chat.id) renderVectorMemoryView();
+    showToast(`整合完成：${result.before} 条 → ${result.after} 条${result.local ? `；${result.local} 条暂用本地检索，可在设置中补全向量` : ''}`, 'success');
+  } catch (error) {
+    showToast(runtime.controller.signal.aborted ? '已取消，旧记忆未修改' : `整合未保存：${error.message.replace(/提取/g, '整合')}`, runtime.controller.signal.aborted ? 'info' : 'error');
+  } finally {
+    closeProgress?.();
+    if (manager._extractionLocks.get(chat) === runtime) manager._extractionLocks.delete(chat);
+  }
+}
+
 async function openVectorMemorySettings(chat, defaultTab = 'settings') {
   const vm = window.vectorMemoryManager.getVariableMemory(chat);
   const settingsHtml = window.vectorMemoryManager.renderSettingsPanel(chat);
@@ -483,6 +591,18 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
     panel.querySelector('#vm-extraction-batch-fields').style.display = extractionBatchCb.checked ? 'block' : 'none';
   });
   const customEmbeddingCb = panel.querySelector('#vm-custom-embedding');
+  const embeddingSourceSelect = panel.querySelector('#vm-embedding-source');
+  if (embeddingSourceSelect) {
+    embeddingSourceSelect.addEventListener('change', () => {
+      if (customEmbeddingCb) customEmbeddingCb.checked = embeddingSourceSelect.value === 'custom';
+      const fields = panel.querySelector('#vm-custom-embedding-fields');
+      if (fields) fields.style.display = embeddingSourceSelect.value === 'custom' ? 'block' : 'none';
+      const help = panel.querySelector('#vm-embedding-source-help');
+      if (help) help.textContent = window.vectorMemoryManager.embeddingSourceDescription(chat, true);
+      const status = panel.querySelector('#vm-embedding-status');
+      if (status) status.textContent = '接口来源已修改，请测试并保存；旧记忆不会自动重建。';
+    });
+  }
   if (customEmbeddingCb) {
     customEmbeddingCb.addEventListener('change', () => {
       const fields = panel.querySelector('#vm-custom-embedding-fields');

@@ -111,27 +111,41 @@
             </div>
 
             <!-- NovelAI 详情 (JS控制显示/隐藏) -->
-            <div id="novelai-details" style="display:none; background-color: #f9f9f9; border-top: 0.5px solid #ebedf0;">
-                <div class="settings-item">
-                    <label>模型</label>
-                    <div class="settings-right">
-                         <select id="novelai-model" class="settings-select">
-                            <option value="nai-diffusion-4-curated-preview">V4.5 Curated</option>
-                            <option value="nai-diffusion-4-5-full">V4.5 Full</option>
-                            <option value="nai-diffusion-3">Anime V3</option>
-                        </select>
+            <div id="novelai-details" style="display:none;">
+                <div class="nai-field">
+                    <label for="novelai-endpoint">生图地址</label>
+                    <input type="url" id="novelai-endpoint" placeholder="留空使用官网，或粘贴公益站／中转站地址" autocomplete="off">
+                    <small>基础地址和完整生图地址都可以填写。使用站点提供的 API 地址。</small>
+                </div>
+                <div class="nai-field">
+                    <label for="novelai-model">模型（可搜索或手动填写）</label>
+                    <div class="nai-model-row">
+                        <input type="text" id="novelai-model" list="novelai-model-options" placeholder="选择或输入站点模型名" autocomplete="off">
+                        <button type="button" id="novelai-fetch-models-btn" class="settings-mini-btn">拉取模型</button>
                     </div>
+                    <datalist id="novelai-model-options"></datalist>
+                    <small>拉取只读取清单，不会生图。不提供清单的站点也可手动填写。</small>
                 </div>
                 <div class="settings-item">
                     <label>API Key</label>
                     <div class="settings-right">
                         <div style="position:relative; width:100%;">
-                             <input type="password" id="novelai-api-key" placeholder="pst-...">
+                             <input type="password" id="novelai-api-key" placeholder="填写官网或当前站点的 Key" autocomplete="off">
                              <span id="novelai-key-toggle" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); cursor: pointer;">🧐</span>
                         </div>
                     </div>
                 </div>
+                <details>
+                    <summary>高级连接设置</summary>
+                    <div class="nai-field"><label for="novelai-protocol">连接方式</label><select id="novelai-protocol"><option value="auto">自动（通常无需调整）</option><option value="native">NovelAI 原生</option><option value="images">OpenAI 图片兼容</option></select><small>站点说明要求“Images / OpenAI 生图”时，选择图片兼容。自动模式优先使用 NovelAI 原生。</small></div>
+                    <div class="nai-field"><label for="novelai-address-mode">地址填写方式</label><select id="novelai-address-mode"><option value="auto">自动识别常见路径</option><option value="base">基础地址（补全生图路径）</option><option value="full">完整地址（原样使用）</option></select><small>站点给的地址使用特殊路径时，选“完整地址”。</small></div>
+                    <div class="nai-field"><label for="novelai-models-url">模型列表地址（选填）</label><input type="url" id="novelai-models-url" placeholder="通常留空，特殊站点填写完整模型列表地址" autocomplete="off"></div>
+                    <div class="nai-field"><label for="novelai-model-family">模型版本</label><select id="novelai-model-family"><option value="auto">按模型名识别</option><option value="v3">V3</option><option value="v4">V4</option><option value="v45">V4.5</option><option value="v5">V5</option></select><small>站点使用自定义别名时，按站点说明选择对应版本。</small></div>
+                    <div class="nai-field"><label for="novelai-proxy-scope">跨域代理范围</label><select id="novelai-proxy-scope"><option value="official">只用于官网（保留旧设置）</option><option value="always">也用于自定义站点</option></select><small>代理地址仍在“生成参数”中设置。多数公益站可以直接连接。</small></div>
+                </details>
+                <p id="novelai-status" role="status" aria-live="polite"></p>
                 <div class="settings-item" style="justify-content: space-around;">
+                    <button type="button" id="novelai-save-connection-btn" class="settings-mini-btn">保存连接</button>
                     <button id="novelai-settings-btn" class="settings-mini-btn">⚙️ 生成参数</button>
                     <button id="novelai-test-btn" class="settings-mini-btn">🧪 测试生成</button>
                 </div>

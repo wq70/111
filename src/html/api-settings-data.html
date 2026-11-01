@@ -49,7 +49,7 @@
             <div class="settings-item reply-guardian-setting-row">
                 <label>
                     <span style="display: block;">回复守护</span>
-                    <span class="reply-guardian-setting-note">保存回复任务并在页面被暂停或重载后提供恢复。</span>
+                    <span class="reply-guardian-setting-note">保存回复任务状态，支持查看后台保活诊断。</span>
                 </label>
                 <label class="toggle-switch">
                     <input type="checkbox" id="reply-guardian-enabled-switch">
@@ -72,7 +72,7 @@
                 <div class="reply-guardian-diagnostic-copy">
                     <label>当前保护能力</label>
                     <span id="reply-guardian-capability-summary">检测中...</span>
-                    <span id="reply-guardian-task-summary">暂无待恢复回复</span>
+                    <span id="reply-guardian-task-summary">暂无未完成回复记录</span>
                 </div>
                 <button id="reply-guardian-refresh-btn" class="settings-mini-btn" type="button">重新检测</button>
             </div>
@@ -250,6 +250,35 @@
                             <input type="text" id="push-server-api-key" placeholder="your-api-key">
                         </div>
                     </div>
+                    <details class="push-server-advanced">
+                        <summary>高级请求设置</summary>
+                        <div class="settings-item">
+                            <label for="push-server-request-method">请求方法</label>
+                            <div class="settings-right">
+                                <select id="push-server-request-method" class="settings-select">
+                                    <option value="POST">POST</option>
+                                    <option value="GET">GET</option>
+                                    <option value="HEAD">HEAD</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="PATCH">PATCH</option>
+                                    <option value="DELETE">DELETE</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="push-server-editor">
+                            <label for="push-server-headers-template">请求头（JSON）</label>
+                            <textarea id="push-server-headers-template" rows="3" spellcheck="false" aria-describedby="push-server-template-help"></textarea>
+                            <label for="push-server-body-template">请求体模板</label>
+                            <textarea id="push-server-body-template" rows="5" spellcheck="false" aria-describedby="push-server-template-help"></textarea>
+                        </div>
+                        <p class="push-server-note" id="push-server-template-help">可用占位符：{{title}} 标题、{{body}} 消息、{{chatId}} 聊天 ID、{{appName}} 应用名、{{apiKey}} 密钥、{{icon}} 图标、{{tag}} 通知标识。地址和请求头也可使用。</p>
+                        <p class="push-server-note">JSON 请求体中的占位符放在双引号内，自动转义；表单使用 application/x-www-form-urlencoded，纯文本使用 text/plain。地址及表单中的占位符自动编码。GET/HEAD 不发送请求体，请把参数填在地址中。浏览器跨域限制需要服务器允许。</p>
+                    </details>
+                    <div class="push-server-test-actions">
+                        <span class="push-server-note">默认 POST JSON，可选密钥使用 Bearer 鉴权。</span>
+                        <button type="button" class="settings-mini-btn" id="test-push-server-btn">测试服务器</button>
+                    </div>
+                    <p id="push-server-test-result" class="push-server-note" role="status" aria-live="polite" hidden></p>
                 </div>
                 
                 <!-- 5. 消息震动 -->

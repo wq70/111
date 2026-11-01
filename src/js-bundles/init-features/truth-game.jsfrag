@@ -482,6 +482,8 @@ ${truthGameHistoryContext}
     let activeTruthGameMessageTimestamp = null;
 
     function showTruthGameMessageActions(timestamp) {
+      document.getElementById('delete-message-btn').style.display = 'none';
+      document.getElementById('erase-message-btn').style.display = 'none';
       activeTruthGameMessageTimestamp = timestamp;
       const message = truthGameState.messages.find(m => m.timestamp === timestamp);
 

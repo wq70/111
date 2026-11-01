@@ -381,7 +381,7 @@ ${taskListString}
 
           // 新增：构建心声prompt部分
           const thoughtsPrompt = enableThoughts ? `
-${getActiveThoughtsPrompt()}
+${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 ` : '';
           // 新增：判断是否启用动态功能
           const enableQzoneActions = chat.settings.enableQzoneActions !== null
@@ -720,7 +720,7 @@ ${getActiveThoughtsPrompt()}
             'myAvatarLibrary': myAvatarLibrary
           };
 
-          systemPrompt = replaceTemplateVars(systemPromptTemplate, contextMapSingle);
+          systemPrompt = replaceTemplateVars(await renderMacroPrompt(systemPromptTemplate, 'single'), contextMapSingle);
           if (timeContext && !systemPrompt.includes(timeContext)) {
             systemPrompt += `\n\n${timeContext}`;
           }

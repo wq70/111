@@ -1,0 +1,140 @@
+/* Keep chat actions usable when the viewport or system font size changes. */
+#chat-interface-screen > .header {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+}
+#chat-interface-screen.selection-mode > .header {
+    max-height: 55%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+#chat-interface-screen.selection-mode .header .selection-controls {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 8px;
+    min-width: 0;
+}
+#chat-interface-screen .selection-controls #selection-count {
+    white-space: nowrap;
+    font-size: 15px;
+    line-height: 1.4;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#chat-interface-screen .selection-controls .header-actions {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(88px, 100%), 1fr));
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+#chat-interface-screen .selection-controls .action-btn,
+#chat-interface-screen .selection-controls #selection-cancel-btn {
+    box-sizing: border-box;
+    margin: 0;
+    border: 1px solid var(--border-color, #e5e5ea);
+    background: var(--secondary-bg, #f2f2f7);
+    color: var(--accent-color, #007aff);
+    border-radius: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    width: 100%;
+    height: auto;
+    padding: 8px 4px;
+    touch-action: manipulation;
+}
+#chat-interface-screen .selection-controls .action-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+#chat-interface-screen .selection-controls .action-btn svg { flex-shrink: 0; width: 20px; height: 20px; }
+#chat-interface-screen .selection-action-label { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+#chat-interface-screen .selection-controls #selection-soft-delete-btn { color: #d9342b; }
+#chat-interface-screen .default-controls { min-width: 0; gap: 4px; }
+#chat-interface-screen .default-controls .header-actions { flex: 0 0 auto; gap: 2px; }
+#chat-interface-screen .default-controls .header-actions .action-btn {
+    display: flex; align-items: center; justify-content: center;
+    box-sizing: border-box; min-width: 44px; min-height: 44px; margin: 0; padding: 10px;
+}
+#chat-interface-screen .default-controls .header-actions .action-btn img,
+#chat-interface-screen .default-controls .header-actions .action-btn svg { width: 24px; height: 24px; }
+#chat-interface-screen #chat-header-title-wrapper { position: static; transform: none; max-width: none; min-width: 0; flex: 1 1 auto; }
+#chat-interface-screen #chat-header-title { position: static; transform: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#message-actions-modal {
+    box-sizing: border-box;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+#message-actions-modal > #custom-modal {
+    box-sizing: border-box;
+    width: min(360px, 100%) !important;
+    max-width: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+#message-actions-modal .custom-modal-footer {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+}
+#message-actions-modal .custom-modal-footer button:not(#cancel-message-action-btn) {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0;
+    min-height: 48px;
+    padding: 12px 6px !important;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+}
+#message-actions-modal #cancel-message-action-btn {
+    grid-column: 1 / -1;
+    min-height: 48px;
+}
+#phone-screen #message-actions-modal .custom-modal-footer button:is(#delete-message-btn, #erase-message-btn) { color: #d9342b !important; }
+#phone-screen.dark-mode #message-actions-modal .custom-modal-footer button:is(#delete-message-btn, #erase-message-btn) { color: #ff6961 !important; }
+
+.button-order-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+#button-order-editor, .button-order-editor {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 8px;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.button-order-editor.button-order-editor-labeled { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; }
+.button-order-editor .draggable-button-item {
+    box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; min-width: 0; min-height: 44px; margin: 0; padding: 8px;
+    font: inherit; font-size: 13px; line-height: 1.4;
+    color: var(--text-primary, #111); overflow-wrap: anywhere;
+    touch-action: none;
+    -webkit-touch-callout: none;
+    cursor: grab;
+}
+.button-order-editor .draggable-button-item img { width: 22px; height: 22px; object-fit: contain; pointer-events: none; }
+.button-order-editor .draggable-button-item > * { pointer-events: none; }
+.button-order-editor .draggable-button-item.dragging { opacity: .25; }
+.button-order-editor .draggable-button-item:focus-visible { outline: 2px solid var(--accent-color, #007aff); outline-offset: 2px; }
+.button-order-editor.is-sorting { cursor: grabbing; }
+.button-order-drag-ghost {
+    position: fixed !important;
+    top: 0; left: 0; margin: 0;
+    box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center;
+    padding: 8px; border-radius: 8px; border: 1px solid #007aff;
+    background: #f2f2f7; color: #111;
+    font-size: 13px; line-height: 1.4; overflow-wrap: anywhere;
+    box-shadow: 0 6px 20px #0003;
+    pointer-events: none !important;
+    z-index: 2147483647 !important;
+    will-change: transform;
+    transition: none;
+}
+.button-order-drag-ghost svg, .button-order-drag-ghost img { width: 22px; height: 22px; }

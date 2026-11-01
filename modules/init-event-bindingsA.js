@@ -2153,6 +2153,8 @@ window.initEventBindingsA = async function(state, db) {
       state.globalSettings.detachStatusBar = document.getElementById('detach-status-bar-switch').checked;
       state.globalSettings.cleanChatDetail = document.getElementById('clean-chat-detail-switch').checked;
       state.globalSettings.cleanApiSettings = document.getElementById('clean-api-settings-switch').checked;
+      state.globalSettings.lockInterfaceZoom = document.getElementById('lock-interface-zoom-switch').checked;
+      state.globalSettings.allowPreviewZoom = document.getElementById('allow-preview-zoom-switch').checked;
       state.globalSettings.apiStyleBeautify = document.getElementById('api-style-beautify-switch').checked;
       state.globalSettings.dropdownPopupMode = document.getElementById('dropdown-popup-mode-switch').checked;
       state.globalSettings.showThoughtChainInChat = document.getElementById('global-show-thought-chain-switch').checked;
@@ -2169,6 +2171,7 @@ window.initEventBindingsA = async function(state, db) {
         }
       }
       await (window.saveSettingsRecord ? window.saveSettingsRecord(db.globalSettings, state.globalSettings) : db.globalSettings.put(state.globalSettings));
+      window.applyInterfaceZoomSettings?.();
 
 
       applyGlobalWallpaper();
@@ -2269,6 +2272,10 @@ window.initEventBindingsA = async function(state, db) {
       try {
 
       const nextApiConfig = { ...state.apiConfig };
+      if (window.EmbeddingApiSettings) {
+        nextApiConfig.embeddingConfig = window.EmbeddingApiSettings.read();
+        window.EmbeddingApiSettings.validate(nextApiConfig.embeddingConfig);
+      }
 
       nextApiConfig.proxyUrl = document.getElementById('proxy-url').value.trim();
       nextApiConfig.apiKey = document.getElementById('api-key').value.trim();
@@ -2358,6 +2365,11 @@ window.initEventBindingsA = async function(state, db) {
       nextApiConfig.novelaiApiKey = document.getElementById('novelai-api-key').value.trim();
       nextApiConfig.novelaiModel = document.getElementById('novelai-model').value;
       nextApiConfig.novelaiEnabled = document.getElementById('novelai-switch').checked;
+      nextApiConfig.novelaiSettings = { ...getNovelAISettings(), ...window.NovelAISettings.read() };
+      if (nextApiConfig.novelaiEnabled) {
+        window.NovelAIConnection.resolve(nextApiConfig.novelaiSettings);
+        if (!nextApiConfig.novelaiModel.trim()) throw new Error('请选择或填写NovelAI生图模型。');
+      }
       // 保存备份间隔
       nextApiConfig.githubBackupInterval = backupInterval;
       // 保存开关状态到 localStorage
@@ -2372,6 +2384,9 @@ window.initEventBindingsA = async function(state, db) {
 
       saveStage = '后台与全局设置';
       const nextGlobalSettings = { ...state.globalSettings };
+      if (window.PromptMacroSettings) nextGlobalSettings.promptMacros = window.PromptMacroSettings.read();
+      const routeObservationSwitch = document.getElementById('model-route-enabled');
+      if (routeObservationSwitch) nextGlobalSettings.modelRouteObservation = routeObservationSwitch.checked;
       const backgroundSwitch = document.getElementById('background-activity-switch');
       const intervalInput = document.getElementById('background-interval-input');
       const cooldownInput = document.getElementById('block-cooldown-input');
@@ -2458,6 +2473,7 @@ window.initEventBindingsA = async function(state, db) {
       
       await (window.saveSettingsRecord ? window.saveSettingsRecord(db.globalSettings, nextGlobalSettings) : db.globalSettings.put(nextGlobalSettings));
       Object.assign(state.globalSettings, nextGlobalSettings);
+      window.PromptMacroSettings?.renderObservations();
       if (floatingBallSwitch && oldFloatingBallEnabled !== nextGlobalSettings.floatingBallEnabled && typeof toggleFloatingBall === 'function') {
         applySavedSetting('悬浮球设置', () => toggleFloatingBall(nextGlobalSettings.floatingBallEnabled));
       }
@@ -2504,6 +2520,7 @@ window.initEventBindingsA = async function(state, db) {
       saveLegacySetting('novelai-enabled', novelaiEnabled);
       saveLegacySetting('novelai-model', novelaiModel);
       saveLegacySetting('novelai-api-key', novelaiApiKey);
+      saveLegacySetting('novelai-settings', JSON.stringify(nextApiConfig.novelaiSettings));
       flushLegacySettings();
 
       // 保存Google Imagen配置到localStorage
@@ -2608,7 +2625,15 @@ window.initEventBindingsA = async function(state, db) {
         const modelSelect = document.getElementById(selectId);
         modelSelect.innerHTML = '';
 
-        const savedModel = selectId === 'model-select' ? state.apiConfig.model : state.apiConfig.secondaryModel;
+        const configKey = {
+          'model-select': 'model',
+          'secondary-model-select': 'secondaryModel',
+          'background-model-select': 'backgroundModel',
+          'vision-model-select': 'visionModel',
+          'couplespace-model-select': 'couplespaceModel'
+        }[selectId];
+        const savedModel = document.getElementById(selectId.replace('-select', '-input')).value.trim()
+          || state.apiConfig[configKey];
 
         models.forEach(model => {
           const option = document.createElement('option');
@@ -2686,177 +2711,9 @@ window.initEventBindingsA = async function(state, db) {
       }
     });
 
-    // ========== 移动端控制台功能 ==========
-    (function () {
-      const consoleLogs = [];
-      let currentFilter = 'all';
+    window.initModelSearchSelects();
 
-      // 保存原始console方法
-      const originalConsole = {
-        log: console.log,
-        warn: console.warn,
-        error: console.error,
-        info: console.info
-      };
-
-      // 添加日志到数组
-      function addLog(type, args) {
-        const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
-        const message = Array.from(args).map(arg => {
-          if (typeof arg === 'object') {
-            try {
-              return JSON.stringify(arg, null, 2);
-            } catch (e) {
-              return String(arg);
-            }
-          }
-          return String(arg);
-        }).join(' ');
-
-        consoleLogs.push({ type, timestamp, message });
-
-        // 限制日志数量，最多保存1000条
-        if (consoleLogs.length > 1000) {
-          consoleLogs.shift();
-        }
-      }
-
-      // 重写console方法
-      console.log = function (...args) {
-        originalConsole.log.apply(console, args);
-        addLog('log', args);
-      };
-
-      console.warn = function (...args) {
-        originalConsole.warn.apply(console, args);
-        addLog('warn', args);
-      };
-
-      console.error = function (...args) {
-        originalConsole.error.apply(console, args);
-        addLog('error', args);
-      };
-
-      console.info = function (...args) {
-        originalConsole.info.apply(console, args);
-        addLog('info', args);
-      };
-
-      // 捕获未处理的错误
-      window.addEventListener('error', (event) => {
-        const message = `${event.message}\n  at ${event.filename}:${event.lineno}:${event.colno}`;
-        addLog('error', [message]);
-      });
-
-      // 捕获未处理的Promise拒绝
-      window.addEventListener('unhandledrejection', (event) => {
-        const message = `Unhandled Promise Rejection: ${event.reason}`;
-        addLog('error', [message]);
-      });
-
-      // 渲染控制台内容
-      function renderConsole() {
-        const content = document.getElementById('mobile-console-content');
-        if (!content) return;
-
-        const filteredLogs = currentFilter === 'all'
-          ? consoleLogs
-          : consoleLogs.filter(log => log.type === currentFilter);
-
-        if (filteredLogs.length === 0) {
-          content.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-secondary);">暂无日志</div>';
-          return;
-        }
-
-        content.innerHTML = filteredLogs.map(log =>
-          `<div class="console-entry ${log.type}">
-            <span class="console-timestamp">[${log.timestamp}]</span>
-            <span class="console-message">${log.message}</span>
-          </div>`
-        ).join('');
-
-        // 自动滚动到底部
-        content.scrollTop = content.scrollHeight;
-      }
-
-      // 打开控制台按钮
-      const openConsoleBtn = document.getElementById('open-console-btn');
-      if (openConsoleBtn) {
-        const openConsoleHandler = async () => {
-          const consolePanel = document.getElementById('mobile-console');
-          if (consolePanel) {
-            consolePanel.style.display = 'flex';
-            renderConsole();
-
-            // 首次打开控制台时显示提示
-            const hasShownConsoleTip = localStorage.getItem('ephoneConsoleFirstTipShown');
-            if (!hasShownConsoleTip) {
-              await showCustomAlert(
-                '💡 控制台使用提示',
-                '如果您是因为遇到问题才打开控制台的，发现报错后请将错误信息发送给作者。\n\n您可以点击左上角的小人图标，进入私信页面联系作者。'
-              );
-              localStorage.setItem('ephoneConsoleFirstTipShown', 'true');
-            }
-          }
-        };
-        openConsoleBtn.addEventListener('click', openConsoleHandler);
-        openConsoleBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          openConsoleHandler();
-        }, { passive: false });
-      }
-
-      // 关闭控制台按钮
-      const closeConsoleBtn = document.getElementById('console-close-btn');
-      if (closeConsoleBtn) {
-        const closeConsoleHandler = () => {
-          const consolePanel = document.getElementById('mobile-console');
-          if (consolePanel) {
-            consolePanel.style.display = 'none';
-          }
-        };
-        closeConsoleBtn.addEventListener('click', closeConsoleHandler);
-        closeConsoleBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          closeConsoleHandler();
-        }, { passive: false });
-      }
-
-      // 清空控制台按钮
-      const clearConsoleBtn = document.getElementById('console-clear-btn');
-      if (clearConsoleBtn) {
-        const clearConsoleHandler = () => {
-          consoleLogs.length = 0;
-          renderConsole();
-        };
-        clearConsoleBtn.addEventListener('click', clearConsoleHandler);
-        clearConsoleBtn.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          clearConsoleHandler();
-        }, { passive: false });
-      }
-
-      // 控制台标签切换
-      const consoleTabs = document.querySelectorAll('.console-tab');
-      consoleTabs.forEach(tab => {
-        const tabClickHandler = () => {
-          consoleTabs.forEach(t => t.classList.remove('active'));
-          tab.classList.add('active');
-          currentFilter = tab.dataset.tab;
-          renderConsole();
-        };
-        tab.addEventListener('click', tabClickHandler);
-        tab.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          tabClickHandler();
-        }, { passive: false });
-      });
-
-      // 添加初始欢迎日志
-      console.log('移动端控制台已启动');
-      console.info('可在API设置中打开控制台查看日志');
-    })();
-    // ========== 移动端控制台功能结束 ==========
+    window.EPhoneConsole?.initUI();
 
     document.getElementById('add-world-book-btn').addEventListener('click', async () => {
       const name = await showCustomPrompt('创建世界书', '请输入书名');
@@ -3076,7 +2933,7 @@ window.initEventBindingsA = async function(state, db) {
         const transcriptEl = bubble ? bubble.querySelector('.voice-transcript') : null;
 
 
-        if ((voiceBody.dataset.voiceId || voiceBody.dataset.ttsProvider === 'elevenlabs') && transcriptEl && transcriptEl.style.display === 'block') {
+        if ((voiceBody.dataset.voiceId || ['elevenlabs', 'fish'].includes(voiceBody.dataset.ttsProvider)) && transcriptEl && transcriptEl.style.display === 'block') {
 
 
           if (chat.isGroup) {
@@ -3502,19 +3359,6 @@ window.initEventBindingsA = async function(state, db) {
       window.MemoryWorldTimeUI?.mount(chat);
 
 
-      const timezoneSelect = document.getElementById('time-zone-select');
-      document.getElementById('time-zone-search-input').value = '';
-
-      const timezones = Intl.supportedValuesOf('timeZone');
-      timezoneSelect.innerHTML = '';
-      timezones.forEach(tz => {
-        const option = document.createElement('option');
-        option.value = tz;
-        option.textContent = tz;
-        timezoneSelect.appendChild(option);
-      });
-
-      timezoneSelect.value = chat.settings.timeZone || 'Asia/Shanghai';
       window.TimeAwareness?.updateRoleTimePreview(true);
       document.getElementById('enable-synth-music-switch').checked = chat.settings.enableSynthMusic || false;
       document.getElementById('narrator-mode-toggle').checked = chat.settings.enableNarratorMode || false;
