@@ -2408,6 +2408,7 @@ window.initEventBindingsA = async function(state, db) {
       const previousThoughtsHTML = nextGlobalSettings.customThoughtsHTML;
       const previousThoughtsCSS = nextGlobalSettings.customThoughtsCSS;
       nextGlobalSettings.enableThoughts = document.getElementById('global-enable-thoughts-switch').checked;
+      nextGlobalSettings.enableOnlineOnlyRestriction = document.getElementById('global-online-only-restriction-switch').checked;
       nextGlobalSettings.customThoughtsUIEnabled = document.getElementById('custom-thoughts-ui-switch').checked;
       nextGlobalSettings.customThoughtsHTML = document.getElementById('custom-thoughts-html-textarea').value;
       nextGlobalSettings.customThoughtsCSS = document.getElementById('custom-thoughts-css-textarea').value;
@@ -3491,6 +3492,8 @@ window.initEventBindingsA = async function(state, db) {
         }
         document.getElementById('char-background-activity-switch').checked = chat.settings.enableBackgroundActivity;
         document.getElementById('inject-thought-toggle').checked = chat.settings.injectLatestThought;
+        const onlineOnlyRestriction = chat.settings.enableOnlineOnlyRestriction;
+        document.getElementById('online-only-restriction-select').value = onlineOnlyRestriction == null ? 'null' : String(onlineOnlyRestriction);
         document.getElementById('char-auto-cart-clear-switch').checked = chat.settings.enableAutoCartClear || false;
         
         // 新增：加载后台查看用户手机设置
@@ -4379,6 +4382,8 @@ window.initEventBindingsA = async function(state, db) {
 
 
         chat.settings.injectLatestThought = document.getElementById('inject-thought-toggle').checked;
+        const onlineOnlyRestrictionValue = document.getElementById('online-only-restriction-select').value;
+        chat.settings.enableOnlineOnlyRestriction = onlineOnlyRestrictionValue === 'null' ? null : onlineOnlyRestrictionValue === 'true';
 
         // 新增：保存AI行为控制设置
         const thoughtsValue = document.getElementById('chat-enable-thoughts-select').value;

@@ -116,6 +116,7 @@ if (!window.__appBootstrapStarted) {
       fontScope: { all: true, homeScreen: true, qq: true, cphone: true, myphone: true, worldBook: true, douban: true, alipay: true, settings: true },
       globalFontSize: 16,
       enableThoughts: false,              // 新增：全局心声开关，默认关闭
+      enableOnlineOnlyRestriction: true,   // 全局线下关系与见面限制，角色默认跟随
       customThoughtsPromptEnabled: false,  // 自定义心声提示词开关，默认关闭
       customThoughtsPrompt: '',            // 自定义心声提示词内容，空字符串表示使用默认
       customThoughtsUIEnabled: false,      // 自定义心声外观开关，默认关闭

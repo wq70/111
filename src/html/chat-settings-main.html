@@ -218,6 +218,18 @@
         <div class="settings-section">
             <!-- 单聊独立后台 -->
             <div id="single-char-background-activity-group">
+
+                <div class="settings-item" id="online-only-restriction-group" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1; padding-right: 10px;">
+                        <label for="online-only-restriction-select">限制线下见面</label>
+                        <div class="settings-desc">默认跟随全局，也可仅为当前角色开启或关闭限制。</div>
+                    </div>
+                    <select id="online-only-restriction-select" class="settings-select" style="width: auto; min-width: 100px;" aria-label="限制线下见面">
+                        <option value="null">跟随全局</option>
+                        <option value="true">开启限制</option>
+                        <option value="false">关闭限制</option>
+                    </select>
+                </div>
                 
                 <!-- 回复条数范围 (仅单聊) -->
                 <div class="settings-item" id="reply-count-range-group" style="display: none; flex-direction: row !important; justify-content: space-between !important; align-items: center !important;">

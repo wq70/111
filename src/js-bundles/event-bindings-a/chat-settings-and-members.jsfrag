@@ -730,6 +730,8 @@
 
 
         chat.settings.injectLatestThought = document.getElementById('inject-thought-toggle').checked;
+        const onlineOnlyRestrictionValue = document.getElementById('online-only-restriction-select').value;
+        chat.settings.enableOnlineOnlyRestriction = onlineOnlyRestrictionValue === 'null' ? null : onlineOnlyRestrictionValue === 'true';
 
         // 新增：保存AI行为控制设置
         const thoughtsValue = document.getElementById('chat-enable-thoughts-select').value;

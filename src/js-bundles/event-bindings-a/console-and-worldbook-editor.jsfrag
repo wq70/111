@@ -657,6 +657,8 @@
         }
         document.getElementById('char-background-activity-switch').checked = chat.settings.enableBackgroundActivity;
         document.getElementById('inject-thought-toggle').checked = chat.settings.injectLatestThought;
+        const onlineOnlyRestriction = chat.settings.enableOnlineOnlyRestriction;
+        document.getElementById('online-only-restriction-select').value = onlineOnlyRestriction == null ? 'null' : String(onlineOnlyRestriction);
         document.getElementById('char-auto-cart-clear-switch').checked = chat.settings.enableAutoCartClear || false;
         
         // 新增：加载后台查看用户手机设置

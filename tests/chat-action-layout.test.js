@@ -32,6 +32,46 @@ test('浏览器：手机宽度适配、跨行排序、取消、即时应用、�
     try {
       const phone = document.getElementById('phone-screen');
       const screen = document.getElementById('chat-interface-screen');
+      const titleWrapper = document.getElementById('chat-header-title-wrapper');
+      const title = document.getElementById('chat-header-title');
+      const header = screen.querySelector('.header');
+      // The normal header must keep its original centering even after leaving selection.
+      for (const width of [280,320,360,390,430,768]) {
+        phone.style.width = width+'px';
+        for (const name of ['白', '这是一个需要省略显示的很长的聊天备注名称']) {
+          title.textContent = name;
+          screen.classList.add('selection-mode');
+          screen.classList.remove('selection-mode');
+          const box = titleWrapper.getBoundingClientRect();
+          const headerBox = header.getBoundingClientRect();
+          assert(Math.abs((box.left+box.right-headerBox.left-headerBox.right)/2)<1, '普通顶栏标题未居中 '+width);
+          assert(getComputedStyle(titleWrapper).position==='absolute', '普通顶栏标题定位被覆盖');
+          assert(getComputedStyle(header).paddingLeft==='20px', '多选样式改变了普通顶栏边距');
+        }
+      }
+      // Existing appearance CSS must retain control over title and custom icon geometry.
+      const customStyle = document.createElement('style');
+      customStyle.textContent = '#chat-header-title-wrapper { position:absolute; left:64px; top:8px; transform:none; max-width:45%; }'
+        +'#chat-header-title { position:relative; transform:translateX(3px); max-width:90%; }'
+        +'.default-controls .header-actions { gap:11px; }'
+        +'.default-controls .header-actions .action-btn { box-sizing:border-box; min-width:0; width:28px; height:28px; padding:2px; }'
+        +'.default-controls .header-actions .action-btn svg { width:19px; height:19px; }';
+      document.head.appendChild(customStyle);
+      const checkAppearance = () => {
+        assert(getComputedStyle(titleWrapper).position==='absolute' && getComputedStyle(titleWrapper).transform==='none', '美化标题定位被覆盖');
+        assert(getComputedStyle(title).position==='relative', '美化标题样式被覆盖');
+        const actions = screen.querySelector('.default-controls .header-actions');
+        const button = actions.querySelector('.action-btn');
+        assert(getComputedStyle(actions).gap==='11px', '美化按钮间距被覆盖');
+        assert(button.getBoundingClientRect().width===28 && button.getBoundingClientRect().height===28, '美化按钮尺寸被覆盖 '+button.getBoundingClientRect().width+'x'+button.getBoundingClientRect().height);
+        assert(button.querySelector('svg').getBoundingClientRect().width===19, '美化图标尺寸被覆盖');
+      };
+      checkAppearance();
+      screen.classList.add('selection-mode');
+      screen.classList.remove('selection-mode');
+      checkAppearance();
+      customStyle.remove();
+      screen.classList.add('selection-mode');
       document.getElementById('selection-count').textContent = '已选 123 条';
       for (const width of [280,320,360,390,430,768]) {
         phone.style.width = width+'px';

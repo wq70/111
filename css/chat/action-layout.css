@@ -1,9 +1,7 @@
-/* Keep chat actions usable when the viewport or system font size changes. */
-#chat-interface-screen > .header {
+/* Keep selection actions usable without changing the normal header or appearance CSS. */
+#chat-interface-screen.selection-mode > .header {
     padding-left: max(12px, env(safe-area-inset-left));
     padding-right: max(12px, env(safe-area-inset-right));
-}
-#chat-interface-screen.selection-mode > .header {
     max-height: 55%;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -53,16 +51,6 @@
 #chat-interface-screen .selection-controls .action-btn svg { flex-shrink: 0; width: 20px; height: 20px; }
 #chat-interface-screen .selection-action-label { font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 #chat-interface-screen .selection-controls #selection-soft-delete-btn { color: #d9342b; }
-#chat-interface-screen .default-controls { min-width: 0; gap: 4px; }
-#chat-interface-screen .default-controls .header-actions { flex: 0 0 auto; gap: 2px; }
-#chat-interface-screen .default-controls .header-actions .action-btn {
-    display: flex; align-items: center; justify-content: center;
-    box-sizing: border-box; min-width: 44px; min-height: 44px; margin: 0; padding: 10px;
-}
-#chat-interface-screen .default-controls .header-actions .action-btn img,
-#chat-interface-screen .default-controls .header-actions .action-btn svg { width: 24px; height: 24px; }
-#chat-interface-screen #chat-header-title-wrapper { position: static; transform: none; max-width: none; min-width: 0; flex: 1 1 auto; }
-#chat-interface-screen #chat-header-title { position: static; transform: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 #message-actions-modal {
     box-sizing: border-box;

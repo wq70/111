@@ -2411,7 +2411,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           const characterBondContext = window.CharacterBond ? window.CharacterBond.getPromptContext(chat, lastVisibleUserMessage) : '';
           if (characterBondContext) systemPrompt += `\n\n${characterBondContext}`;
 
-          systemPrompt = processPromptWithSettings(systemPrompt, 'single');
+          systemPrompt = processPromptWithSettings(systemPrompt, 'single', chat);
 
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;

@@ -278,7 +278,7 @@ ${linkedContents}
         systemPrompt += `\n\n${contextMapPropel.timePerceptionContext}`;
       }
 
-      systemPrompt = processPromptWithSettings(systemPrompt, chat.isGroup && chat.settings.isOfflineMode ? 'group_offline' : 'single');
+      systemPrompt = processPromptWithSettings(systemPrompt, chat.isGroup && chat.settings.isOfflineMode ? 'group_offline' : 'single', chat);
 
       systemPrompt += window.RemarkNames.buildContext(chat, filteredHistory);
       let messagesForApi = filteredHistory.filter(msg => !window.RemarkNames.getEvent(msg, chat)).map(msg => ({

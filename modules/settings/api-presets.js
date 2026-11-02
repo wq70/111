@@ -279,6 +279,7 @@
 
     // 新增：读取心声和动态功能开关
     document.getElementById('global-enable-thoughts-switch').checked = state.globalSettings.enableThoughts || false;
+    document.getElementById('global-online-only-restriction-switch').checked = state.globalSettings.enableOnlineOnlyRestriction !== false;
     document.getElementById('global-enable-qzone-actions-switch').checked = state.globalSettings.enableQzoneActions || false;
 
     // 新增：读取自定义心声提示词设置

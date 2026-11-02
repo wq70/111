@@ -614,14 +614,14 @@
    * 根据用户设置处理提示词
    * @param {string} originalPrompt - 原始的完整提示词
    * @param {string} chatType - 聊天类型：'single'单聊, 'group'群聊, 'spectator'旁观, 'offline'线下模式
+   * @param {object} chat - 本次请求所属聊天，后台回复不依赖当前打开的聊天
    * @returns {string} - 处理后的提示词
    */
-  function processPromptWithSettings(originalPrompt, chatType = 'single') {
+  function processPromptWithSettings(originalPrompt, chatType = 'single', chat = state.chats[state.activeChatId]) {
     let processedPrompt = originalPrompt;
     
     // 仅对单聊应用多条回复设置
     if (chatType === 'single') {
-      const chat = state.chats[state.activeChatId];
       if (chat && chat.settings.enableMultiReply) {
         const minCount = chat.settings.minReplyCount || 2;
         const maxCount = chat.settings.maxReplyCount || 5;
@@ -642,6 +642,13 @@
       }
     }
     
+    // 只移除指定的内置限制，不改写保存的默认模板或自定义提示词。
+    if (chatType === 'single' && chat && !chat.isGroup && !chat.settings.isOfflineMode &&
+        (chat.settings.enableOnlineOnlyRestriction ?? state.globalSettings.enableOnlineOnlyRestriction) === false) {
+      const restriction = '你扮演的角色和我之间没有任何线下关系。严禁提出任何关于线下见面、现实世界互动或转为其他非本平台联系方式的建议。你必须始终保持在线角色的身份。';
+      processedPrompt = processedPrompt.split(restriction).join('');
+    }
+
     return processedPrompt;
   }
   

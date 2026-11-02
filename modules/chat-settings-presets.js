@@ -17,6 +17,7 @@
     return {
       // ===== 模型与智能设置 =====
       enableMultiReply: chat.settings.enableMultiReply || false,
+      enableOnlineOnlyRestriction: chat.settings.enableOnlineOnlyRestriction ?? null,
       minReplyCount: chat.settings.minReplyCount || 2,
       maxReplyCount: chat.settings.maxReplyCount || 5,
       injectThought: chat.settings.injectThought || false,

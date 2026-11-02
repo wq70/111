@@ -437,6 +437,7 @@
       const previousThoughtsHTML = nextGlobalSettings.customThoughtsHTML;
       const previousThoughtsCSS = nextGlobalSettings.customThoughtsCSS;
       nextGlobalSettings.enableThoughts = document.getElementById('global-enable-thoughts-switch').checked;
+      nextGlobalSettings.enableOnlineOnlyRestriction = document.getElementById('global-online-only-restriction-switch').checked;
       nextGlobalSettings.customThoughtsUIEnabled = document.getElementById('custom-thoughts-ui-switch').checked;
       nextGlobalSettings.customThoughtsHTML = document.getElementById('custom-thoughts-html-textarea').value;
       nextGlobalSettings.customThoughtsCSS = document.getElementById('custom-thoughts-css-textarea').value;
