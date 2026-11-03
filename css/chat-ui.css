@@ -476,8 +476,11 @@
                border: 2px solid white;
            }
 
-           /* 智能匹配表情包面板 */
+           /* 匹配结果悬浮在输入区上方，保持输入区尺寸稳定。 */
            #smart-sticker-match-panel {
+               position: absolute;
+               inset-inline: 8px;
+               bottom: calc(100% + 5px);
                background: var(--secondary-bg, #fff);
                backdrop-filter: blur(10px);
                -webkit-backdrop-filter: blur(10px);
