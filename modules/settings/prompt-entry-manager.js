@@ -49,7 +49,7 @@
     summary: ['总结设定', '角色名', '用户昵称', '用户人设', '角色人设', '现有记忆', '时间范围', '分类说明', '对话记录'],
     single: [
       'chat.originalName', 'chat.name', 'aiAgeContext', 'aiPersona', 'latestThoughtContext', 'worldBookContent',
-      'memoryContextForPrompt', 'multiLayeredSummaryContext', 'todoListContext', 'periodSummaryContext', 'myNickname',
+      'memoryContextForPrompt', 'linkedMemoryContext', 'multiLayeredSummaryContext', 'todoListContext', 'periodSummaryContext', 'myNickname',
       'myPersona', 'userStatus', 'userProfileContext', 'nameHistoryContext', 'timePerceptionContext', 'weatherContext',
       'timeContext', 'musicContextStr', 'readingContextStr', 'contactsList', 'postsContext', 'groupContext', 'gomokuContext',
       'sharedContext', 'callTranscriptContext', 'synthMusicInstruction', 'narratorInstruction', 'kinshipContext',
@@ -82,7 +82,7 @@
       'char_name', 'char_remark', 'user_name', 'user_nickname', 'thoughtChainContextHead', 'thoughtChainContextMiddle'
     ]
   };
-  variableScopes.thoughts = variableScopes.single.slice();
+  variableScopes.thoughts = variableScopes.single.filter(name => name !== 'linkedMemoryContext');
   const unavailableByScope = {
     group_offline: new Set(['presetContext', 'membersList', 'timePerceptionContext', 'historySliceStr', 'formatRules', 'minLength', 'maxLength'])
   };

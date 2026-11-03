@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>更新日志</title>
+  <script>
+    if (window.parent !== window) document.documentElement.classList.add('embedded');
+  </script>
   <style>
     * {
       margin: 0;
@@ -42,6 +45,10 @@
       font-size: 17px;
       font-weight: 600;
       color: var(--text-color, #333);
+    }
+
+    .embedded .header {
+      display: none;
     }
 
     .container {
@@ -196,6 +203,16 @@
           <li><strong>新增「限制线下见面」开关</strong>。可在全局设置中调整，也可为单个角色单独设置。默认开启，关闭后会移除线上聊天中关于见面和站外联系的内置限制。</li>
           <li><strong>修复网易云音乐扫码和歌单读取问题</strong>。扫码成功后如果账号资料或歌单加载失败，可以单独重试。大型歌单支持分页读取。</li>
           <li><strong>优化聊天中的人物和事件识别</strong>。模型能更清楚地区分角色本名、聊天备注和对玩家的称呼，以及是谁修改了备注。旁白和转账记录也会更明确地交代谁做了什么。</li>
+          <li><strong>情侣空间记录支持编辑</strong>。你和角色留下的日记、留言、相册描述、睡眠记录等，都可以从详情页修改。修改睡眠时间时会保留原日期，并按修改后的入睡和起床时间重新计算时长。</li>
+          <li><strong>修复自定义单聊提示词可能漏带挂载记忆的问题</strong>。开启 API 历史记录后，可以在「发送消息内容」中展开「本次发送的挂载记忆」，查看这次实际发给 AI 的内容。</li>
+          <li><strong>更新日志可以在应用内查看</strong>。从更新弹窗、API 设置的「应用更新」或小人菜单，都能打开完整日志。</li>
+        </ul>
+      </div>
+      <div class="section">
+        <div class="section-title">共同更新 · 反馈中心试用</div>
+        <ul class="item-list">
+          <li>新增私密反馈和公开反馈入口，可提交建议、报错并附带截图。公开内容经审核后展示，作者回复后可回到原浏览器查看并继续交流。</li>
+          <li>反馈投稿需要联网完成安全验证。中国大陆网络下，验证可能无法加载，可稍后重试或使用原有反馈渠道。</li>
         </ul>
       </div>
     </div>
@@ -820,15 +837,19 @@
 
   <script>
     // 支持主题切换
-    if (window.opener && window.opener.state && window.opener.state.globalSettings) {
-      const theme = window.opener.state.globalSettings.theme || 'light';
-      if (theme === 'dark') {
-        document.documentElement.style.setProperty('--primary-bg', '#1a1a1a');
-        document.documentElement.style.setProperty('--text-color', '#e0e0e0');
-        document.documentElement.style.setProperty('--text-secondary', '#999');
-        document.documentElement.style.setProperty('--border-color', '#333');
-        document.documentElement.style.setProperty('--accent-color', '#0a84ff');
-      }
+    let theme;
+    try {
+      const app = window.parent !== window ? window.parent : window.opener;
+      theme = app?.state?.globalSettings?.theme;
+    } catch {
+      // 跨域打开时使用页面默认主题。
+    }
+    if (theme === 'dark') {
+      document.documentElement.style.setProperty('--primary-bg', '#1a1a1a');
+      document.documentElement.style.setProperty('--text-color', '#e0e0e0');
+      document.documentElement.style.setProperty('--text-secondary', '#999');
+      document.documentElement.style.setProperty('--border-color', '#333');
+      document.documentElement.style.setProperty('--accent-color', '#0a84ff');
     }
   </script>
 </body>

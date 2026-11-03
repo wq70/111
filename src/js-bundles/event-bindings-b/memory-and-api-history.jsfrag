@@ -776,7 +776,7 @@ window.initEventBindingsB = function(state, db) {
           const index = parseInt(btn.dataset.index);
           const record = normalizeApiHistoryRecord(chat.apiHistory[index]);
           const messagesContent = JSON.stringify(record.messages, null, 2);
-          showApiHistoryDetail('发送消息内容', messagesContent, 'json');
+          showApiHistoryDetail('发送消息内容', messagesContent, record.linkedMemoryContext);
         });
       });
 
@@ -784,7 +784,7 @@ window.initEventBindingsB = function(state, db) {
         btn.addEventListener('click', () => {
           const index = parseInt(btn.dataset.index);
           const record = normalizeApiHistoryRecord(chat.apiHistory[index]);
-          showApiHistoryDetail('AI响应内容', record.aiResponseContent, 'text');
+          showApiHistoryDetail('AI响应内容', record.aiResponseContent);
         });
       });
 
@@ -792,7 +792,7 @@ window.initEventBindingsB = function(state, db) {
         btn.addEventListener('click', () => {
           const index = parseInt(btn.dataset.index);
           const record = normalizeApiHistoryRecord(chat.apiHistory[index]);
-          showApiHistoryDetail('原始响应数据', JSON.stringify(record.responseData, null, 2), 'json');
+          showApiHistoryDetail('原始响应数据', JSON.stringify(record.responseData, null, 2));
         });
       });
 
@@ -813,12 +813,18 @@ window.initEventBindingsB = function(state, db) {
     }
 
     // 显示API历史详情
-    function showApiHistoryDetail(title, content, type) {
+    function showApiHistoryDetail(title, content, linkedMemoryContext = '') {
       const modal = document.createElement('div');
       modal.className = 'modal visible';
       modal.style.zIndex = '10001'; // 确保在API历史模态窗口之上
 
       const copyButtonHtml = `<button id="copy-detail-btn" class="form-button" style="padding: 8px 15px; margin-right: 10px;">复制内容</button>`;
+      const linkedMemoryHtml = typeof linkedMemoryContext === 'string' && linkedMemoryContext.trim()
+        ? `<details style="margin-bottom: 12px;">
+            <summary>本次发送的挂载记忆</summary>
+            <div style="white-space: pre-wrap; overflow-wrap: anywhere;">${escapeHTML(linkedMemoryContext.trim())}</div>
+          </details>`
+        : '';
 
       modal.innerHTML = `
         <div class="modal-content" style="height: 90%; max-width: 900px;">
@@ -826,6 +832,7 @@ window.initEventBindingsB = function(state, db) {
             <span>${escapeHTML(title)}</span>
           </div>
           <div class="modal-body" style="height: calc(100% - 100px); overflow-y: auto;">
+            ${linkedMemoryHtml}
             <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px; font-family: monospace; white-space: pre-wrap; word-wrap: break-word; font-size: 13px; line-height: 1.6;">
               ${escapeHTML(content || '(空)')}
             </div>

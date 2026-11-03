@@ -677,6 +677,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
             'latestThoughtContext': latestThoughtContext,
             'worldBookContent': worldBookContent || '(当前无特殊世界观设定，以现实逻辑为准)',
             'memoryContextForPrompt': resolvedMemoryContextForPrompt,
+            'linkedMemoryContext': linkedMemoryContext,
             'multiLayeredSummaryContext': multiLayeredSummaryContext,
             'todoListContext': todoListContext,
             'periodSummaryContext': periodSummaryContext,
@@ -726,6 +727,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           if (characterBondContext) systemPrompt += `\n\n${characterBondContext}`;
 
           systemPrompt = processPromptWithSettings(systemPrompt, 'single', chat);
+          if (linkedMemoryContext && !systemPrompt.includes(linkedMemoryContext)) {
+            systemPrompt += linkedMemoryContext;
+          }
 
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;

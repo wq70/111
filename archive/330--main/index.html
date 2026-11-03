@@ -3614,7 +3614,7 @@ function editCurrentAlbumPhoto() {
   if (!currentAlbumPhotoId) return;
   var photos = getAlbumPhotos();
   var photo = photos.find(function(p){ return p.id === currentAlbumPhotoId; });
-  if (!photo || photo.author !== 'user') return;
+  if (!photo) return;
   var overlay = document.createElement('div');
   overlay.className = 'sig-overlay animate-fade-in';
   overlay.innerHTML = '<div class="sig-modal animate-slide-up"><h3>编辑照片描述</h3>' +
@@ -3627,7 +3627,7 @@ function editCurrentAlbumPhoto() {
   overlay.querySelector('#album-edit-confirm').onclick = function() {
     var val = textarea.value.trim();
     var photos2 = getAlbumPhotos();
-    var idx = photos2.findIndex(function(p){ return p.id === currentAlbumPhotoId; });
+    var idx = photos2.findIndex(function(p){ return p.id === photo.id; });
     if (idx >= 0) {
       photos2[idx].description = val;
       saveAlbumPhotos(photos2);
@@ -5870,7 +5870,7 @@ function editCurrentMsg() {
   if (!currentViewingMsgId) return;
   var msgs = getMessages();
   var m = msgs.find(function(x){ return x.id === currentViewingMsgId; });
-  if (!m || m.author !== 'user') return;
+  if (!m) return;
   var idToEdit = currentViewingMsgId;
   closeMsgDetail();
   openMsgWrite(idToEdit);
@@ -6481,7 +6481,7 @@ function editCurrentTl() {
   if (!currentViewingTlId) return;
   var items = getTlItems();
   var item = items.find(function(x){ return x.id === currentViewingTlId; });
-  if (!item || item.author !== 'user') return;
+  if (!item) return;
   var idToEdit = currentViewingTlId;
   closeTlDetail();
   openTlWrite(idToEdit);
@@ -7167,7 +7167,7 @@ function editCurrentMood() {
   if (!currentViewingMoodId) return;
   var moods = getMoods();
   var m = moods.find(function(x){ return x.id === currentViewingMoodId; });
-  if (!m || m.author !== 'user') return;
+  if (!m) return;
   var idToEdit = currentViewingMoodId;
   closeMoodDetail();
   openMoodWrite(idToEdit);
@@ -7690,7 +7690,7 @@ function editCurrentLetter() {
   if (!currentViewingLetterId) return;
   var letters = getLetters();
   var l = letters.find(function(x){ return x.id === currentViewingLetterId; });
-  if (!l || l.author !== 'user') return;
+  if (!l) return;
   var idToEdit = currentViewingLetterId;
   closeLetterDetail();
   openLetterWrite(null, idToEdit);
@@ -9763,7 +9763,7 @@ function editCurrentLoc() {
   if (!currentViewingLocId) return;
   var items = getLocItems();
   var item = items.find(function(x){ return x.id === currentViewingLocId; });
-  if (!item || item.author !== 'user') return;
+  if (!item) return;
   var idToEdit = currentViewingLocId;
   closeLocDetail();
   openLocWrite(idToEdit);
@@ -10613,34 +10613,22 @@ function openSleepWrite(type, existingId) {
   var timeLabel = document.getElementById('sleep-write-time-label');
   var qualitySection = document.getElementById('sleep-write-quality-section');
   var noteInput = document.getElementById('sleep-write-note');
+  var timeInput = document.getElementById('sleep-write-time');
+  var s = existingId && getSleeps().find(function(x){ return x.id === existingId; });
 
-  if (existingId) {
-    var sleeps = getSleeps();
-    var s = sleeps.find(function(x){ return x.id === existingId; });
-    if (s) {
-      if (s.status === 'completed' && s.wakeAt) {
-        sleepWriteType = 'wake';
-      } else {
-        sleepWriteType = 'sleep';
-      }
-      if (sleepWriteType === 'sleep') {
-        sleepWriteMood = s.sleepMood || '';
-        noteInput.value = s.sleepNote || '';
-        if (s.sleepAt) {
-          try { document.getElementById('sleep-write-time').value = s.sleepAt.split('T')[1].substring(0,5); } catch(e){}
-        }
-      } else {
-        sleepWriteMood = s.wakeMood || '';
-        sleepWriteQuality = s.quality || '';
-        noteInput.value = s.wakeNote || '';
-        if (s.wakeAt) {
-          try { document.getElementById('sleep-write-time').value = s.wakeAt.split('T')[1].substring(0,5); } catch(e){}
-        }
-      }
-    }
+  if (s) {
+    sleepWriteType = type || (s.wakeAt ? 'wake' : 'sleep');
+    var isWake = sleepWriteType === 'wake';
+    var phaseTime = isWake ? s.wakeAt : s.sleepAt;
+    sleepWriteMood = (isWake ? s.wakeMood : s.sleepMood) || '';
+    sleepWriteQuality = isWake ? s.quality || '' : '';
+    noteInput.value = (isWake ? s.wakeNote : s.sleepNote) || '';
+    timeInput.value = ((phaseTime || '').split('T')[1] || '').slice(0, 5);
     titleLabel.textContent = '编辑睡眠';
   } else {
     noteInput.value = '';
+    var now = new Date();
+    timeInput.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
   }
 
   if (sleepWriteType === 'sleep') {
@@ -10649,23 +10637,15 @@ function openSleepWrite(type, existingId) {
     timeLabel.textContent = '入睡时间';
     noteInput.placeholder = '晚安...';
     qualitySection.style.display = 'none';
-    if (!existingId) {
-      var now = new Date();
-      document.getElementById('sleep-write-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-    }
   } else {
     if (!existingId) titleLabel.textContent = '记录起床';
     noteLabel.textContent = '起床感受';
     timeLabel.textContent = '起床时间';
     noteInput.placeholder = '早安...';
     qualitySection.style.display = '';
-    if (!existingId) {
-      var now = new Date();
-      document.getElementById('sleep-write-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-    }
   }
 
-  renderSleepWriteTypeRow();
+  renderSleepWriteTypeRow(s);
   renderSleepWriteMoodRow();
   renderSleepWriteQualityRow();
   updateSleepSaveBtn();
@@ -10678,17 +10658,23 @@ function closeSleepWrite() {
   document.getElementById('feature-wrapper').classList.add('active');
 }
 
-function renderSleepWriteTypeRow() {
+function renderSleepWriteTypeRow(record) {
   var row = document.getElementById('sleep-write-type-row');
   var types = [{ id: 'sleep', label: '入睡', icon: SVG_SLEEP_MOON }, { id: 'wake', label: '起床', icon: SVG_SLEEP_SUN }];
   row.innerHTML = '';
   types.forEach(function(t) {
+    if (record && t.id !== sleepWriteType && !(record.sleepAt && record.wakeAt)) return;
     row.innerHTML += '<button class="sleep-write-chip' + (sleepWriteType === t.id ? ' active' : '') + '" onclick="switchSleepWriteType(\'' + t.id + '\')">' +
       '<span class="chip-icon">' + t.icon + '</span>' + t.label + '</button>';
   });
 }
 
 function switchSleepWriteType(type) {
+  if (type === sleepWriteType) return;
+  if (editingSleepId) {
+    openSleepWrite(type, editingSleepId);
+    return;
+  }
   sleepWriteType = type;
   var qualitySection = document.getElementById('sleep-write-quality-section');
   var timeLabel = document.getElementById('sleep-write-time-label');
@@ -10795,22 +10781,20 @@ function saveSleepItem() {
     var idx = sleeps.findIndex(function(x){ return x.id === editingSleepId; });
     if (idx >= 0) {
       var s = sleeps[idx];
+      var timeKey = sleepWriteType === 'sleep' ? 'sleepAt' : 'wakeAt';
+      var oldTime = s[timeKey];
+      if (timeVal && oldTime) s[timeKey] = oldTime.replace(/T\d{2}:\d{2}/, 'T' + timeVal);
       if (sleepWriteType === 'sleep') {
-        s.sleepAt = new Date().toISOString().split('T')[0] + 'T' + (timeVal || '23:00') + ':00';
         s.sleepNote = noteVal;
         s.sleepMood = sleepWriteMood || s.sleepMood || 'calm';
       } else {
-        s.wakeAt = new Date().toISOString().split('T')[0] + 'T' + (timeVal || '07:00') + ':00';
         s.wakeNote = noteVal;
         s.wakeMood = sleepWriteMood || s.wakeMood || 'refreshed';
         s.quality = sleepWriteQuality || s.quality || 'normal';
-        if (s.sleepAt && s.wakeAt) {
-          try {
-            var sleepMs = new Date(s.sleepAt).getTime();
-            var wakeMs = new Date(s.wakeAt).getTime();
-            if (wakeMs > sleepMs) s.duration = Math.round((wakeMs - sleepMs) / 60000);
-          } catch(e) {}
-        }
+      }
+      if (s[timeKey] !== oldTime && s.sleepAt && s.wakeAt) {
+        var minutes = (new Date(s.wakeAt) - new Date(s.sleepAt)) / 60000;
+        s.duration = minutes > 0 ? Math.round(minutes) : null;
       }
     }
     saveSleeps(sleeps);
@@ -10919,7 +10903,7 @@ function editCurrentSleep() {
   if (!currentViewingSleepId) return;
   var sleeps = getSleeps();
   var s = sleeps.find(function(x){ return x.id === currentViewingSleepId; });
-  if (!s || s.author !== 'user') return;
+  if (!s) return;
   var idToEdit = currentViewingSleepId;
   closeSleepDetail();
   openSleepWrite(null, idToEdit);
@@ -11615,7 +11599,7 @@ function editCurrentFin() {
   if (!currentViewingFinId) return;
   var items = getFinItems();
   var item = items.find(function(x){ return x.id === currentViewingFinId; });
-  if (!item || item.author !== 'user') return;
+  if (!item) return;
   var idToEdit = currentViewingFinId;
   closeFinDetail();
   openFinWrite(idToEdit);

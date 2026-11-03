@@ -315,7 +315,7 @@ class HelperAssistant {
         this.showThirdPartyNotices();
         break;
       case 'update-log':
-        window.open('update-log.html', '_blank');
+        window.openUpdateLog();
         break;
       case 'resale-notice':
         this.showResaleNotice();

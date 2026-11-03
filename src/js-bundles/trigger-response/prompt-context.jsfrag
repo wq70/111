@@ -481,7 +481,6 @@
 
 
 
-        let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
 
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {

@@ -732,89 +732,10 @@ ${linkedContents}
       }
 
       let linkedMemoryContext = '';
-      const memoryCount = chat.settings.linkedMemoryCount || 10;
-
-      if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
-
-        const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
-
-        if (idsToMount.length > 0) {
-          const linkedChatsWithTimestamps = idsToMount.map(id => {
-            const linkedChat = state.chats[id];
-            if (!linkedChat) return null;
-            const lastMsg = linkedChat.history.slice(-1);
-            return {
-              chat: linkedChat,
-              latestTimestamp: lastMsg ? lastMsg.timestamp : 0
-            };
-          }).filter(Boolean);
-
-          linkedChatsWithTimestamps.sort((a, b) => b.latestTimestamp - a.latestTimestamp);
-
-          linkedMemoryContext += `\n\n# 参考记忆 (至关重要！你必须【主动】将这些参考记忆中的【关键信息和事件】，自然地融入到当前的对话中，以体现你拥有完整的记忆。不要只是被动等待用户提问！)\n`;
-
-          for (const item of linkedChatsWithTimestamps) {
-            const linkedChat = item.chat;
-            const prefix = linkedChat.isGroup ? '[群聊]' : '[私聊]';
-            const timeAgo = item.latestTimestamp > 0 ? ` (最后互动于 ${formatTimeAgo(item.latestTimestamp)})` : '';
-            linkedMemoryContext += `\n## --- 来自${prefix}“${linkedChat.name}”的参考记忆${timeAgo} ---\n`;
-
-            const recentHistory = linkedChat.history.slice(-memoryCount);
-            const filteredHistory = recentHistory.filter(msg =>
-              !String(msg.content).includes('已被用户删除') &&
-              msg.type !== 'thought_chain_block' &&
-              msg.type !== 'mcp_activity'
-            );
-
-            if (filteredHistory.length > 0) {
-              filteredHistory.forEach(msg => {
-
-                const sender = msg.role === 'user' ? (linkedChat.settings.myNickname || '我') : (getDisplayNameInGroup(linkedChat, msg.senderName) || linkedChat.name);
-
-                let prefix = "";
-
-                if (msg.quote && msg.quote.content) {
-
-                  const quotedSenderDisplayName = getDisplayNameInGroup(linkedChat, msg.quote.senderName);
-                  let quoteContentPreview = String(msg.quote.content).substring(0, 30);
-                  if (quoteContentPreview.length === 30) quoteContentPreview += "...";
-
-                  prefix = `[回复 ${quotedSenderDisplayName}: "${quoteContentPreview}"] `;
-                }
-
-                let contentText = '';
-
-                if (msg.type === 'ai_image' || msg.type === 'user_photo') {
-                  contentText = `[发送了一张图片，描述为：${msg.content}]`;
-                } else if (msg.type === 'voice_message') {
-                  contentText = `[发送了一条语音，内容是：${msg.content}]`;
-                } else if (msg.type === 'sticker') {
-                  contentText = `[表情: ${msg.meaning || 'sticker'}]`;
-                } else if (msg.type === 'transfer') {
-                  contentText = `[转账: ${msg.amount}元]`;
-                } else if (Array.isArray(msg.content)) {
-                  contentText = `[图片]`;
-                } else {
-                  contentText = String(msg.content);
-                }
-
-                const timeAgoForMsg = formatTimeAgo(msg.timestamp);
-
-                linkedMemoryContext += `(${timeAgoForMsg}) ${sender}: ${prefix}${contentText}\n`;
-              });
-            } else {
-              linkedMemoryContext += "(暂无有效聊天记录)\n";
-            }
-          }
-        }
-      }
-
-      console.log("本次发送给AI的【挂载记忆】内容如下：\n", linkedMemoryContext);
 
       if (chat.isGroup) {
 
 
-        let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
           const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
@@ -1327,7 +1248,6 @@ ${linkedContents}
 
 
 
-        let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
 
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
@@ -2346,6 +2266,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
             'latestThoughtContext': latestThoughtContext,
             'worldBookContent': worldBookContent || '(当前无特殊世界观设定，以现实逻辑为准)',
             'memoryContextForPrompt': resolvedMemoryContextForPrompt,
+            'linkedMemoryContext': linkedMemoryContext,
             'multiLayeredSummaryContext': multiLayeredSummaryContext,
             'todoListContext': todoListContext,
             'periodSummaryContext': periodSummaryContext,
@@ -2395,6 +2316,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           if (characterBondContext) systemPrompt += `\n\n${characterBondContext}`;
 
           systemPrompt = processPromptWithSettings(systemPrompt, 'single', chat);
+          if (linkedMemoryContext && !systemPrompt.includes(linkedMemoryContext)) {
+            systemPrompt += linkedMemoryContext;
+          }
 
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;
@@ -2699,6 +2623,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
         requestSource: isPreview ? 'generation_candidate' : options.candidateContent ? 'generation_candidate_adopted' : 'chat',
         provider: isGemini ? 'gemini' : 'openai-compatible',
         systemPrompt: systemPrompt,
+        ...(!options.candidateContent && linkedMemoryContext && systemPrompt.includes(linkedMemoryContext)
+          ? { linkedMemoryContext }
+          : {}),
         messages: isGemini ? messagesPayload : [{
           role: 'system',
           content: systemPrompt

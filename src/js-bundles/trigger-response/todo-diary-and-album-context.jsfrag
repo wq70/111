@@ -222,6 +222,9 @@
         requestSource: isPreview ? 'generation_candidate' : options.candidateContent ? 'generation_candidate_adopted' : 'chat',
         provider: isGemini ? 'gemini' : 'openai-compatible',
         systemPrompt: systemPrompt,
+        ...(!options.candidateContent && linkedMemoryContext && systemPrompt.includes(linkedMemoryContext)
+          ? { linkedMemoryContext }
+          : {}),
         messages: isGemini ? messagesPayload : [{
           role: 'system',
           content: systemPrompt

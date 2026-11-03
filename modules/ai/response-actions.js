@@ -234,6 +234,7 @@ ${linkedContents}
         'latestThoughtContext': '', // 推进时通常没有上一轮思考，故留空
         'worldBookContent': worldBookContent || '(当前无特殊世界观设定，以现实逻辑为准)',
         'memoryContextForPrompt': memoryContextForPrompt,
+        'linkedMemoryContext': '',
         'multiLayeredSummaryContext': '',
         'todoListContext': '',
         'periodSummaryContext': '',

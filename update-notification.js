@@ -1,8 +1,25 @@
+window.openUpdateLog = function (section = '') {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'app-update-log';
+  dialog.setAttribute('aria-labelledby', 'app-update-log-title');
+  dialog.innerHTML = `
+    <div class="app-update-log-header">
+      <h2 id="app-update-log-title">更新日志</h2>
+      <form method="dialog"><button type="submit" autofocus>关闭</button></form>
+    </div>
+    <iframe title="更新日志"></iframe>
+  `;
+  dialog.querySelector('iframe').src = 'update-log.html' + section;
+  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  document.body.append(dialog);
+  dialog.showModal();
+};
+
 // 更新弹窗管理器
 class UpdateNotification {
   constructor() {
     this.storageKey = 'update_notification_dismissed';
-    this.currentVersion = '11.3-20261103'; // 当前更新版本号
+    this.currentVersion = '11.3-20261103-patch1'; // 当前更新版本号
     this.countdownSeconds = 5;
     this.countdownInterval = null;
   }
@@ -17,6 +34,10 @@ class UpdateNotification {
   // 创建弹窗HTML
   createNotificationHTML() {
     const updateContent = `
+      <div class="update-divider">11.3 补更</div>
+      <div class="update-item"><strong>情侣空间记录支持编辑</strong>。你和角色留下的日记、留言、相册描述、睡眠记录等，都可以从详情页修改。修改睡眠时间时会保留原日期，并按修改后的入睡和起床时间重新计算时长。</div>
+      <div class="update-item"><strong>修复自定义单聊提示词可能漏带挂载记忆的问题</strong>。开启 API 历史记录后，可以在「发送消息内容」中展开「本次发送的挂载记忆」，查看这次实际发给 AI 的内容。</div>
+      <div class="update-item tips"><a id="update-open-log" href="update-log.html#release-20261103">查看完整更新日志</a></div>
       <div style="margin-bottom: 15px;"><button id="update-clear-global-css-btn" style="width: 100%; padding: 10px; background: #ff4d4f; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">清除全局自定义CSS (防错位)</button></div>
       <div class="update-item important-note">新手必看：DC解答区 <a href="https://discord.com/channels/1379304008157499423/1443544486796853248" target="_blank" style="color: #4A9EFF;">点击前往</a></div>
       <div class="update-item important-note">强烈建议：安装到主屏幕以获得最佳体验</div>
@@ -41,7 +62,6 @@ class UpdateNotification {
       <div class="update-item">13. <strong>新增「限制线下见面」开关</strong>。可在全局设置中调整，也可为单个角色单独设置。默认开启，关闭后会移除线上聊天中关于见面和站外联系的内置限制。</div>
       <div class="update-item">14. <strong>修复网易云音乐扫码和歌单读取问题</strong>。扫码成功后如果账号资料或歌单加载失败，可以单独重试。大型歌单支持分页读取。</div>
       <div class="update-item">15. <strong>优化聊天中的人物和事件识别</strong>。模型能更清楚地区分角色本名、聊天备注和对玩家的称呼，以及是谁修改了备注。旁白和转账记录也会更明确地交代谁做了什么。</div>
-      <div class="update-item tips"><a href="update-log.html#release-20261103" target="_blank" rel="noopener">查看完整更新日志</a></div>
       <div class="update-divider">共同更新 · 反馈中心试用</div>
       <div class="update-item">新增私密反馈和公开反馈入口，可提交建议、报错并附带截图；公开内容经审核后展示。作者回复后，可回到原浏览器查看并继续交流。</div>
       <div class="update-item tips">反馈投稿需要联网完成安全验证。中国大陆网络下，验证可能无法加载，投稿暂不保证稳定可用；遇到问题可稍后重试，或继续使用原有反馈渠道。</div>
@@ -52,7 +72,7 @@ class UpdateNotification {
         <div id="update-notification-modal">
           <img src="https://img.baibai.cv/f/mwOEhK/retouch-2026013121094970.png" class="update-decoration-img">
           <div class="update-notification-header">
-            <div class="update-title">11.3 更新</div>
+            <div class="update-title">11.3 更新补充</div>
           </div>
           
           <div class="update-notification-body">
@@ -134,6 +154,12 @@ class UpdateNotification {
   bindEvents() {
     const btnGotIt = document.getElementById('update-btn-got-it');
     const btnDontShow = document.getElementById('update-btn-dont-show');
+
+    const logLink = document.getElementById('update-open-log');
+    logLink.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.openUpdateLog(logLink.hash);
+    });
 
     if (btnGotIt) {
       btnGotIt.addEventListener('click', () => {
