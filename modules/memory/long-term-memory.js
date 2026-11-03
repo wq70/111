@@ -220,6 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function openLongTermMemoryScreen() {
   if (!state.activeChatId) return;
   const chat = state.chats[state.activeChatId];
+  if (window.GroupMemory?.independent(chat)) return window.GroupMemoryUI.open(chat);
   
   // 显示/隐藏 tab 栏
   const tabBar = document.getElementById('memory-tab-bar');

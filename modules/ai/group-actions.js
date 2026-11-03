@@ -114,20 +114,23 @@
 
       if (filteredHistory.length > 0) {
         recentContextSummary = "这是你们最近的对话：\n" + filteredHistory.map(msg => {
-          const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName);
+          const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
           const content = String(msg.content || msg.message || '').substring(0, 50);
           return `${sender}: ${content}...`;
         }).join('\n');
       }
 
-      const membersList = chat.members.map(m => `- **${m.groupNickname}** (本名: ${m.originalName}): ${m.persona}`).join('\n');
+      const membersList = chat.members.map(m => `- **${m.groupNickname}** (本名: ${m.originalName}, actorId: ${JSON.stringify(String(m.id))}): ${m.persona}`).join('\n');
 
       let longTermMemoryContext = '# 长期记忆 (最高优先级，这是群内已经确立的事实，所有角色必须严格遵守)\n';
       let collectedMemories = false;
 
       const queryTextForVector = filteredHistory.slice(-5).map(m => typeof m.content === 'string' ? m.content : '').join(' ');
 
-      for (const member of chat.members) {
+      if (window.GroupMemory?.independent(chat)) {
+          longTermMemoryContext = await window.GroupMemory.context(chat, queryTextForVector);
+        } else {
+        for (const member of chat.members) {
         const memberChat = state.chats[member.id];
         if (memberChat) {
           const memMode = memberChat.settings?.memoryMode || (memberChat.settings?.enableStructuredMemory ? 'structured' : 'diary');
@@ -154,7 +157,10 @@
       }
 
 
-      let worldBookContent = '';
+      
+        }
+
+        let worldBookContent = '';
       // 获取所有应该使用的世界书ID（包括手动选择的和全局的）
       let allWorldBookIds = [...(chat.settings.linkedWorldBookIds || [])];
       // 添加所有全局世界书
@@ -198,7 +204,7 @@ ${linkedContents}
       let linkedMemoryContext = '';
       const memoryCount = chat.settings.linkedMemoryCount || 10;
       if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
-        const linkedChatsWithTimestamps = chat.settings.linkedMemoryChatIds.map(id => {
+        const linkedChatsWithTimestamps = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds).map(id => {
           const linkedChat = state.chats[id];
           if (!linkedChat) return null;
           const lastMsg = linkedChat.history.slice(-1)[0];
@@ -220,7 +226,7 @@ ${linkedContents}
           if (filteredHistory.length > 0) {
             filteredHistory.forEach(msg => {
 
-              const sender = msg.role === 'user' ? (linkedChat.settings.myNickname || '我') : (getDisplayNameInGroup(linkedChat, msg.senderName) || linkedChat.name);
+              const sender = msg.role === 'user' ? (linkedChat.settings.myNickname || '我') : (getDisplayNameInGroup(linkedChat, msg.senderName, msg.senderId) || linkedChat.name);
 
               let prefix = "";
 
@@ -268,10 +274,9 @@ ${linkedContents}
         }
       }
 
-      const groupMemberNames = new Set(chat.members.map(m => m.originalName));
       const unInteractedPostsForGroup = [...visiblePostsForGroup].filter(post => {
-        const hasBeenLikedByGroup = post.likes && post.likes.some(likerName => groupMemberNames.has(likerName));
-        const hasBeenCommentedByGroup = post.comments && post.comments.some(comment => typeof comment === 'object' && groupMemberNames.has(comment.commenterName));
+        const hasBeenLikedByGroup = chat.members.some(member => window.CharacterIdentity.likedBy(post, member.id));
+        const hasBeenCommentedByGroup = post.comments && post.comments.some(comment => typeof comment === 'object' && chat.members.some(member => String(member.id) === String(window.CharacterIdentity.resolve(comment.commenterId, comment.commenterName)?.id)));
         return !hasBeenLikedByGroup && !hasBeenCommentedByGroup;
       });
 
@@ -311,7 +316,7 @@ ${linkedContents}
           if (post.comments && post.comments.length > 0) {
             for (const comment of post.comments) {
               if (typeof comment === 'object' && comment.commenterName) {
-                const commenterDisplayName = getDisplayNameByOriginalName(comment.commenterName);
+                const commenterDisplayName = window.CharacterIdentity.commentContext(comment);
                 let commentText = comment.meaning ? `[表情: '${comment.meaning}']` : comment.text;
                 postsContext += `  - 评论: ${commenterDisplayName} (本名: ${comment.commenterName}): ${commentText}\n`;
               }
@@ -373,6 +378,7 @@ ${longTermMemoryContext}
         ${worldBookContent}
         # 长期记忆 (最高优先级，这是群内已经确立的事实，所有角色必须严格遵守)
         ${(() => {
+          if (window.GroupMemory?.independent(chat)) return '';
           const memMode = chat.settings?.memoryMode || (chat.settings?.enableStructuredMemory ? 'structured' : 'diary');
           if (memMode === 'vector') return '(群聊自身的变量记忆 - 由检索引擎动态注入)';
           if (memMode === 'structured' && window.structuredMemoryManager) return window.structuredMemoryManager.serializeForPrompt(chat);
@@ -400,6 +406,7 @@ ${longTermMemoryContext}
         现在，请开始你的导演工作，让群聊再次热闹起来吧！
         `;
     }
+    systemPrompt += window.CharacterIdentity.buildContext(chat);
     const recentHistoryForPayload = chat.history.filter(m => !m.isHidden).slice(-10);
     const messagesPayload = [{
       role: 'system',
@@ -407,7 +414,7 @@ ${longTermMemoryContext}
     },
 
     ...filteredHistory.map(msg => {
-      const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName);
+      const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
       let content = msg.content;
 
       if (msg.type === 'ai_image' || msg.type === 'user_photo') {
@@ -490,26 +497,17 @@ ${longTermMemoryContext}
         }
       }
       for (const action of processedActions) {
-        if (!action || !action.type || (!action.name && action.type !== 'narration')) continue;
+        if (!action || !action.type) continue;
+        if (!await window.CharacterIdentity.prepare(chat, action)) continue;
 
-        // 纠正AI可能返回群昵称而非本名的问题
-        if (action.name) {
-          const exactMember = chat.members.find(m => m.originalName === action.name);
-          if (!exactMember) {
-            const nicknameMember = chat.members.find(m => m.groupNickname === action.name);
-            if (nicknameMember) {
-              action.name = nicknameMember.originalName;
-            }
-          }
-        }
-
-        const senderDisplayName = getDisplayNameInGroup(chat, action.name);
+        const senderDisplayName = getDisplayNameInGroup(chat, action.name, action.actorId);
         let visibleSystemMessage = null;
 
         let aiMessage = null;
         const baseMessage = {
           role: 'assistant',
           senderName: action.name,
+          senderId: action.actorId || null,
           timestamp: actionTimestamp++
         };
 
@@ -637,7 +635,7 @@ ${longTermMemoryContext}
 
                 if (chat.isGroup) {
 
-                  quotedSenderDisplayName = getDisplayNameInGroup(chat, originalMessage.senderName);
+                  quotedSenderDisplayName = getDisplayNameInGroup(chat, originalMessage.senderName, originalMessage.senderId);
                 } else {
 
                   quotedSenderDisplayName = chat.name;
@@ -647,6 +645,7 @@ ${longTermMemoryContext}
               const quoteContext = {
                 timestamp: originalMessage.timestamp,
                 senderName: quotedSenderDisplayName,
+                senderId: originalMessage.role === 'user' ? 'user' : originalMessage.senderId,
 
                 content: String(originalMessage.content || '').substring(0, 50)
               };
@@ -696,7 +695,7 @@ ${longTermMemoryContext}
               type: action.postType || 'shuoshuo',
               content: action.content,
               timestamp: Date.now(),
-              authorId: state.chats[Object.keys(state.chats).find(key => state.chats[key].originalName === action.name)]?.id || action.name,
+              authorId: action.actorId,
               authorOriginalName: action.name,
               visibleGroupIds: null
             };
@@ -710,15 +709,11 @@ ${longTermMemoryContext}
             const postToComment = await db.qzonePosts.get(parseInt(action.postId));
             if (postToComment) {
               if (!postToComment.comments) postToComment.comments = [];
-              // 防御：如果模型错误地填了用户的名字，强制纠正为角色本名
-              const qzUserNickname = state.qzoneSettings?.nickname;
-              let qzCommenterName = action.name || chat.originalName;
-              if (qzUserNickname && qzCommenterName === qzUserNickname) {
-                console.warn(`[动态防御] 角色 "${chat.originalName}" 试图用用户名字 "${qzUserNickname}" 评论，已纠正`);
-                qzCommenterName = chat.originalName;
-              }
+              const qzCommenterName = action.name;
               postToComment.comments.push({
+                ...window.CharacterIdentity.commentFields(action),
                 commenterName: qzCommenterName,
+                replyTo: action.replyTo || null,
                 text: action.commentText,
                 timestamp: Date.now()
               });
@@ -735,10 +730,10 @@ ${longTermMemoryContext}
             const postToLike = await db.qzonePosts.get(parseInt(action.postId));
             if (postToLike) {
               if (!postToLike.likes) postToLike.likes = [];
-              if (!postToLike.likes.includes(action.name)) {
-                postToLike.likes.push(action.name);
+              if (window.CharacterIdentity.addLike(postToLike, action.actorId, action.name)) {
                 await db.qzonePosts.update(postToLike.id, {
-                  likes: postToLike.likes
+                  likes: postToLike.likes,
+                  likeActors: postToLike.likeActors
                 });
                 updateUnreadIndicator(unreadPostsCount + 1);
                 visibleSystemMessage = {

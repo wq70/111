@@ -9,7 +9,7 @@ function fixture() {
   const chat = { id: 'a', name: '小白', originalName: '白', settings: {}, history: [] };
   const context = vm.createContext({ window: {}, chat, console, Date,
     document: { getElementById: () => ({ value: '用户备注' }) },
-    state: { qzoneSettings: { nickname: '用户' } },
+    state: { qzoneSettings: { nickname: '林晓' } },
     appendMessage() {}, async syncCharacterNameInGroups() {} });
   vm.runInContext(source('modules/chat/remark-names.js'), context);
   vm.runInContext(source('modules/memory/extraction-support.js'), context);
@@ -23,9 +23,9 @@ test('角色、用户交替修改：保留本名、来源和旧备注；保存�
   assert.equal(first.remarkChange.oldName, '小白');
   assert.equal(first.remarkChange.newName, '小狐狸');
   assert.equal(first.isHidden, undefined);
-  assert.match(first.content, /角色（白）/);
+  assert.match(first.content, /^白将自己的聊天备注/);
   names.recordChange(chat, '乖狐狸', 'user', 20);
-  assert.match(names.buildContext(chat), /最近一次修改.*用户将角色/);
+  assert.match(names.buildContext(chat), /最近一次修改.*林晓将白的聊天备注.*执行者：玩家/);
   names.recordChange(chat, '大狐狸', 'character', 30);
   assert.equal(chat.originalName, '白');
   assert.deepEqual(Array.from(chat.nameHistory), ['小白', '小狐狸', '乖狐狸']);
@@ -93,16 +93,28 @@ test('两处实际角色指令处理都保存来源、同步群聊，只生成�
   }
 });
 
-test('实际设置入口记录用户改名；仅保存设置不产生重复事件', () => {
+test('实际设置入口记录用户改名；仅保存设置不产生重复事件', async () => {
   const { chat, context } = fixture();
   const text = source('src/js-bundles/event-bindings-a/chat-settings-and-members.jsfrag');
   const start = text.indexOf("      const newName = document.getElementById('chat-name-input')");
   const end = text.indexOf('      // 保存角色国籍', start);
-  const run = () => vm.runInContext(`(() => { ${text.slice(start, end)} })()`, context);
-  run(); run();
+  const run = () => vm.runInContext(`(async () => { ${text.slice(start, end)} })()`, context);
+  await run();
+  await run();
   assert.equal(chat.name, '用户备注');
   assert.equal(chat.lastRemarkChange.actor, 'user');
   assert.equal(chat.history.length, 1);
+});
+
+test('历史收款和退款按实际动作和角色本名进入上下文', () => {
+  const { chat, context } = fixture();
+  chat.settings.myNickname = '对话称呼';
+  vm.runInContext(source('modules/chat-input.js'), context);
+  const { formatChatTransferEvent, formatLegacyTransferNotice } = context.window;
+  assert.match(formatChatTransferEvent(chat, { role: 'user', isReceived: true, amount: 5 }), /林晓收下了白的转账/);
+  assert.match(formatChatTransferEvent(chat, { role: 'assistant', isReceived: true, amount: 5 }), /白收下了林晓的转账/);
+  assert.match(formatChatTransferEvent(chat, { role: 'assistant', isRefund: true, amount: 5 }), /白退还了林晓的转账/);
+  assert.match(formatLegacyTransferNotice(chat, '[系统提示：你接受了"小白"的转账。]'), /林晓收下了白的转账/);
 });
 
 test('实际线上与线下消息转换将备注事件移入系统上下文，保留普通用户发言', () => {
@@ -124,7 +136,7 @@ test('实际线上与线下消息转换将备注事件移入系统上下文，�
       .match(/systemPrompt \+= window\.RemarkNames\.buildContext\(chat, filteredHistory\);/)[0];
     vm.runInContext(addition, context);
     assert.match(context.systemPrompt, /^用户自定义提示词/);
-    assert.match(context.systemPrompt, /最近一次修改.*角色（白）/);
+    assert.match(context.systemPrompt, /最近一次修改.*白将自己的聊天备注.*执行者：角色本人/);
   }
 });
 
@@ -138,7 +150,7 @@ test('四种实际记忆格式化入口明确保留系统事件修改者和旧�
     const start = text.indexOf('  const formattedHistory = ');
     const end = text.indexOf(".join('\\n');", start) + ".join('\\n');".length;
     const result = vm.runInContext(`(() => { ${text.slice(start, end)} return formattedHistory; })()`, context);
-    assert.match(result, /\[系统事件；时间戳：1\] 角色（白）.*从 "小白" 修改为 "狐狸"/);
-    assert.match(result, /\[系统事件；时间戳：2\] 用户.*从 "狐狸" 修改为 "用户备注"/);
+    assert.match(result, /\[系统事件；时间戳：1\] 白将自己的聊天备注从 "小白" 修改为 "狐狸"/);
+    assert.match(result, /\[系统事件；时间戳：2\] 林晓将白的聊天备注从 "狐狸" 修改为 "用户备注"/);
   }
 });

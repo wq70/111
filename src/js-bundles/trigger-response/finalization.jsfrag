@@ -9,7 +9,7 @@
               if (foundAvatar) {
                 chat.settings.groupAvatar = foundAvatar.url;
 
-                const changerMember = chat.members.find(m => m.originalName === msgData.name);
+                const changerMember = window.CharacterIdentity.member(chat, msgData);
                 const changerDisplayName = changerMember ? changerMember.groupNickname : msgData.name;
 
                 const systemMessage = {
@@ -82,7 +82,7 @@
 
                 if (chat.isGroup) {
 
-                  quotedSenderDisplayName = getDisplayNameInGroup(chat, originalMessage.senderName);
+                  quotedSenderDisplayName = getDisplayNameInGroup(chat, originalMessage.senderName, originalMessage.senderId);
                 } else {
 
                   quotedSenderDisplayName = chat.name;
@@ -92,6 +92,7 @@
               const quoteContext = {
                 timestamp: originalMessage.timestamp,
                 senderName: quotedSenderDisplayName,
+                senderId: originalMessage.role === 'user' ? 'user' : originalMessage.senderId,
 
                 content: String(originalMessage.content || '').substring(0, 50)
               };
@@ -761,7 +762,22 @@
         await triggerAiResponse({ chatId });
         return;
       }
-      await db.chats.put(chat);
+      const previousTodos = chat.todoList;
+      const previousAutoDate = chat.characterTodoAutoDate;
+      const generatedTodoCount = window.CharacterTodos.add(chat, characterTodoContext.date, parsedMessages, 'auto');
+      const savedTodos = chat.todoList;
+      try {
+        await db.chats.put(chat);
+      } catch (error) {
+        if (generatedTodoCount && chat.todoList === savedTodos) {
+          chat.todoList = previousTodos;
+          chat.characterTodoAutoDate = previousAutoDate;
+        }
+        throw error;
+      }
+      if (generatedTodoCount && state.activeChatId === chatId && document.getElementById('todo-list-screen')?.classList.contains('active')) {
+        await window.renderTodoList();
+      }
       if (window.GenerationAdjustments) await window.GenerationAdjustments.consume(generationGuidance);
       if (options.onCommitted) options.onCommitted();
       if (replyGuardianTaskId && window.ReplyTaskStore) {

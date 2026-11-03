@@ -8,6 +8,7 @@ window.handleExportLongTermMemory = handleExportLongTermMemory;
 async function checkAndTriggerAutoSummary(chatId) {
   const chat = state.chats[chatId];
   if (!chat || !chat.settings.enableAutoMemory) return;
+  if (window.GroupMemory?.independent(chat)) return window.GroupMemory.auto(chat);
 
   const memoryMode = chat.settings.memoryMode || 'diary';
 
@@ -58,6 +59,9 @@ async function summarizeCallTranscript(chatId, transcriptText) {
     throw new Error("基础数据不完整，无法开始总结。");
   }
 
+  if (window.GroupMemory?.independent(chat)) {
+    return window.GroupMemory.summarize(chat, { messages: [{ role: 'user', content: transcriptText, timestamp: Date.now() }] });
+  }
   const userNickname = chat.settings.myNickname || (state.qzoneSettings.nickname || '用户');
   const summaryWorldBook = state.worldBooks.find(wb => wb.name === '总结设定'); // 确保这个名字和你创建的世界书一致
   let summarySettingContext = '';
@@ -252,6 +256,8 @@ ${transcriptText}
     let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
     rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
     const result = JSON.parse(rawContent);
+    if (window.GroupMemory?.independent(chat)) return;
+
 
     if (result.summary && result.summary.trim()) {
       const newMemoryEntry = {
@@ -819,6 +825,7 @@ ${memoryContent}
 async function triggerAutoSummary(chatId, force = false, customRange = null) {
   const chat = state.chats[chatId];
   if (!chat) return;
+  if (window.GroupMemory?.independent(chat)) return force || customRange ? window.GroupMemory.summarize(chat, { range: customRange }) : window.GroupMemory.auto(chat);
 
   const lastSummaryTimestamp = chat.lastMemorySummaryTimestamp || 0;
   let messagesToSummarize;
@@ -1073,6 +1080,8 @@ ${formattedHistory}
     let rawContent = isGemini ? getGeminiResponseText(data) : data.choices[0].message.content;
     rawContent = rawContent.replace(/^```json\s*/, '').replace(/```$/, '').trim();
     const result = JSON.parse(rawContent);
+    if (window.GroupMemory?.independent(chat)) return; // Shared request started before switching modes.
+
 
     if (chat.isGroup) {
       if (result.summaries && typeof result.summaries === 'object') {

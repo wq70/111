@@ -425,7 +425,7 @@
             ${avatarGroupHtml}
             <div class="info">
                 <div class="name-line">
-                    <span class="name">${chat.name}</span>
+                    <span class="name">${escapeHTML(!chat.isGroup && window.CharacterIdentity ? window.CharacterIdentity.display(chat.originalName, chat.id) : chat.name)}</span>
                     ${chat.isGroup ? '<span class="group-tag">群聊</span>' : ''}
                 </div>
                 <div class="last-msg" style="color: ${chat.isGroup ? 'var(--text-secondary)' : '#b5b5b5'}; font-style: italic;">${lastMsgDisplay}</div>

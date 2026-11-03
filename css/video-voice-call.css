@@ -1070,6 +1070,7 @@
            }
 
            #phone-screen.dark-mode {
+               --primary-bg: #29292d;
                --secondary-bg: #1c1c1e;
                --border-color: #38383a;
                --text-primary: #ffffff;

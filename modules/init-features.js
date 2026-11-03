@@ -17,6 +17,7 @@ window.initFeatures = function(state, db) {
     // 所有按钮、弹窗、批量选择与歌曲添加能力保持不变。
     if (window.__initFeaturesReady) return;
     window.__initFeaturesReady = true;
+    window.SmsApp?.initialize().catch(error => console.warn('[信息初始化]', error.message));
 
 
 
@@ -149,6 +150,8 @@ window.initFeatures = function(state, db) {
     document.getElementById('close-music-account-btn')?.addEventListener('click', closeMusicAccountCenter);
     document.getElementById('netease-login-btn')?.addEventListener('click', startNeteaseQrLogin);
     document.getElementById('netease-logout-btn')?.addEventListener('click', logoutNeteaseMusic);
+    document.getElementById('netease-account-retry-btn')?.addEventListener('click', refreshNeteaseAccountView);
+    document.getElementById('netease-playlists-retry-btn')?.addEventListener('click', refreshNeteaseAccountView);
     document.getElementById('cancel-music-search-btn')?.addEventListener('click', () => {
       document.getElementById('music-search-results-modal').classList.remove('visible');
     });
@@ -4926,7 +4929,7 @@ ${linkedContents}
         let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
-          const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== watchTogetherState.chatId);
+          const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== watchTogetherState.chatId));
 
           if (idsToMount.length > 0) {
             linkedMemoryContext += `\n# 参考记忆 (其他聊天的记忆)\n`;
@@ -6419,7 +6422,7 @@ ${linkedContents}
           const linkedMemories = [];
           for (const linkedId of chat.settings.linkedChatIds) {
             const linkedChat = state.chats[linkedId];
-            if (linkedChat && linkedChat.history.length > 0) {
+            if (linkedChat && (!window.GroupMemory || window.GroupMemory.canMount(chat, linkedChat)) && linkedChat.history.length > 0) {
               const recentMessages = linkedChat.history.slice(-5).map(msg =>
                 `${msg.role === 'user' ? userNickname : linkedChat.name}: ${String(msg.content)}`
               ).join('\n');
@@ -7230,6 +7233,10 @@ ${finalInstruction}
     document.getElementById('todo-next-day-btn')?.addEventListener('click', () => changeTodoDate(1));
 
     document.getElementById('add-todo-btn')?.addEventListener('click', () => openTodoEditor(null));
+    document.getElementById('char-todo-generate')?.addEventListener('click', window.CharacterTodos.generateForSelectedDate);
+    for (const id of ['char-todo-manual', 'char-todo-auto', 'char-todo-source']) {
+      document.getElementById(id)?.addEventListener('change', window.CharacterTodos.updateSettingsVisibility);
+    }
 
     document.getElementById('cancel-todo-editor-btn')?.addEventListener('click', () => {
       document.getElementById('todo-editor-modal').classList.remove('visible');

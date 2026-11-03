@@ -35,6 +35,7 @@
     }
 
 
+    if (post.authorAvatar) authorAvatar = post.authorAvatar;
     const detailAvatar = document.getElementById('douban-detail-avatar');
     if (detailAvatar) {
         detailAvatar.src = authorAvatar;
@@ -43,7 +44,7 @@
     document.getElementById('douban-detail-author').textContent = authorDisplayName;
     document.getElementById('douban-detail-group').textContent = `来自 ${post.groupName}`;
     document.getElementById('douban-detail-post-title').textContent = post.postTitle;
-    document.getElementById('douban-detail-content').innerHTML = post.content.replace(/\n/g, '<br>');
+    document.getElementById('douban-detail-content').innerHTML = escapeHTML(post.content || '').replace(/\n/g, '<br>');
     
     const postBodyEl = document.getElementById('douban-post-detail-body');
     postBodyEl.onclick = (e) => {
@@ -86,7 +87,7 @@
         let commenterAvatar = defaultAvatar;
         const myNickname = state.globalSettings.doubanUserNickname || state.qzoneSettings.nickname || '我';
         const isUserComment = comment.isUser || comment.commenter === '我' || comment.commenter === state.qzoneSettings.nickname || comment.commenter === state.globalSettings.doubanUserNickname;
-        const displayCommenterName = isUserComment ? myNickname : comment.commenter;
+        const displayCommenterName = comment.commenterDisplayName || (isUserComment ? myNickname : comment.commenter);
 
         if (commenterAvatarMap.has(displayCommenterName)) {
 
@@ -123,6 +124,7 @@
           commenterAvatarMap.set(displayCommenterName, commenterAvatar);
         }
 
+        if (comment.commenterAvatar) commenterAvatar = comment.commenterAvatar;
         const commentEl = document.createElement('div');
         commentEl.className = 'douban-comment-item';
         
@@ -130,10 +132,10 @@
         commentEl.dataset.commentId = commentId;
         commentEl.innerHTML = `
                 <div class="douban-checkbox" style="display: none; margin-right: 10px; align-self: center; flex-shrink: 0; pointer-events: none;"></div>
-                <img src="${commenterAvatar}" class="douban-comment-avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
+                <img src="${escapeHTML(commenterAvatar || '')}" class="douban-comment-avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
                 <div class="douban-comment-body">
-                    <div class="douban-comment-author">${displayCommenterName}</div>
-                    <div class="douban-comment-text">${comment.text.replace(/\n/g, '<br>')}</div>
+                    <div class="douban-comment-author">${escapeHTML(displayCommenterName || '')}</div>
+                    <div class="douban-comment-text">${escapeHTML(comment.text || '').replace(/\n/g, '<br>')}</div>
                 </div>
             `;
             

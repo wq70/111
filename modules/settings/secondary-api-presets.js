@@ -49,11 +49,19 @@
 
     const preset = await db.secondaryApiPresets.get(selectedId);
     if (preset) {
-      state.apiConfig.secondaryProxyUrl = preset.secondaryProxyUrl || '';
-      state.apiConfig.secondaryApiKey = preset.secondaryApiKey || '';
-      state.apiConfig.secondaryModel = preset.secondaryModel || '';
-      
-      await db.apiConfig.put(state.apiConfig);
+      const nextApiConfig = { ...state.apiConfig,
+        secondaryProxyUrl: preset.secondaryProxyUrl || '',
+        secondaryApiKey: preset.secondaryApiKey || '',
+        secondaryModel: preset.secondaryModel || '' };
+      if (window.vectorMemoryManager) {
+        if (!await window.vectorMemoryManager.saveApiConfiguration(nextApiConfig)) {
+          await loadSecondaryApiPresetsDropdown();
+          return;
+        }
+      } else {
+        await db.apiConfig.put(nextApiConfig);
+        Object.assign(state.apiConfig, nextApiConfig);
+      }
 
       document.getElementById('secondary-proxy-url').value = state.apiConfig.secondaryProxyUrl;
       document.getElementById('secondary-api-key').value = state.apiConfig.secondaryApiKey;

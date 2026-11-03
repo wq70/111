@@ -111,6 +111,7 @@ function getCurrencyExchangeContext() {
 
 // 获取角色的记忆上下文（自动判断记忆模式）
 function getMemoryContextForPrompt(chat, options = {}) {
+  if (window.GroupMemory?.independent(chat)) return window.GroupMemory.contextSync(chat, options.queryText || '');
   const { includeTimestamp = false, queryText = '' } = options;
   const memoryMode = chat.settings?.memoryMode;
 
@@ -150,6 +151,7 @@ function getMemoryContextForPrompt(chat, options = {}) {
 }
 
 async function getMemoryContextForPromptAsync(chat, options = {}) {
+  if (window.GroupMemory?.independent(chat)) return window.GroupMemory.context(chat, options.queryText || '');
   if (chat?.settings?.memoryMode === 'vector' && window.vectorMemoryManager) {
     return window.vectorMemoryManager.serializeForPrompt(chat, options.queryText || '');
   }
@@ -598,6 +600,7 @@ const DEFAULT_APP_ICONS = {
     'auction': 'https://i.postimg.cc/Hs7BLh76/alipay.png',
     'green-river': 'https://i.postimg.cc/0j55Pj1L/green-river-icon.png',
     'mail': 'https://i.postimg.cc/PfR7f37x/mail.png',
+    'messages': 'icons/messages.svg',
     'period-tracker': 'https://i.postimg.cc/RVGt0yMN/calendar-pink.png',
     'focus-timer': 'https://i.postimg.cc/Kz8d9YJy/tomato-timer.png',
 
@@ -840,7 +843,7 @@ async function calculateCurrentContextTokens() {
     const linkedChatIds = Array.from(document.querySelectorAll('#linked-chats-checkboxes-container input:checked')).map(cb => cb.value);
     for (const linkedId of linkedChatIds) {
       const linkedChat = state.chats[linkedId];
-      if (linkedChat && linkedChat.history.length > 0) {
+      if (linkedChat && (!window.GroupMemory || window.GroupMemory.canMount(chat, linkedChat)) && linkedChat.history.length > 0) {
         fullContextString += linkedChat.history.slice(-linkedMemoryCount).map(msg => String(msg.content)).join('\n');
       }
     }

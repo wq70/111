@@ -3,6 +3,12 @@
   let isQuickReplyManagementMode = false;
   let selectedQuickReplies = new Set();
 
+  function getCurrentQuickReplies() {
+    if (activeQuickReplyCategoryId === 'all') return state.quickReplies;
+    if (activeQuickReplyCategoryId === 'uncategorized') return state.quickReplies.filter(r => !r.categoryId);
+    return state.quickReplies.filter(r => r.categoryId == activeQuickReplyCategoryId);
+  }
+
   function openQuickReplyModal() {
     const tabsContainer = document.getElementById('quick-reply-tabs');
     if (tabsContainer) tabsContainer.dataset.needsRefresh = 'true';
@@ -43,14 +49,8 @@
         });
       }
     }
-    let repliesToShow;
-    if (activeQuickReplyCategoryId === 'all') {
-      repliesToShow = state.quickReplies;
-    } else if (activeQuickReplyCategoryId === 'uncategorized') {
-      repliesToShow = state.quickReplies.filter(r => !r.categoryId);
-    } else {
-      repliesToShow = state.quickReplies.filter(r => r.categoryId == activeQuickReplyCategoryId);
-    }
+    const repliesToShow = getCurrentQuickReplies();
+    updateQuickReplyActionBar();
     if (!repliesToShow || repliesToShow.length === 0) {
       const tipText = activeQuickReplyCategoryId === 'all'
         ? '你还没有添加任何快捷回复。<br>点击右上角"+"号添加第一条吧！'
@@ -70,20 +70,18 @@
                 <button class="quick-reply-edit-btn" data-id="${reply.id}" title="编辑">✏️</button>
                 <button class="quick-reply-delete-btn" data-id="${reply.id}" title="删除">🗑️</button>
             </div>`;
-      item.addEventListener('click', (e) => {
+      item.addEventListener('click', async (e) => {
         if (isQuickReplyManagementMode) {
           if (!e.target.closest('.quick-reply-actions')) {
             toggleQuickReplySelection(reply.id);
-            const cb = item.querySelector('.quick-reply-checkbox');
-            if (cb) cb.checked = !cb.checked;
           }
         } else {
           const textEl = e.target.closest('.quick-reply-text');
           const editBtn = e.target.closest('.quick-reply-edit-btn');
           const deleteBtn = e.target.closest('.quick-reply-delete-btn');
           if (textEl) selectQuickReply(textEl.dataset.text);
-          else if (editBtn) editQuickReply(reply.id);
-          else if (deleteBtn) deleteQuickReply(reply.id);
+          else if (editBtn) await editQuickReply(reply.id);
+          else if (deleteBtn) await deleteQuickReply(reply.id);
         }
       });
       listEl.appendChild(item);
@@ -102,6 +100,37 @@
     chatInput.focus();
   }
 
+  async function editQuickReply(id) {
+    const reply = state.quickReplies.find(r => r.id === id);
+    if (!reply) return;
+    const text = await showCustomPrompt('编辑快捷回复', '请修改回复内容：', reply.text, 'textarea');
+    if (text === null) return;
+    if (!text.trim()) return showCustomAlert('内容不能为空', '请输入快捷回复内容。');
+    try {
+      await db.quickReplies.update(id, { text: text.trim() });
+      reply.text = text.trim();
+      await renderQuickReplyList(false);
+    } catch (error) {
+      console.error('保存快捷回复失败:', error);
+      await showCustomAlert('保存失败', '快捷回复未能保存，请重试。');
+    }
+  }
+
+  async function deleteQuickReply(id) {
+    if (!state.quickReplies.some(r => r.id === id)) return;
+    const confirmed = await showCustomConfirm('确认删除', '确定要删除这条快捷回复吗？删除后无法恢复。', { confirmText: '删除', confirmButtonClass: 'btn-danger' });
+    if (!confirmed) return;
+    try {
+      await db.quickReplies.delete(id);
+      state.quickReplies = state.quickReplies.filter(r => r.id !== id);
+      selectedQuickReplies.delete(id);
+      await renderQuickReplyList(false);
+    } catch (error) {
+      console.error('删除快捷回复失败:', error);
+      await showCustomAlert('删除失败', '快捷回复未能删除，请重试。');
+    }
+  }
+
   function toggleQuickReplyManagementMode() {
     isQuickReplyManagementMode = !isQuickReplyManagementMode;
     const listEl = document.getElementById('quick-reply-list');
@@ -114,6 +143,7 @@
       normalFooter.style.display = 'none';
       batchBtn.textContent = "完成";
       batchBtn.style.color = "var(--accent-color)";
+      updateQuickReplyActionBar();
     } else {
       listEl.classList.remove('management-mode');
       actionBar.style.display = 'none';
@@ -137,16 +167,19 @@
     const count = selectedQuickReplies.size;
     document.getElementById('move-selected-quick-replies-btn').textContent = `移动 (${count})`;
     document.getElementById('delete-selected-quick-replies-btn').textContent = `删除 (${count})`;
+    const visibleReplies = getCurrentQuickReplies();
+    const selectedCount = visibleReplies.filter(r => selectedQuickReplies.has(r.id)).length;
+    const selectAll = document.getElementById('select-all-quick-replies-checkbox');
+    selectAll.checked = visibleReplies.length > 0 && selectedCount === visibleReplies.length;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < visibleReplies.length;
+    selectAll.disabled = visibleReplies.length === 0;
   }
 
   function handleSelectAllQuickReplies() {
     const isChecked = document.getElementById('select-all-quick-replies-checkbox').checked;
-    let currentViewReplies;
-    if (activeQuickReplyCategoryId === 'all') currentViewReplies = state.quickReplies;
-    else if (activeQuickReplyCategoryId === 'uncategorized') currentViewReplies = state.quickReplies.filter(r => !r.categoryId);
-    else currentViewReplies = state.quickReplies.filter(r => r.categoryId == activeQuickReplyCategoryId);
+    const currentViewReplies = getCurrentQuickReplies();
     if (isChecked) currentViewReplies.forEach(r => selectedQuickReplies.add(r.id));
-    else selectedQuickReplies.clear();
+    else currentViewReplies.forEach(r => selectedQuickReplies.delete(r.id));
     updateQuickReplyActionBar();
     renderQuickReplyList(false);
   }
@@ -172,14 +205,19 @@
 
   async function executeBatchDeleteQuickReplies() {
     if (selectedQuickReplies.size === 0) return alert("请先选择回复。");
-    const confirmed = await showCustomConfirm("确认删除", `确定要删除选中的 ${selectedQuickReplies.size} 条回复吗？`);
-    if (!confirmed) return;
     const ids = Array.from(selectedQuickReplies);
-    await db.quickReplies.bulkDelete(ids);
-    state.quickReplies = state.quickReplies.filter(r => !selectedQuickReplies.has(r.id));
-    await showCustomAlert("成功", "已删除选中回复。");
-    toggleQuickReplyManagementMode();
-    renderQuickReplyList(false);
+    const confirmed = await showCustomConfirm("确认删除", `确定要删除选中的 ${ids.length} 条回复吗？删除后无法恢复。`, { confirmText: '删除', confirmButtonClass: 'btn-danger' });
+    if (!confirmed) return;
+    try {
+      await db.quickReplies.bulkDelete(ids);
+      const deletedIds = new Set(ids);
+      state.quickReplies = state.quickReplies.filter(r => !deletedIds.has(r.id));
+      await showCustomAlert("成功", "已删除选中回复。");
+      toggleQuickReplyManagementMode();
+    } catch (error) {
+      console.error('批量删除快捷回复失败:', error);
+      await showCustomAlert('删除失败', '选中的快捷回复未能删除，请重试。');
+    }
   }
 
   async function addNewQuickReply() {

@@ -28,6 +28,7 @@ class VariableMemoryManager {
     this._embeddingQueue = [];
     this._isProcessingQueue = false;
     this._extractionLocks = new WeakMap();
+    this._embeddingRebuilds = new WeakMap();
   }
 
   _defaultSettings() {
@@ -229,12 +230,222 @@ class VariableMemoryManager {
   }
 
   _hasCurrentEmbedding(chat, fragment) {
-    if (!Array.isArray(fragment?.embedding) || !fragment.embedding.length) return false;
-    // 无模型标识的旧向量只按原有配置识别，不能被新全局模型直接接管。
+    return !!this._currentEmbeddingRecord(chat, fragment);
+  }
+
+  _validEmbedding(vector) {
+    return Array.isArray(vector) && vector.length > 0 && vector.every(Number.isFinite);
+  }
+
+  _embeddingSpace(chat, signature = this._embeddingSignature(chat)) {
+    return this.getVariableMemory(chat).embeddingProfiles?.find(profile => profile.signature === signature)?.space || signature;
+  }
+
+  _primaryEmbeddingRecord(chat, fragment) {
+    if (!this._validEmbedding(fragment?.embedding)) return null;
     const signature = fragment.embeddingSignature || this._signatureForConfig(this._legacyEmbeddingConfig(this.getVariableMemory(chat).settings));
-    if (signature !== this._embeddingSignature(chat)) return false;
-    if (!fragment.embeddingTextHash) return !String(fragment.retrievalText || '').trim();
-    return fragment.embeddingTextHash === this._embeddingTextHashFor(chat, fragment);
+    return { signature, space: fragment.embeddingSpace || this._embeddingSpace(chat, signature),
+      textHash: fragment.embeddingTextHash || '', embedding: fragment.embedding };
+  }
+
+  _currentEmbeddingRecord(chat, fragment) {
+    const space = this._embeddingSpace(chat);
+    const hash = this._embeddingTextHashFor(chat, fragment);
+    const primary = this._primaryEmbeddingRecord(chat, fragment);
+    return [primary, ...(fragment?.embeddingVersions || [])].find(record =>
+      record && record.space === space && this._validEmbedding(record.embedding) &&
+      (record.textHash ? record.textHash === hash : record === primary && !String(fragment.retrievalText || '').trim())) || null;
+  }
+
+  _archiveEmbedding(chat, fragment) {
+    const record = this._primaryEmbeddingRecord(chat, fragment);
+    if (!record) return;
+    // 在修改正文或配置前固定旧向量的身份，不能事后改名为新模型的结果。
+    fragment.embeddingSignature = record.signature;
+    fragment.embeddingSpace = record.space;
+    fragment.embeddingTextHash = record.textHash || (!String(fragment.retrievalText || '').trim() ? this._embeddingTextHashFor(chat, fragment) : 'legacy-unverified');
+    const archived = { ...record, textHash: fragment.embeddingTextHash };
+    const versions = fragment.embeddingVersions ||= [];
+    if (!versions.some(item => item.space === archived.space && item.textHash === archived.textHash)) {
+      versions.push({ ...archived, embedding: [...archived.embedding] });
+    }
+  }
+
+  _storeEmbedding(chat, fragment, embedding, textHash = this._embeddingTextHashFor(chat, fragment)) {
+    if (!this._validEmbedding(embedding)) return;
+    this._archiveEmbedding(chat, fragment);
+    fragment.embedding = embedding;
+    fragment.embeddingSignature = this._embeddingSignature(chat);
+    fragment.embeddingSpace = this._embeddingSpace(chat);
+    fragment.embeddingTextHash = textHash;
+    // 立即存入分模型记录；后续修改正文、重建或切换都不会覆盖其他模型。
+    this._archiveEmbedding(chat, fragment);
+  }
+
+  async _chooseEmbeddingChange(changes) {
+    const records = changes.flatMap(change => this.getVariableMemory(change.chat).fragments.flatMap(fragment =>
+      [this._primaryEmbeddingRecord(change.chat, fragment), ...(fragment.embeddingVersions || [])].filter(Boolean)));
+    const known = changes.every(change => this.getVariableMemory(change.chat).embeddingProfiles?.some(profile => profile.signature === change.next) || records.some(record => record.signature === change.next));
+    const previousSpaces = new Set(changes.map(change => this._embeddingSpace(change.chat, change.previous)));
+    const sources = [...new Map(records.filter(record => !previousSpaces.has(record.space)).map(record => [record.space, record])).values()];
+    const title = changes.every(change => change.previous === change.next) ? '选择已有向量。请确认底层模型相同。' : `向量接口已变化（${changes.length} 个角色）。旧向量保留，不会自动重建。`;
+    const choice = await window.showChoiceModal(title, [
+      ...(known ? [{ text: '恢复此配置以前保存的向量', value: 'restore' }] : []),
+      ...(records.some(record => previousSpaces.has(record.space)) ? [{ text: '沿用当前已有向量（确认只是更换地址或模型别名）', value: 'reuse' }] : []),
+      ...sources.map((record, index) => ({ text: `沿用已保留的第 ${index + 1} 套向量：${record.signature.split('|').pop()}（确认模型相同）`, value: `reuse-from:${encodeURIComponent(record.space)}` })),
+      { text: '作为新模型使用（旧向量保留，稍后手动重建）', value: 'new' }
+    ]);
+    if (typeof choice === 'string' && choice.startsWith('reuse-from:')) return { mode: 'reuse', space: decodeURIComponent(choice.slice(11)) };
+    return ['restore', 'reuse', 'new'].includes(choice) ? choice : null;
+  }
+
+  _applyEmbeddingChange(chat, previous, next, choice) {
+    const mode = typeof choice === 'object' ? choice.mode : choice;
+    const vm = this.getVariableMemory(chat);
+    const previousSpace = this._embeddingSpace(chat, previous);
+    vm.fragments.forEach(fragment => this._archiveEmbedding(chat, fragment));
+    const profiles = vm.embeddingProfiles ||= [];
+    if (!profiles.some(profile => profile.signature === previous)) profiles.push({ signature: previous, space: previousSpace });
+    let target = profiles.find(profile => profile.signature === next);
+    if (!target) { target = { signature: next, space: next }; profiles.push(target); }
+    if (mode === 'reuse') target.space = choice.space || previousSpace;
+    if (mode === 'new') target.space = next;
+    vm.stats.embeddingStatus = mode === 'reuse' ? 'reused' : 'stale';
+    vm._retrievalCache = this._emptyRetrievalCache();
+  }
+
+  async saveApiConfiguration(nextApiConfig) {
+    if (this._apiEmbeddingSavePending) throw new Error('向量设置正在保存，请稍后再试');
+    this._apiEmbeddingSavePending = true;
+    try {
+      const originalConfig = window.state.apiConfig;
+      const changes = [];
+      for (const chat of Object.values(window.state.chats || {})) {
+        if (!chat.variableMemory && !chat.vectorMemory) continue;
+        const previous = this._embeddingSignature(chat);
+        const next = this._signatureForConfig(this._embeddingConfig(chat, false, nextApiConfig));
+        if (previous === next) continue;
+        if (this._extractionLocks.has(chat) || this._embeddingRebuilds.has(chat) || chat.variableMemory?._metadataEnrichmentCancelled === false) {
+          throw new Error('请先结束正在运行的记忆任务，再切换向量接口');
+        }
+        changes.push({ chat, previous, next });
+      }
+      const groups = new Map();
+      for (const change of changes) {
+        const vm = this.getVariableMemory(change.chat);
+        const hasVectors = vm.fragments.some(fragment => this._validEmbedding(fragment.embedding) || fragment.embeddingVersions?.length);
+        if (!hasVectors) { change.choice = 'new'; continue; }
+        const key = JSON.stringify([change.previous, change.next]);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(change);
+      }
+      for (const group of groups.values()) {
+        const choice = await this._chooseEmbeddingChange(group);
+        if (!choice) return false;
+        group.forEach(change => { change.choice = choice; });
+      }
+      if (window.state.apiConfig !== originalConfig || changes.some(change => this._embeddingSignature(change.chat) !== change.previous)) {
+        throw new Error('设置已变化，请重新保存');
+      }
+      const staged = changes.map(change => {
+        if (this._extractionLocks.has(change.chat) || this._embeddingRebuilds.has(change.chat) || change.chat.variableMemory?._metadataEnrichmentCancelled === false) {
+          throw new Error('请先结束正在运行的记忆任务，再切换向量接口');
+        }
+        const copy = { ...change.chat, variableMemory: JSON.parse(JSON.stringify(this.getVariableMemory(change.chat))) };
+        this._applyEmbeddingChange(copy, change.previous, change.next, change.choice);
+        return { chat: change.chat, copy };
+      });
+      const persist = async () => {
+        for (const item of staged) await db.chats.put(item.copy);
+        await (window.saveSettingsRecord ? window.saveSettingsRecord(db.apiConfig, nextApiConfig) : db.apiConfig.put(nextApiConfig));
+      };
+      // 配置和角色向量身份必须一起保存；事务失败时运行配置和旧向量均不变。
+      if (staged.length && typeof db.transaction === 'function') await db.transaction('rw', db.chats, db.apiConfig, persist);
+      else await persist();
+      staged.forEach(item => { item.chat.variableMemory = item.copy.variableMemory; });
+      Object.assign(window.state.apiConfig, nextApiConfig);
+      return true;
+    } finally { this._apiEmbeddingSavePending = false; }
+  }
+
+  async saveSettingsWithEmbeddingChoice(chat) {
+    const vm = this.getVariableMemory(chat);
+    const previous = this._embeddingSignature(chat);
+    const stage = { ...chat, variableMemory: JSON.parse(JSON.stringify(vm)) };
+    // 只校验副本，用户取消、校验失败或保存失败都不影响当前配置。
+    this.saveSettingsFromUI(stage);
+    const next = this._embeddingSignature(stage);
+    let choice = 'new';
+    if (previous !== next && vm.fragments.some(fragment => this._validEmbedding(fragment.embedding) || fragment.embeddingVersions?.length)) {
+      choice = await this._chooseEmbeddingChange([{ chat, previous, next }]);
+      if (!choice) return false;
+    }
+    if (this._embeddingSignature(chat) !== previous) throw new Error('设置已变化，请重新保存');
+    if (this._embeddingRebuilds.has(chat) || this._extractionLocks.has(chat) || vm._metadataEnrichmentCancelled === false) {
+      throw new Error('请先结束正在运行的记忆任务，再保存设置');
+    }
+    // 选择期间记忆可能已变化，提交时重新复制最新数据。
+    const saved = { ...chat, variableMemory: JSON.parse(JSON.stringify(this.getVariableMemory(chat))) };
+    if (previous !== next) this._applyEmbeddingChange(saved, previous, next, choice);
+    saved.variableMemory.settings = stage.variableMemory.settings;
+    saved.variableMemory._retrievalCache = this._emptyRetrievalCache();
+    await db.chats.put(saved);
+    // 保持面板已有 vm 引用有效。
+    Object.assign(vm, saved.variableMemory);
+    return true;
+  }
+
+  async useCurrentInterfaceAsNewModel(chat) {
+    if (this._embeddingRebuilds.has(chat) || this._extractionLocks.has(chat) || chat.variableMemory?._metadataEnrichmentCancelled === false) throw new Error('请先结束正在运行的记忆任务');
+    const copy = { ...chat, variableMemory: JSON.parse(JSON.stringify(this.getVariableMemory(chat))) };
+    const signature = this._embeddingSignature(chat);
+    this._applyEmbeddingChange(copy, signature, signature, 'new');
+    // 同一个接口名称背后的模型也可能变化，显式“作为新模型”应能创建独立的一套。
+    if (this._embeddingSpace(chat) === signature && copy.variableMemory.fragments.some(fragment => this._validEmbedding(fragment.embedding) || fragment.embeddingVersions?.length)) {
+      copy.variableMemory.embeddingProfiles.find(profile => profile.signature === signature).space = `${signature}#${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    }
+    await db.chats.put(copy);
+    Object.assign(this.getVariableMemory(chat), copy.variableMemory);
+    const prefix = `${this._embeddingRequestKey(this._embeddingConfig(chat))}|`;
+    for (const key of this.embeddingCache.keys()) if (key.startsWith(prefix)) this.embeddingCache.delete(key);
+  }
+
+  async chooseSavedEmbeddings(chat) {
+    const signature = this._embeddingSignature(chat);
+    const choice = await this._chooseEmbeddingChange([{ chat, previous: signature, next: signature }]);
+    if (!choice) return false;
+    if (signature !== this._embeddingSignature(chat)) throw new Error('设置已变化，请重新选择');
+    if (this._embeddingRebuilds.has(chat) || this._extractionLocks.has(chat) || chat.variableMemory?._metadataEnrichmentCancelled === false) throw new Error('请先结束正在运行的记忆任务');
+    const copy = { ...chat, variableMemory: JSON.parse(JSON.stringify(this.getVariableMemory(chat))) };
+    this._applyEmbeddingChange(copy, signature, signature, choice);
+    await db.chats.put(copy);
+    Object.assign(this.getVariableMemory(chat), copy.variableMemory);
+    return true;
+  }
+
+  _checkEmbeddingDimensions(chat, queryEmbedding) {
+    if (!queryEmbedding) return false;
+    const mismatch = this.getVariableMemory(chat).fragments.some(fragment => {
+      const vector = this._currentEmbeddingRecord(chat, fragment)?.embedding;
+      return vector && vector.length !== queryEmbedding.length;
+    });
+    if (mismatch) this._setEmbeddingStatus(chat, 'dimension-mismatch', '接口返回的向量维度与已有向量不匹配。旧向量已保留，请选择“作为新模型使用”后重建。');
+    return !mismatch;
+  }
+
+  embeddingStatusText(chat) {
+    const vm = this.getVariableMemory(chat);
+    const count = vm.fragments.filter(fragment => this._hasCurrentEmbedding(chat, fragment)).length;
+    const status = vm.stats.embeddingSignature === this._embeddingSignature(chat) ? vm.stats.embeddingStatus : '';
+    const detail = ['error', 'local', 'dimension-mismatch'].includes(status) ? vm.stats.embeddingStatusDetail : '';
+    return `${detail ? `${detail}。` : ''}当前模型已有向量 ${count}/${vm.fragments.length} 条。旧模型向量分别保留；切换时可选择沿用，重建由你手动开始，已完成部分可继续。`;
+  }
+
+  _embeddingBadge(chat, fragment) {
+    const vm = this.getVariableMemory(chat);
+    if (vm.stats.embeddingSignature === this._embeddingSignature(chat) && vm.stats.embeddingStatus === 'dimension-mismatch') return '维度不匹配（已保留）';
+    if (this._hasCurrentEmbedding(chat, fragment)) return 'Vector✓';
+    return this._validEmbedding(fragment.embedding) || fragment.embeddingVersions?.length ? '旧向量已保留 · 当前模型待生成' : '待生成向量 · 本地检索';
   }
 
   _fragmentContentForLanguage(chat, fragment, purpose = 'prompt') {
@@ -360,6 +571,8 @@ class VariableMemoryManager {
       embedding: data.embedding || null,
       embeddingSignature: data.embeddingSignature || '',
       embeddingTextHash: data.embeddingTextHash || '',
+      embeddingSpace: data.embeddingSpace || (data.embeddingSignature ? this._embeddingSpace(chat, data.embeddingSignature) : ''),
+      embeddingVersions: Array.isArray(data.embeddingVersions) ? data.embeddingVersions : [],
       linkedMemories: data.linkedMemories || [],
       source: data.source || 'auto',
       context: data.context || ''
@@ -374,6 +587,7 @@ class VariableMemoryManager {
     const vm = this.getVariableMemory(chat);
     const frag = vm.fragments.find(f => f.id === id);
     if (!frag) return false;
+    if (updates.content !== undefined || updates.tags !== undefined) this._archiveEmbedding(chat, frag);
     if (updates.content !== undefined) {
       frag.content = updates.content;
       frag.sourceLanguage = this.detectLanguage(updates.content);
@@ -383,12 +597,14 @@ class VariableMemoryManager {
       frag.embedding = null;
       frag.embeddingSignature = '';
       frag.embeddingTextHash = '';
+      frag.embeddingSpace = '';
     }
     if (updates.tags !== undefined) {
       frag.tags = this._normalizeTags(updates.tags);
       frag.embedding = null;
       frag.embeddingSignature = '';
       frag.embeddingTextHash = '';
+      frag.embeddingSpace = '';
     }
     if (updates.category !== undefined) frag.category = updates.category;
     if (updates.importance !== undefined) frag.importance = updates.importance;
@@ -490,8 +706,7 @@ class VariableMemoryManager {
     return settings.useCustomEmbedding ? 'custom' : settings.embeddingSource === 'legacy' ? 'legacy' : 'global';
   }
 
-  _legacyEmbeddingConfig(settings = {}) {
-    const apiConfig = window.state?.apiConfig || {};
+  _legacyEmbeddingConfig(settings = {}, apiConfig = window.state?.apiConfig || {}) {
     if (settings.useCustomEmbedding && String(settings.embeddingEndpoint || '').trim()) {
       return { endpoint: settings.embeddingEndpoint, apiKey: settings.embeddingApiKey || apiConfig.apiKey,
         model: settings.embeddingModel || 'text-embedding-3-small', custom: true, source: 'custom' };
@@ -505,7 +720,7 @@ class VariableMemoryManager {
     };
   }
 
-  _embeddingConfig(chat, ui = false) {
+  _embeddingConfig(chat, ui = false, apiConfig = window.state?.apiConfig || {}) {
     const settings = { ...this.getVariableMemory(chat).settings };
     if (ui) {
       const source = document.getElementById('vm-embedding-source')?.value;
@@ -516,13 +731,13 @@ class VariableMemoryManager {
       settings.embeddingModel = document.getElementById('vm-embedding-model-input')?.value.trim() || document.getElementById('vm-embedding-model-select')?.value || settings.embeddingModel;
     }
     // 旧角色独立配置（包括未填完的配置）仍然遵循原有回退行为。
-    if (settings.useCustomEmbedding || settings.embeddingSource === 'legacy') return this._legacyEmbeddingConfig(settings);
-    const globalConfig = window.state?.apiConfig?.embeddingConfig;
+    if (settings.useCustomEmbedding || settings.embeddingSource === 'legacy') return this._legacyEmbeddingConfig(settings, apiConfig);
+    const globalConfig = apiConfig.embeddingConfig;
     if (globalConfig?.enabled === true) {
       return { endpoint: globalConfig.endpoint, apiKey: globalConfig.apiKey, model: globalConfig.model,
         custom: false, source: 'global' };
     }
-    return this._legacyEmbeddingConfig(settings);
+    return this._legacyEmbeddingConfig(settings, apiConfig);
   }
 
   _signatureForConfig(config) {
@@ -557,11 +772,12 @@ class VariableMemoryManager {
   }
 
   _setEmbeddingStatus(chat, status, detail = '', dimensions = 0) {
+    const signature = this._embeddingSignature(chat);
     const vm = this.getVariableMemory(chat);
     vm.stats.embeddingStatus = status;
     vm.stats.embeddingStatusDetail = String(detail || '').slice(0, 300);
     vm.stats.embeddingCheckedAt = Date.now();
-    vm.stats.embeddingSignature = this._embeddingSignature(chat);
+    vm.stats.embeddingSignature = signature;
     if (dimensions > 0) vm.stats.embeddingDimensions = dimensions;
   }
 
@@ -606,6 +822,7 @@ class VariableMemoryManager {
       this._setEmbeddingStatus(chat, 'error', '接口返回中没有有效向量');
       return null;
     } catch (e) {
+      if (requestOptions.signal?.aborted) return null;
       if (requestKey && requestKey !== this._embeddingRequestKey(this._embeddingConfig(chat))) {
         this._setEmbeddingStatus(chat, 'stale', '向量接口设置已变化，请重新请求');
         return null;
@@ -719,8 +936,9 @@ class VariableMemoryManager {
     const queryTokens = this.tokenize(queryText);
     return vm.fragments.filter(frag => frag.category !== 'C' && typeof frag.content === 'string' && frag.content.trim() &&
       (!window.MemoryWorldTime || window.MemoryWorldTime.visible(chat, frag))).map(frag => {
-      const semanticScore = this._hasCurrentEmbedding(chat, frag) && queryEmbedding && queryEmbedding.length === frag.embedding.length
-        ? Math.max(0, this.cosineSimilarity(queryEmbedding, frag.embedding)) * this._languageCompatibility(queryText, frag) : 0;
+      const currentVector = this._currentEmbeddingRecord(chat, frag)?.embedding;
+      const semanticScore = currentVector && queryEmbedding && queryEmbedding.length === currentVector.length
+        ? Math.max(0, this.cosineSimilarity(queryEmbedding, currentVector)) * this._languageCompatibility(queryText, frag) : 0;
       const searchableText = this.getSearchableText(frag);
       const tagText = this._normalizeTags(frag.tags).join(' ');
       const keywordScore = Math.max(this.bm25Match(queryTokens, tagText), this.bm25Match(queryTokens, searchableText) * 0.8);
@@ -771,8 +989,9 @@ class VariableMemoryManager {
 
     const embeddingRequestKey = this._embeddingRequestKey(this._embeddingConfig(chat));
     const queryEmbedding = await this.getEmbedding(queryText, chat);
-    const scored = this._scoreFragments(chat, queryText, queryEmbedding);
-    const results = this._selectScored(scored, topN, !!queryEmbedding);
+    const usableQuery = this._checkEmbeddingDimensions(chat, queryEmbedding) ? queryEmbedding : null;
+    const scored = this._scoreFragments(chat, queryText, usableQuery);
+    const results = this._selectScored(scored, topN, !!usableQuery);
 
     // 更新统计
     for (const r of results) {
@@ -792,7 +1011,8 @@ class VariableMemoryManager {
     const cleanQuery = String(queryText || '').trim();
     if (!cleanQuery) return [];
     const queryEmbedding = await this.getEmbedding(cleanQuery, chat);
-    return this._scoreFragments(chat, cleanQuery, queryEmbedding)
+    const usableQuery = this._checkEmbeddingDimensions(chat, queryEmbedding) ? queryEmbedding : null;
+    return this._scoreFragments(chat, cleanQuery, usableQuery)
       .slice(0, Math.max(1, Math.min(30, Number(topN) || 10)))
       .map(row => ({
         id: row.fragment.id,
@@ -802,7 +1022,7 @@ class VariableMemoryManager {
         keywordScore: row.keywordScore,
         entityScore: row.entityScore,
         language: row.fragment.sourceLanguage || this.detectLanguage(row.fragment.content),
-        matched: row.score > 0.1 && (!!queryEmbedding ? (row.semanticScore > 0.05 || row.keywordScore > 0 || row.entityScore > 0 || Number(row.fragment.importance) >= 8) : row.keywordScore > 0)
+        matched: row.score > 0.1 && (!!usableQuery ? (row.semanticScore > 0.05 || row.keywordScore > 0 || row.entityScore > 0 || Number(row.fragment.importance) >= 8) : row.keywordScore > 0)
       }));
   }
 
@@ -1063,6 +1283,7 @@ ${extractionRules}
       if (!canUpdate && isDuplicate) { newIds.duplicates++; continue; }
 
       if (canUpdate) {
+        this._archiveEmbedding(chat, previous);
         const manualTime = previous.clockVersion && previous.timeBasis === 'manual' ? Object.fromEntries(['memoryTime', 'memoryTimeEnd', 'plannedTime', 'plannedTimePrecision',
           'timeBasis', 'timePrecision', 'timeEvidence', 'eventTimeText', 'memoryTimeZone', 'timeSource'].map(key => [key, previous[key]])) : null;
         const previousVersions = [...(previous.previousVersions || []), { content: previous.content, status: previous.status,
@@ -1070,6 +1291,7 @@ ${extractionRules}
         Object.assign(previous, draft, { id: previous.id, createdAt: previous.createdAt,
           previousVersions,
           embedding, embeddingSignature: embedding ? this._embeddingSignature(chat) : '',
+          embeddingSpace: embedding ? this._embeddingSpace(chat) : '',
           embeddingTextHash: embedding ? this._hashEmbeddingText(embeddingText) : '' });
         if (manualTime) Object.assign(previous, manualTime);
         newIds.updated++;
@@ -1119,7 +1341,8 @@ ${extractionRules}
       this.bm25Match(existingTokens, this.getSearchableText(candidate))
     );
     if (lexical > 0.72) return true;
-    if (!candidateEmbedding || !this._hasCurrentEmbedding(chat, existing) || candidateEmbedding.length !== existing.embedding.length) return false;
+    const currentVector = this._currentEmbeddingRecord(chat, existing)?.embedding;
+    if (!candidateEmbedding || !currentVector || candidateEmbedding.length !== currentVector.length) return false;
     const candidateEntities = new Set(this.tokenize(this._entityText(candidate)));
     const existingEntities = new Set(this.tokenize(this._entityText(existing)));
     const entitiesCompatible = !candidateEntities.size || !existingEntities.size || [...candidateEntities].some(token => existingEntities.has(token));
@@ -1127,7 +1350,7 @@ ${extractionRules}
     const candidateTime = Number(candidate.memoryTime) || Date.now();
     const existingTime = Number(existing.memoryTime) || Number(existing.createdAt) || candidateTime;
     const withinReasonableTime = Math.abs(candidateTime - existingTime) <= 1000 * 60 * 60 * 24 * 45;
-    return withinReasonableTime && this.cosineSimilarity(candidateEmbedding, existing.embedding) >= 0.94;
+    return withinReasonableTime && this.cosineSimilarity(candidateEmbedding, currentVector) >= 0.94;
   }
 
   // 手动整合独立于聊天提取；只在预览确认后替换指定范围。
@@ -1143,6 +1366,31 @@ ${extractionRules}
     const originals = this.getAllFragments(chat).filter(fragment => categories.includes(fragment.category));
     if (!originals.length) throw new Error('所选范围没有可整合的记忆');
     return { scope, originals: JSON.parse(JSON.stringify(originals)) };
+  }
+
+  _consolidationTimeline(fragment) {
+    return JSON.stringify(fragment.clockVersion ? [fragment.clockVersion, fragment.timelineId || null] : [0, null]);
+  }
+
+  _consolidationRevision({ recallCount, lastRecalled, ...fragment }) {
+    return JSON.stringify(fragment);
+  }
+
+  groupConsolidation(snapshot) {
+    const groups = new Map();
+    for (const fragment of snapshot.originals) {
+      const key = this._consolidationTimeline(fragment);
+      if (!groups.has(key)) groups.set(key, {
+        scope: snapshot.scope, originals: [],
+        name: fragment.clockVersion ? fragment.timelineName || fragment.timelineId || '未命名时间线' : '旧版记忆'
+      });
+      groups.get(key).originals.push(fragment);
+    }
+    return [...groups.values()];
+  }
+
+  preserveConsolidationGroup(group) {
+    return group.originals.map(fragment => ({ sourceIds: [fragment.id], fragment, preserve: true }));
   }
 
   buildConsolidationPrompt(chat, snapshot, feedback = '') {
@@ -1172,7 +1420,7 @@ ${feedback ? `用户对上次结果的反馈：${feedback}\n仍须遵守保留�
 ${JSON.stringify(memories)}`;
   }
 
-  parseConsolidationResult(rawText, snapshot) {
+  parseConsolidationResult(rawText, snapshot, approved = new Map()) {
     const text = String(rawText || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
     let rows;
     try { rows = JSON.parse(text); }
@@ -1190,28 +1438,53 @@ ${JSON.stringify(memories)}`;
       });
       if (row.keep === true) {
         if (sources.length !== 1) throw new Error('原样保留的条目只能引用一条记忆');
-        return { sourceIds: row.sourceIds, fragment: JSON.parse(JSON.stringify(sources[0])) };
+        return { sourceIds: row.sourceIds, fragment: JSON.parse(JSON.stringify(sources[0])), keep: true };
       }
       if (!categories.includes(row.category) || typeof row.content !== 'string' || !row.content.trim()) {
         throw new Error('整合结果含有范围外分类或空正文');
       }
-      const timelines = new Set(sources.map(fragment => JSON.stringify([fragment.clockVersion || 0, fragment.timelineId || null])));
-      if (timelines.size > 1) throw new Error('不同时间线的记忆不能合并，请让AI分别保留');
+      const timelines = new Set(sources.map(fragment => this._consolidationTimeline(fragment)));
+      const approval = approved.get(JSON.stringify(row.sourceIds));
+      const target = approval && sources.find(fragment => fragment.id === approval.targetId && fragment.clockVersion && fragment.timelineId);
+      const dateSource = approval && sources.find(fragment => fragment.id === approval.dateId);
+      const confirmed = target && timelines.size === 2 && sources.some(fragment => !fragment.clockVersion) &&
+        sources.every(fragment => !fragment.clockVersion || this._consolidationTimeline(fragment) === this._consolidationTimeline(target)) &&
+        (approval.dateId === null || dateSource);
+      if (approval && !confirmed) throw new Error('请选择一条旧版记忆和一条有归属的新版记忆');
+      if (timelines.size > 1 && !confirmed) throw new Error('不同时间线的记忆不能合并，请分别保留或确认旧记忆的归属');
       if (new Set(sources.map(fragment => fragment.polarity || 'positive')).size > 1 ||
           new Set(sources.map(fragment => fragment.status).filter(Boolean)).size > 1) {
         throw new Error('存在否定或状态冲突的记忆应分别保留');
       }
-      if (['E', 'R', 'I', 'M'].includes(row.category)) {
+      if (!confirmed && ['E', 'R', 'I', 'M'].includes(row.category)) {
         const days = new Set(sources.filter(fragment => ['E', 'R', 'I', 'M'].includes(fragment.category)).map(fragment => {
-          const time = window.MemoryExtractionSupport.validTime(fragment.memoryTime);
+          const value = fragment.memoryTime;
+          const time = fragment.clockVersion && value != null && value !== '' && Number.isFinite(Number(value))
+            ? Number(value) : window.MemoryExtractionSupport.validTime(value);
           return time === null ? 'unknown' : fragment.memoryTimeZone && window.MemoryWorldTime
             ? window.MemoryWorldTime.format(time, fragment.memoryTimeZone, true) : new Date(time).toDateString();
         }));
         if (days.size > 1) throw new Error('不同发生日期的经历不能合并，请让AI分别保留');
       }
-      const anchor = sources.find(fragment => fragment.category === row.category && fragment.timeBasis === 'manual') ||
+      const anchor = target || sources.find(fragment => fragment.category === row.category && fragment.timeBasis === 'manual') ||
         sources.find(fragment => fragment.category === row.category) || sources[0];
       const fragment = JSON.parse(JSON.stringify(anchor));
+      if (confirmed) {
+        for (const field of ['memoryTime', 'memoryTimeEnd', 'plannedTime', 'plannedTimePrecision', 'timePrecision',
+          'eventTimeText', 'timeEvidence', 'automaticTime', 'timeSource', 'memoryTimeZone']) {
+          if (dateSource?.[field] === undefined) delete fragment[field];
+          else fragment[field] = JSON.parse(JSON.stringify(dateSource[field]));
+        }
+        fragment.memoryTime = dateSource?.clockVersion ? dateSource.memoryTime ?? null :
+          window.MemoryExtractionSupport.validTime(dateSource?.memoryTime);
+        fragment.memoryTimeEnd ??= null;
+        fragment.plannedTime ??= null;
+        fragment.timePrecision ||= fragment.memoryTime === null ? 'unknown' : 'minute';
+        fragment.memoryTimeZone ||= dateSource && !dateSource.clockVersion ? window.MemoryWorldTime?.zone() : target.memoryTimeZone;
+        fragment.timeSource ||= 'real';
+        fragment.timeBasis = 'manual';
+        fragment.status = sources.find(source => source.status)?.status || '';
+      }
       fragment.content = row.content.trim();
       fragment.category = row.category;
       fragment.tags = this._normalizeTags([...sources.flatMap(source => source.tags || []), ...this._normalizeTags(row.tags)]);
@@ -1236,6 +1509,8 @@ ${JSON.stringify(memories)}`;
           delete original.embedding;
           delete original.embeddingSignature;
           delete original.embeddingTextHash;
+          delete original.embeddingSpace;
+          delete original.embeddingVersions;
           return [original];
         });
       }
@@ -1243,11 +1518,23 @@ ${JSON.stringify(memories)}`;
         fragment.embedding = null;
         fragment.embeddingSignature = '';
         fragment.embeddingTextHash = '';
+        fragment.embeddingSpace = '';
       }
       return { sourceIds: row.sourceIds, fragment };
     });
     if (used.size !== allowed.size) throw new Error('整合结果遗漏了原记忆，旧记忆未修改');
     return result;
+  }
+
+  confirmConsolidationPair(snapshot, legacy, current, dateId, content) {
+    const sourceIds = [...legacy.sourceIds, ...current.sourceIds];
+    const approval = { targetId: current.fragment.id, dateId };
+    const selected = new Set(sourceIds);
+    const pair = { ...snapshot, originals: snapshot.originals.filter(fragment => selected.has(fragment.id)) };
+    const row = { sourceIds, category: current.fragment.category, content,
+      tags: [...(legacy.fragment.tags || []), ...(current.fragment.tags || [])] };
+    const [result] = this.parseConsolidationResult(JSON.stringify([row]), pair, new Map([[JSON.stringify(sourceIds), approval]]));
+    return { ...result, approval };
   }
 
   async generateConsolidation(chat, snapshot, feedback = '', signal) {
@@ -1286,45 +1573,106 @@ ${JSON.stringify(memories)}`;
     const assertUnchanged = () => {
       if (signal?.aborted) throw new Error('整合已取消，旧记忆未修改');
       const current = vm.fragments.filter(fragment => categories.includes(fragment.category));
-      if (JSON.stringify(current) !== JSON.stringify(snapshot.originals)) throw new Error('原记忆已变化，请重新整合；本次结果未覆盖');
+      if (current.length !== snapshot.originals.length ||
+          current.some((fragment, index) => this._consolidationRevision(fragment) !== this._consolidationRevision(snapshot.originals[index]))) {
+        throw new Error('原记忆已变化，请重新整合；本次结果未覆盖');
+      }
     };
     assertUnchanged();
     // 保存入口再次校验来源覆盖，避免未校验的结果误删记忆。
-    this.parseConsolidationResult(JSON.stringify(rows.map(row => ({ sourceIds: row.sourceIds,
-      category: row.fragment.category, content: row.fragment.content }))), snapshot);
+    const approved = new Map(rows.filter(row => row.approval).map(row => [JSON.stringify(row.sourceIds), row.approval]));
+    this.parseConsolidationResult(JSON.stringify(rows.map(row => row.keep || row.preserve ? { sourceIds: row.sourceIds, keep: true } : ({
+      sourceIds: row.sourceIds, category: row.fragment.category, content: row.fragment.content
+    }))), snapshot, approved);
     const stage = { ...chat, variableMemory: { ...vm, fragments: [], stats: { ...vm.stats }, settings: { ...vm.settings } } };
     const idMap = new Map();
     const replacements = rows.map(row => {
       row.sourceIds.forEach(id => idMap.set(id, row.fragment.id));
       return JSON.parse(JSON.stringify(row.fragment));
     });
-    for (const fragment of replacements) {
+    for (const [index, fragment] of replacements.entries()) {
+      if (rows[index].preserve) continue;
       if (this._embeddingSignature(chat) !== embeddingSignature) throw new Error('向量设置已变化，请重新整合');
       const text = this._embeddingTextFor(stage, fragment);
       if (!this._hasCurrentEmbedding(stage, fragment)) {
-        fragment.embedding = await this.getEmbedding(text, stage, { signal });
+        const embedding = await this.getEmbedding(text, stage, { signal });
         if (this._embeddingSignature(chat) !== embeddingSignature) throw new Error('向量设置已变化，请重新整合');
-        fragment.embeddingSignature = fragment.embedding ? this._embeddingSignature(stage) : '';
-        fragment.embeddingTextHash = fragment.embedding ? this._hashEmbeddingText(text) : '';
+        if (embedding) this._storeEmbedding(stage, fragment, embedding, this._hashEmbeddingText(text));
       }
     }
     assertUnchanged();
     if (this._embeddingSignature(chat) !== embeddingSignature) throw new Error('向量设置已变化，请重新整合');
     const selected = new Set(snapshot.originals.map(fragment => fragment.id));
+    const liveById = new Map(vm.fragments.map(fragment => [fragment.id, fragment]));
+    for (const fragment of replacements) {
+      const live = liveById.get(fragment.id);
+      fragment.recallCount = live.recallCount;
+      fragment.lastRecalled = live.lastRecalled;
+    }
     const next = [...vm.fragments.filter(fragment => !selected.has(fragment.id)), ...replacements].map(fragment => {
       const links = this._normalizeTags((fragment.linkedMemories || []).map(id => idMap.get(id) || id)).filter(id => id !== fragment.id);
       return JSON.stringify(links) === JSON.stringify(fragment.linkedMemories || []) ? fragment : { ...fragment, linkedMemories: links };
     });
-    const before = { fragments: vm.fragments, stats: vm.stats, cache: vm._retrievalCache };
+    const before = { fragments: vm.fragments, stats: vm.stats, cache: vm._retrievalCache, undo: vm.consolidationUndo };
+    const afterById = new Map(next.map(fragment => [fragment.id, fragment]));
+    const changes = vm.fragments.flatMap(fragment => {
+      const after = afterById.get(fragment.id);
+      return JSON.stringify(fragment) === JSON.stringify(after) ? [] : [{ before: fragment, after: after || null }];
+    });
     onPersist?.();
     vm.fragments = next;
     const embeddingStats = Object.fromEntries(['embeddingStatus', 'embeddingStatusDetail', 'embeddingCheckedAt', 'embeddingDimensions', 'embeddingSignature']
       .filter(key => stage.variableMemory.stats[key] !== undefined).map(key => [key, stage.variableMemory.stats[key]]));
     vm.stats = { ...vm.stats, ...embeddingStats, totalFragments: next.length, lastUpdated: Date.now() };
     vm._retrievalCache = this._emptyRetrievalCache();
+    if (changes.length) vm.consolidationUndo = JSON.parse(JSON.stringify(changes));
     try { await db.chats.put(chat); }
-    catch (error) { vm.fragments = before.fragments; vm.stats = before.stats; vm._retrievalCache = before.cache; throw error; }
+    catch (error) {
+      vm.fragments = before.fragments; vm.stats = before.stats; vm._retrievalCache = before.cache;
+      if (before.undo) vm.consolidationUndo = before.undo;
+      else delete vm.consolidationUndo;
+      throw error;
+    }
     return { before: snapshot.originals.length, after: replacements.length, local: replacements.filter(fragment => !this._hasCurrentEmbedding(chat, fragment)).length };
+  }
+
+  async undoConsolidation(chat) {
+    if (this._extractionLocks.get(chat) || this._embeddingRebuilds.has(chat) ||
+        chat.variableMemory?._metadataEnrichmentCancelled === false) throw new Error('请先结束当前记忆任务');
+    const vm = this.getVariableMemory(chat);
+    const undo = vm.consolidationUndo;
+    if (!undo?.length) throw new Error('没有可撤销的整合');
+    const runtime = { type: 'consolidation' };
+    this._extractionLocks.set(chat, runtime);
+    const before = { fragments: vm.fragments, stats: vm.stats, cache: vm._retrievalCache };
+    const byId = new Map(vm.fragments.map(fragment => [fragment.id, fragment]));
+    let skipped = 0;
+    for (const change of undo) {
+      const { id } = change.before;
+      const current = byId.get(id);
+      if (!current && !change.after) byId.set(id, change.before);
+      else if (current && change.after &&
+          this._consolidationRevision(current) === this._consolidationRevision(change.after)) {
+        byId.set(id, { ...change.before, recallCount: current.recallCount, lastRecalled: current.lastRecalled });
+      } else if (current && change.after) {
+        // 保留后续正文、日期和向量更新，只恢复尚未再次修改的关联。
+        if (JSON.stringify(current.linkedMemories) === JSON.stringify(change.after.linkedMemories)) {
+          byId.set(id, { ...current, linkedMemories: change.before.linkedMemories });
+        }
+        skipped++;
+      } else skipped++;
+    }
+    vm.fragments = [...byId.values()];
+    vm.stats = { ...vm.stats, totalFragments: vm.fragments.length, lastUpdated: Date.now() };
+    vm._retrievalCache = this._emptyRetrievalCache();
+    delete vm.consolidationUndo;
+    try { await db.chats.put(chat); }
+    catch (error) {
+      vm.fragments = before.fragments; vm.stats = before.stats; vm._retrievalCache = before.cache;
+      vm.consolidationUndo = undo;
+      throw error;
+    } finally { this._extractionLocks.delete(chat); }
+    return skipped;
   }
 
   // ==================== 批量操作与导入导出 ====================
@@ -1358,6 +1706,7 @@ ${JSON.stringify(memories)}`;
     return JSON.stringify({
       type: 'variable-memory-partial',
       version: 4,
+      embeddingProfiles: vm.embeddingProfiles || [],
       fragments: selectedFrags
     }, null, 2);
   }
@@ -1370,6 +1719,7 @@ ${JSON.stringify(memories)}`;
       type: 'variable-memory-full',
       version: 4,
       settings,
+      embeddingProfiles: vm.embeddingProfiles || [],
       fragments: vm.fragments,
       _customCategories: vm._customCategories,
       dateRepairBackups: vm.dateRepairBackups || [],
@@ -1380,6 +1730,7 @@ ${JSON.stringify(memories)}`;
   }
 
   async importMemory(chat, jsonString, mode = 'merge') {
+    if (this._embeddingRebuilds.has(chat)) throw new Error('请先停止向量重建，再导入记忆');
     const data = JSON.parse(jsonString);
     if (!data || !['variable-memory-full', 'variable-memory-partial'].includes(data.type) || !Array.isArray(data.fragments)) {
       throw new Error('向量记忆文件格式不正确或缺少 fragments');
@@ -1398,7 +1749,15 @@ ${JSON.stringify(memories)}`;
     
     if (mode === 'replace' && data.type !== 'variable-memory-partial') {
       vm.fragments = [];
+      delete vm.consolidationUndo;
+      vm.embeddingProfiles = [];
       vm.stats = { totalFragments: 0, totalRecalls: 0, lastUpdated: Date.now() };
+    }
+
+    for (const profile of Array.isArray(data.embeddingProfiles) ? data.embeddingProfiles : []) {
+      if (typeof profile?.signature !== 'string' || typeof profile?.space !== 'string' || !profile.space) continue;
+      const profiles = vm.embeddingProfiles ||= [];
+      if (!profiles.some(item => item.signature === profile.signature)) profiles.push({ signature: profile.signature, space: profile.space });
     }
 
     const frags = data.fragments;
@@ -1431,7 +1790,14 @@ ${JSON.stringify(memories)}`;
         embeddingSignature: Array.isArray(frag.embedding) && frag.embedding.every(Number.isFinite)
           ? (frag.embeddingSignature || '') : '',
         embeddingTextHash: Array.isArray(frag.embedding) && frag.embedding.every(Number.isFinite)
-          ? (frag.embeddingTextHash || '') : ''
+          ? (frag.embeddingTextHash || '') : '',
+        embeddingSpace: typeof frag.embeddingSpace === 'string' && frag.embeddingSpace ? frag.embeddingSpace
+          : (Array.isArray(data.embeddingProfiles) ? data.embeddingProfiles : []).find(profile => profile?.signature === frag.embeddingSignature)?.space || frag.embeddingSignature || '',
+        embeddingVersions: (Array.isArray(frag.embeddingVersions) ? frag.embeddingVersions : []).filter(record =>
+          record && typeof record.space === 'string' && typeof record.signature === 'string' &&
+          typeof record.textHash === 'string' && this._validEmbedding(record.embedding)).map(record => ({
+            signature: record.signature, space: record.space, textHash: record.textHash, embedding: [...record.embedding]
+          }))
       });
       count++;
     }
@@ -1566,7 +1932,8 @@ ${JSON.stringify(memories)}`;
     container.appendChild(toolbar);
     const consolidationToolbar = document.createElement('div');
     consolidationToolbar.className = 'vm-consolidation-entry';
-    consolidationToolbar.innerHTML = '<button class="vm-toolbar-btn" id="vm-consolidate-btn" title="整理已有七类记忆或单独一类，预览后确认替换">AI整合</button>';
+    consolidationToolbar.innerHTML = '<button class="vm-toolbar-btn" id="vm-consolidate-btn" title="整理已有七类记忆或单独一类，预览后确认替换">AI整合</button>' +
+      (vm.consolidationUndo?.length ? '<button class="vm-toolbar-btn" id="vm-consolidate-undo">撤销上次整合</button>' : '');
     container.appendChild(consolidationToolbar);
     if (vm.extractionTask || vm.settings.autoExtractionBlocked) {
       const status = document.createElement('div');
@@ -1641,15 +2008,16 @@ ${JSON.stringify(memories)}`;
             <div class="vm-item-meta">
               <input type="${frag.timePrecision === 'day' ? 'date' : 'datetime-local'}" class="vm-time-picker" data-id="${frag.id}" value="${frag.timePrecision === 'day' ? localISOTime.slice(0, 10) : localISOTime}" title="修改记忆发生时间">
               ${frag.memoryTime === null || frag.memoryTimeEnd || frag.eventTimeText || frag.plannedTime ? `<span class="vm-meta-tag">${this._escapeHtml(window.MemoryExtractionSupport.formatTime(frag))}</span>` : ''}
-              ${frag.clockVersion && window.MemoryWorldTime ? `<button type="button" class="vm-time-source-btn" data-id="${frag.id}" title="查看时间依据或修改日期规则">${this._escapeHtml(window.MemoryWorldTime.label(frag))}</button>` : ''}
+              ${window.MemoryWorldTime ? `<button type="button" class="vm-time-source-btn" data-id="${frag.id}" title="查看时间依据或修改日期规则">${frag.clockVersion ? this._escapeHtml(window.MemoryWorldTime.label(frag)) : '旧版 · 时间详情'}</button>` : ''}
               <span class="vm-meta-tag">重要度:${frag.importance}</span>
               <span class="vm-meta-tag" title="记忆原始语言">${this._escapeHtml(frag.sourceLanguage || this.detectLanguage(frag.content))}</span>
-              ${this._hasCurrentEmbedding(chat, frag) ? '<span class="vm-meta-tag" title="已使用当前模型与当前检索文本向量化">Vector✓</span>' : '<span class="vm-meta-tag" style="color:#ff9500" title="当前使用本地字面检索，可在设置中补全向量">BM25</span>'}
+              <span class="vm-meta-tag" title="已有向量按模型分别保留；只有与当前模型、当前内容对应的向量参与检索">${this._escapeHtml(this._embeddingBadge(chat, frag))}</span>
             </div>
           </div>
           <div class="vm-item-actions">
             ${code !== 'C' ? `<button class="vm-item-btn vm-pin-btn" data-id="${frag.id}">置顶为核心</button>` : ''}
             <button class="vm-item-btn vm-edit-frag-btn" data-id="${frag.id}">改内容</button>
+            ${code !== 'C' ? `<button class="vm-item-btn vm-category-btn" data-id="${frag.id}">改分类</button>` : ''}
             <button class="vm-item-btn vm-delete-frag-btn" data-id="${frag.id}" style="color:#ff3b30">删</button>
           </div>
         `;
@@ -1863,8 +2231,10 @@ ${JSON.stringify(memories)}`;
           <div class="vm-embedding-actions">
             <button id="vm-test-embedding-btn" class="vm-btn-secondary" type="button">测试向量接口</button>
             <button id="vm-reembed-btn" class="vm-btn-secondary" type="button">补全/重建向量</button>
+            <button id="vm-new-embedding-model-btn" class="vm-btn-secondary" type="button">作为新模型使用</button>
+            <button id="vm-reuse-embedding-btn" class="vm-btn-secondary" type="button">选择已有向量</button>
           </div>
-          <div id="vm-embedding-status" class="vm-embedding-status" aria-live="polite">当前模型：${this._escapeHtml(embeddingConfig.model || '未配置')}。${vm.stats.embeddingSignature === this._embeddingSignature(chat) && vm.stats.embeddingStatus === 'ready' ? '上次接口请求正常。' : '可测试接口；未配置或失败时使用本地关键词检索。'}更换接口或模型后，可手动补全 / 重建向量，不会自动处理旧记忆。</div>
+          <div id="vm-embedding-status" class="vm-embedding-status" aria-live="polite">当前模型：${this._escapeHtml(embeddingConfig.model || '未配置')}。${this._escapeHtml(this.embeddingStatusText(chat))}</div>
         </div>
 
         <button id="vm-save-settings-btn" class="vm-btn-primary" style="width:100%;margin-top:12px;">保存设置</button>
@@ -1951,30 +2321,57 @@ ${JSON.stringify(memories)}`;
     };
   }
 
+  cancelEmbeddingRebuild(chat) {
+    this._embeddingRebuilds.get(chat)?.abort();
+  }
+
   async rebuildEmbeddings(chat, onProgress) {
+    if (this._embeddingRebuilds.has(chat) || this._extractionLocks.has(chat) || chat.variableMemory?._metadataEnrichmentCancelled === false) throw new Error('请先结束正在运行的记忆任务');
+    const controller = new AbortController();
+    this._embeddingRebuilds.set(chat, controller);
+    const runtime = { type: 'embedding-rebuild', controller };
+    this._extractionLocks.set(chat, runtime);
     const vm = this.getVariableMemory(chat);
     const signature = this._embeddingSignature(chat);
-    let completed = 0;
-    let failed = 0;
-    for (const fragment of vm.fragments) {
-      if (signature !== this._embeddingSignature(chat)) throw new Error('向量设置已变化，重建已停止；已保存的记忆保留');
-      if (typeof fragment.content !== 'string' || !fragment.content.trim()) continue;
-      const embeddingText = this._embeddingTextFor(chat, fragment);
-      const embeddingTextHash = this._hashEmbeddingText(embeddingText);
-      if (fragment.embedding && fragment.embeddingSignature === signature && fragment.embeddingTextHash === embeddingTextHash) continue;
-      const embedding = await this.getEmbedding(embeddingText, chat);
-      if (signature !== this._embeddingSignature(chat)) throw new Error('向量设置已变化，重建已停止；已保存的记忆保留');
-      if (embedding) {
-        fragment.embedding = embedding;
-        fragment.embeddingSignature = signature;
-        fragment.embeddingTextHash = embeddingTextHash;
-        completed++;
-      } else failed++;
-      if (onProgress) onProgress(completed, failed);
+    const space = this._embeddingSpace(chat);
+    const requestKey = this._embeddingRequestKey(this._embeddingConfig(chat));
+    const assertConfig = () => {
+      if (signature !== this._embeddingSignature(chat) || space !== this._embeddingSpace(chat) || requestKey !== this._embeddingRequestKey(this._embeddingConfig(chat))) {
+        throw new Error('向量设置已变化，重建已停止；已保存的记忆保留');
+      }
+    };
+    let completed = 0, failed = 0, skipped = 0;
+    try {
+      // 即使上次最后一次落盘失败，再次开始时也先保存已在内存中的进度。
+      await db.chats.put(chat);
+      for (const fragment of [...vm.fragments]) {
+        if (controller.signal.aborted) break;
+        assertConfig();
+        if (typeof fragment.content !== 'string' || !fragment.content.trim()) continue;
+        const embeddingTextHash = this._embeddingTextHashFor(chat, fragment);
+        if (this._hasCurrentEmbedding(chat, fragment)) { skipped++; continue; }
+        const embedding = await this.getEmbedding(this._embeddingTextFor(chat, fragment), chat, { signal: controller.signal });
+        assertConfig();
+        if (controller.signal.aborted) break;
+        if (!vm.fragments.includes(fragment) || embeddingTextHash !== this._embeddingTextHashFor(chat, fragment)) { failed++; continue; }
+        if (embedding) {
+          if (!this._checkEmbeddingDimensions(chat, embedding)) throw new Error(vm.stats.embeddingStatusDetail);
+          this._storeEmbedding(chat, fragment, embedding, embeddingTextHash);
+          completed++;
+          vm.stats.lastUpdated = Date.now();
+          vm._retrievalCache = this._emptyRetrievalCache();
+          await db.chats.put(chat);
+        } else failed++;
+        onProgress?.(completed, failed, skipped);
+      }
+      vm.stats.lastUpdated = Date.now();
+      vm._retrievalCache = this._emptyRetrievalCache();
+      await db.chats.put(chat);
+      return { completed, failed, skipped, cancelled: controller.signal.aborted };
+    } finally {
+      this._embeddingRebuilds.delete(chat);
+      if (this._extractionLocks.get(chat) === runtime) this._extractionLocks.delete(chat);
     }
-    vm.stats.lastUpdated = Date.now();
-    vm._retrievalCache = this._emptyRetrievalCache();
-    return { completed, failed };
   }
 
   getMultilingualCoverage(chat) {
@@ -2073,6 +2470,7 @@ ${JSON.stringify(payload)}`;
   }
 
   async enrichMemoryMetadata(chat, onProgress) {
+    if (this._embeddingRebuilds.has(chat)) throw new Error('请先停止向量重建，再补全多语言信息');
     const vm = this.getVariableMemory(chat);
     vm._metadataEnrichmentCancelled = false;
     const candidates = vm.fragments.filter(fragment => typeof fragment.content === 'string' && fragment.content.trim() &&
@@ -2090,6 +2488,7 @@ ${JSON.stringify(payload)}`;
           if (vm._metadataEnrichmentCancelled) break;
           const fragment = vm.fragments.find(item => item.id === metadata.id);
           if (!fragment) continue;
+          this._archiveEmbedding(chat, fragment);
           fragment.sourceLanguage = metadata.sourceLanguage === 'unknown' ? this.detectLanguage(fragment.content) : metadata.sourceLanguage;
           fragment.conversationLanguages = metadata.conversationLanguages;
           fragment.localizedContent = metadata.localizedContent;
@@ -2101,12 +2500,11 @@ ${JSON.stringify(payload)}`;
           fragment.embedding = null;
           fragment.embeddingSignature = '';
           fragment.embeddingTextHash = '';
+          fragment.embeddingSpace = '';
           const embeddingText = this._embeddingTextFor(chat, fragment);
           const embedding = await this.getEmbedding(embeddingText, chat);
           if (embedding) {
-            fragment.embedding = embedding;
-            fragment.embeddingSignature = this._embeddingSignature(chat);
-            fragment.embeddingTextHash = this._hashEmbeddingText(embeddingText);
+            this._storeEmbedding(chat, fragment, embedding, this._hashEmbeddingText(embeddingText));
             embedded++;
           }
           enriched++;

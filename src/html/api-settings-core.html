@@ -6,6 +6,9 @@
       </div>
       
       <div class="settings-container ios-scroll-container">
+        <div class="settings-section" data-api-category="system">
+          <div class="settings-item"><div><label>聊天设置模板</label><div class="settings-desc">旁白、语言与回复偏好 · 新聊天默认设置</div></div><div class="settings-right"><button type="button" class="settings-mini-btn" data-chat-templates>管理</button></div></div>
+        </div>
         
         <!-- 语言设置 -->
         <div class="settings-section" data-api-category="system">
@@ -398,6 +401,8 @@
         </div>
 
         <!-- 情侣空间 API 设置 -->
+        <div class="settings-header" data-api-category="ai">视频理解</div>
+        <div class="settings-section"><div class="settings-item"><label>Google 视频理解模型</label><div class="settings-right"><button type="button" id="open-video-settings-btn" class="settings-mini-btn">配置视频理解</button></div></div><div class="settings-item"><p style="margin:0;color:var(--secondary-text-color,#888);font-size:12px;line-height:1.7">发送视频前需独立配置地址、密钥和模型，可拉取模型后自行选择。当前角色继续使用自己的聊天模型。</p></div></div>
         <div class="settings-header" data-api-category="ai" data-lang-key="apiCoupleSpaceSettings">情侣空间 API 设置</div>
         <div class="settings-section">
             <div class="settings-tip-wrapper">

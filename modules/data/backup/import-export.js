@@ -58,7 +58,7 @@
         inventory,
         emails,
         mailThreads, mailContacts, mailAccounts, mailEvents, mailPublicBoxes, mailSettings,
-        watchTogetherPlaylist,
+        watchTogetherPlaylist, videoAttachments,
         mcpConnections,
         mcpActivities,
         mcpSettings
@@ -113,7 +113,7 @@
         db.emails.toArray(),
         db.mailThreads.toArray(), db.mailContacts.toArray(), db.mailAccounts.toArray(),
         db.mailEvents.toArray(), db.mailPublicBoxes.toArray(), db.mailSettings.get('main'),
-        db.watchTogetherPlaylist.toArray(),
+        db.watchTogetherPlaylist.toArray(), db.videoAttachments.toArray(),
         db.mcpConnections.toArray(),
         db.mcpActivities.toArray(),
         db.mcpSettings.get('main')
@@ -175,7 +175,7 @@
         inventory,
         emails,
         mailThreads, mailContacts, mailAccounts, mailEvents, mailPublicBoxes, mailSettings,
-        watchTogetherPlaylist,
+        watchTogetherPlaylist, videoAttachments,
         mcpConnections: sanitizeMcpConnectionsForBackup(mcpConnections),
         mcpActivities,
         mcpSettings,
@@ -184,6 +184,7 @@
         localStorage: coupleSpaceLocalStorage
       });
 
+      for (const tableName of window.SmsEngine?.TABLES || []) backupData[tableName] = await db.table(tableName).toArray();
       const blob = new Blob(
         [JSON.stringify(backupData, null, 2)], {
         type: 'application/json'
@@ -307,6 +308,7 @@
         mailPublicBoxes: '公共邮箱',
         mailSettings: '邮箱设置',
         watchTogetherPlaylist: '观影播放列表',
+        videoAttachments: '聊天视频文件',
         mcpConnections: 'MCP连接',
         mcpActivities: 'MCP活动记录',
         mcpSettings: 'MCP设置',
@@ -618,6 +620,7 @@
       'inventory': '物品清单',
       'emails': '邮件',
       'watchTogetherPlaylist': '观影播放列表',
+        videoAttachments: '聊天视频文件',
       'mcpConnections': 'MCP连接',
       'mcpActivities': 'MCP活动记录',
       'mcpSettings': 'MCP设置',
@@ -784,6 +787,7 @@
       'inventory': '物品清单',
       'emails': '邮件',
       'watchTogetherPlaylist': '观影播放列表',
+        videoAttachments: '聊天视频文件',
       'mcpConnections': 'MCP连接',
       'mcpActivities': 'MCP活动记录',
       'mcpSettings': 'MCP设置',
@@ -1012,6 +1016,10 @@
         if (Array.isArray(backupData.mailEvents)) await db.mailEvents.bulkPut(backupData.mailEvents);
         if (Array.isArray(backupData.mailPublicBoxes)) await db.mailPublicBoxes.bulkPut(backupData.mailPublicBoxes);
         if (backupData.mailSettings) await db.mailSettings.put(backupData.mailSettings);
+        for (const tableName of window.SmsEngine?.TABLES || []) {
+          if (Array.isArray(backupData[tableName])) await db.table(tableName).bulkPut(backupData[tableName].map(row => ({ ...row, lease: null, summaryLease: null })));
+        }
+        if (Array.isArray(backupData.videoAttachments)) await window.ChatVideo.importMedia(backupData.videoAttachments);
         if (Array.isArray(backupData.watchTogetherPlaylist)) await db.watchTogetherPlaylist.bulkPut(backupData.watchTogetherPlaylist);
         if (Array.isArray(backupData.mcpConnections)) await db.mcpConnections.bulkPut(sanitizeMcpConnectionsForBackup(backupData.mcpConnections));
         if (Array.isArray(backupData.mcpActivities)) await db.mcpActivities.bulkPut(backupData.mcpActivities);

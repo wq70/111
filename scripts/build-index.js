@@ -41,7 +41,7 @@ const embeddedAssets = ['update-log.html', 'modules/rendering-rule-worker.js', '
 const localAssets = Array.from(rawFragments.join('').matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/gi), match => match[1])
   .filter(asset => !/^(?:https?:)?\/\//i.test(asset))
   .map(asset => asset.replace(/^\.\//, '').split(/[?#]/, 1)[0]).filter(Boolean);
-const resourcePaths = Array.from(new Set(['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png',
+const resourcePaths = Array.from(new Set(['manifest.json', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/messages.svg',
   'modules/bootstrap/register-service-worker.js', 'modules/bootstrap/document-loader.js', ...embeddedAssets, ...localAssets]));
 const resourceData = new Map(resourcePaths.map(asset => {
   const bytes = fs.readFileSync(path.join(projectRoot, asset));

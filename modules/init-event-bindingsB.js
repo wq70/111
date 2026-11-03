@@ -58,6 +58,7 @@ window.initEventBindingsB = function(state, db) {
             // 长期记忆（总结的记忆）
             longTermMemory: chat.longTermMemory ? JSON.parse(JSON.stringify(chat.longTermMemory)) : [],
             normalMemory: window.normalMemoryManager?.transfer(chat) || null,
+            groupMemory: window.GroupMemory?.transfer(chat) || null,
             structuredMemory: chat.structuredMemory ? JSON.parse(JSON.stringify(chat.structuredMemory)) : null,
             variableMemory: cloneVectorMemoryForArchive(chat.variableMemory),
             vectorMemory: cloneVectorMemoryForArchive(chat.vectorMemory),
@@ -80,6 +81,9 @@ window.initEventBindingsB = function(state, db) {
               autoMemoryInterval: chat.settings.autoMemoryInterval,
               enableDiaryMode: chat.settings.enableDiaryMode,
               memoryMode: chat.settings.memoryMode,
+              groupMemoryMode: chat.settings.groupMemoryMode,
+              groupMemoryAllowLinks: chat.settings.groupMemoryAllowLinks,
+              groupMemoryNpcIds: [...(chat.settings.groupMemoryNpcIds || [])],
               enableStructuredMemory: chat.settings.enableStructuredMemory,
               longTermMemoryLimit: chat.settings.longTermMemoryLimit,
 
@@ -229,6 +233,8 @@ window.initEventBindingsB = function(state, db) {
       if (!confirmed) return;
 
       try {
+        if (window.GroupMemory?.locks.has(String(chat.id))) throw new Error('请先停止本群记忆总结再读取存档');
+        if (Object.prototype.hasOwnProperty.call(archive.data, 'groupMemory')) chat.groupMemory = archive.data.groupMemory ? JSON.parse(JSON.stringify(archive.data.groupMemory)) : undefined;
         const currentEmbeddingApiKey = chat.variableMemory?.settings?.embeddingApiKey || chat.vectorMemory?.settings?.embeddingApiKey || '';
         if (window.normalMemoryManager?.locks.has(chat)) throw new Error('请先暂停普通记忆梳理再读取存档');
         window.normalMemoryManager?.validateState(archive.data.normalMemory);
@@ -260,6 +266,9 @@ window.initEventBindingsB = function(state, db) {
 
         // 恢复所有设置
         const savedSettings = archive.data.settings;
+        for (const key of ['groupMemoryMode', 'groupMemoryAllowLinks', 'groupMemoryNpcIds']) {
+          if (Object.prototype.hasOwnProperty.call(savedSettings, key)) chat.settings[key] = JSON.parse(JSON.stringify(savedSettings[key] ?? null));
+        }
         chat.settings.aiPersona = savedSettings.aiPersona;
         chat.settings.aiAvatar = savedSettings.aiAvatar;
         chat.settings.myPersona = savedSettings.myPersona;
@@ -949,7 +958,10 @@ window.initEventBindingsB = function(state, db) {
         chat.randomJottings = '...';
         chat.customThoughts = {};
         
-        if (shouldClearMemory) {
+        window.GroupMemory?.stop(chat);
+        if (shouldClearMemory && window.GroupMemory?.independent(chat)) {
+          chat.groupMemory = { version: 1, members: {}, startedAt: Date.now(), startKeys: [] };
+        } else if (shouldClearMemory) {
            chat.longTermMemory = [];
            if (chat.structuredMemory) {
              const customCategories = JSON.parse(JSON.stringify(chat.structuredMemory._customCategories || {}));
@@ -1777,20 +1789,11 @@ window.initEventBindingsB = function(state, db) {
 
 
 
-          if (deletedComment && deletedComment.commenterName === state.qzoneSettings.nickname) {
+          if (deletedComment && window.CharacterIdentity.isUserComment(deletedComment)) {
             console.log("用户删除了自己的评论，开始清理AI记忆...");
 
 
-            const aiToNotifyIds = new Set();
-            if (post.authorId !== 'user') {
-              aiToNotifyIds.add(post.authorId);
-            }
-            if (deletedComment.replyTo) {
-              const repliedToChat = Object.values(state.chats).find(c => c.originalName === deletedComment.replyTo);
-              if (repliedToChat) {
-                aiToNotifyIds.add(repliedToChat.id);
-              }
-            }
+            const aiToNotifyIds = window.CharacterIdentity.notificationIds(post, deletedComment);
 
 
             const postSummary = (post.publicText || post.content || '').substring(0, 30);
@@ -1849,15 +1852,21 @@ window.initEventBindingsB = function(state, db) {
       const commentItem = target.closest('.comment-item');
       if (commentItem) {
         const postId = parseInt(commentItem.dataset.postId);
-        const commenterOriginalName = commentItem.dataset.commenterOriginalName;
-        const commenterDisplayName = commentItem.dataset.commenterDisplayName;
+        const post = await db.qzonePosts.get(postId);
+        const person = await window.CharacterIdentity.resolveComment(post, Number(commentItem.dataset.commentIndex));
+        if (!person) return;
+        const cachedPost = qzonePostsCache.find(item => item.id === postId);
+        if (cachedPost) cachedPost.comments = post.comments;
+        const commenterOriginalName = person.originalName || person.name;
+        const commenterDisplayName = window.CharacterIdentity.display(commenterOriginalName, person.id);
 
-        if (!commenterOriginalName || !commenterDisplayName || commenterOriginalName === state.qzoneSettings.nickname) {
+        if (person.id === 'user') {
           clearQzoneReplyContext(commentItem.closest('.qzone-post-container'));
           return;
         }
         currentQzoneReplyContext = {
           postId,
+          replyToId: person.id,
           replyToName: commenterOriginalName,
           replyToDisplayName: commenterDisplayName
         };
@@ -1919,18 +1928,19 @@ window.initEventBindingsB = function(state, db) {
           if (!post) return;
           if (!post.likes) post.likes = [];
           const userOriginalName = state.qzoneSettings.nickname;
-          const userLikeIndex = post.likes.indexOf(userOriginalName);
-          if (userLikeIndex > -1) {
-            post.likes.splice(userLikeIndex, 1);
+          if (window.CharacterIdentity.likedBy(post, 'user')) {
+            post.likeActors = (post.likeActors || []).filter(actor => actor.id !== 'user');
+            post.likes = post.likes.filter(name => !window.CharacterIdentity.isUserComment({ commenterName: name }));
           } else {
-            post.likes.push(userOriginalName);
+            window.CharacterIdentity.addLike(post, 'user', userOriginalName);
             icon.classList.add('animate-like');
             icon.addEventListener('animationend', () => icon.classList.remove('animate-like'), {
               once: true
             });
           }
           await db.qzonePosts.update(postId, {
-            likes: post.likes
+            likes: post.likes,
+            likeActors: post.likeActors || []
           });
           await updateSinglePostInDOM(postId);
         }
@@ -1970,10 +1980,12 @@ window.initEventBindingsB = function(state, db) {
         if (!post.comments) post.comments = [];
 
         const newComment = {
+          commenterId: 'user',
           commenterName: state.qzoneSettings.nickname,
           text: commentText,
           timestamp: Date.now(),
-          replyTo: (currentQzoneReplyContext && currentQzoneReplyContext.postId === postId) ? currentQzoneReplyContext.replyToName : null
+          replyTo: (currentQzoneReplyContext && currentQzoneReplyContext.postId === postId) ? currentQzoneReplyContext.replyToName : null,
+          replyToId: (currentQzoneReplyContext && currentQzoneReplyContext.postId === postId) ? currentQzoneReplyContext.replyToId : null
         };
 
         post.comments.push(newComment);
@@ -1983,12 +1995,7 @@ window.initEventBindingsB = function(state, db) {
 
         let postSummary = (post.publicText || post.content || '').substring(0, 30);
         const userNickname = state.qzoneSettings.nickname;
-        const notifiedAiIds = new Set();
-        if (post.authorId !== 'user') notifiedAiIds.add(post.authorId);
-        if (newComment.replyTo && newComment.replyTo !== userNickname) {
-          const repliedToChat = Object.values(state.chats).find(c => c.originalName === newComment.replyTo);
-          if (repliedToChat) notifiedAiIds.add(repliedToChat.id);
-        }
+        const notifiedAiIds = window.CharacterIdentity.notificationIds(post, newComment);
         for (const aiId of notifiedAiIds) {
           const chat = state.chats[aiId];
           if (chat && !chat.isGroup) {

@@ -405,10 +405,10 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
           <div style="flex: 1;">
             <div style="font-weight: 600; font-size: 15px; color: #333; margin-bottom: 5px;">
-              ${group.name}
+              ${escapeHTML(group.name || '')}
               ${group.enabled ? '<span style="background: #4CAF50; color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px;">已启用</span>' : '<span style="background: #999; color: white; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px;">未启用</span>'}
             </div>
-            <div style="font-size: 13px; color: #666; line-height: 1.4;">${promptPreview}</div>
+            <div style="font-size: 13px; color: #666; line-height: 1.4;">${escapeHTML(promptPreview)}</div>
           </div>
         </div>
         <div style="display: flex; gap: 8px; margin-top: 10px;">

@@ -23,10 +23,6 @@
                   content: `${prefix}[分享了一个Reddit帖子]\n标题: ${rData.title}\n来自: ${rData.subreddit}\n内容摘要: ${rData.selftext || '[链接/图片]'}`
                 };
               }
-              if (msg.type === 'transfer') return {
-                role: 'user',
-                content: `${prefix}[系统提示：你于时间戳 ${msg.timestamp} 向对方发起了转账: ${msg.amount}元, 备注: ${msg.note}。等待对方处理。]`
-              };
               if (msg.type === 'couple_invite') {
                 const ciStatus = msg.status === 'accepted' ? '对方已接受' : msg.status === 'rejected' ? '对方已拒绝' : '等待对方确认';
                 return {
@@ -69,9 +65,6 @@
               if (msg.type === 'sticker') {
 
                 assistantMsgObject.meaning = msg.meaning;
-              } else if (msg.type === 'transfer') {
-                assistantMsgObject.amount = msg.amount;
-                assistantMsgObject.note = msg.note;
               } else if (msg.type === 'waimai_request') {
                 assistantMsgObject.productInfo = msg.productInfo;
                 assistantMsgObject.amount = msg.amount;
@@ -124,6 +117,15 @@
 
       // 在自定义提示词处理完成后注入运行时事实，线上/线下模式都保留来源。
       systemPrompt += window.RemarkNames.buildContext(chat, filteredHistory);
+      if (chat.settings.enableNarratorMode || chat.settings.isOfflineMode) {
+        const names = window.RemarkNames.participantNames(chat);
+        systemPrompt += `\n旁白用第三人称本名（玩家：${JSON.stringify(names.user)}${chat.isGroup ? '' : `，角色：${JSON.stringify(names.character)}`}），避免用“用户”“我”“你”指代当事人。按已发生的事件准确写清谁做了什么。`;
+      }
+      const characterTodoContext = !isPreview && !options.candidateContent
+        ? window.CharacterTodos.chatContext(chat)
+        : { date: '', prompt: '' };
+      systemPrompt += characterTodoContext.prompt;
+      systemPrompt += window.CharacterIdentity.buildContext(chat);
 
       // ========== 识图API预处理 ==========
       // 如果配置了独立的识图API，先用识图API识别图片，再把描述文本替代图片发给主API
@@ -187,6 +189,8 @@
         systemPrompt += window.languagePolicy.buildEnforcementPrompt(chat);
       }
       let isGemini = proxyUrl === GEMINI_API_URL;
+      // 信息关闭时返回空串，不增加任何短信能力提示词或专属上下文。
+      if (window.SmsEngine && !chat.isGroup) systemPrompt += await window.SmsEngine.qqContext(chat);
       let geminiConfig = options.candidateContent ? null : toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload)
 
       // 创建新的 AbortController
@@ -488,13 +492,14 @@
       lastRawAiResponse = aiResponseContent;
       lastResponseTimestamps = [];
       chat.history = chat.history.filter(msg => !msg.isTemporary);
-      const messagesArray = parseAiResponse(aiResponseContent);
+      const parsedMessages = parseAiResponse(aiResponseContent);
+      const messagesArray = parsedMessages.filter(message => message?.type !== 'character_todo');
       if (replyGuardianTaskId && window.ReplyTaskStore) {
         window.ReplyTaskStore.setStage(replyGuardianTaskId, 'applying', '正在写入聊天').catch(() => {});
       }
 
       let consolidatedMessages = [];
-      if (chat.settings.isOfflineMode && !messagesArray.some(message => message?.speakerType === 'pet')) {
+      if (chat.settings.isOfflineMode && !chat.isGroup && !messagesArray.some(message => message?.speakerType === 'pet')) {
 
         let offlineBuffer = {
           content: [],
@@ -613,7 +618,7 @@
           msgData.type = 'voice_message';
           msgData.content = msgData.content.replace('[V]', '').trim();
         }
-        if (chat.isGroup && msgData.name && msgData.name === chat.name) {
+        if (chat.isGroup && !msgData.actorId && msgData.name && msgData.name === chat.name) {
           console.error(`AI幻觉已被拦截！试图使用群名 ("${chat.name}") 作为角色名。消息内容:`, msgData);
           continue;
         }
@@ -676,8 +681,9 @@
         }
 
         if (msgData.type === 'group_call_response') {
+          if (!await window.CharacterIdentity.prepare(chat, msgData, isViewingThisChat)) continue;
           if (msgData.decision === 'join') {
-            const member = chat.members.find(m => m.originalName === msgData.name);
+            const member = window.CharacterIdentity.member(chat, msgData);
             if (member && !videoCallState.participants.some(p => p.id === member.id)) {
               videoCallState.participants.push(member);
             }
@@ -686,14 +692,14 @@
           continue;
         }
 
-        if (chat.isGroup && msgData.name && msgData.name === chat.name) {
+        if (chat.isGroup && !msgData.actorId && msgData.name && msgData.name === chat.name) {
           console.error(`AI幻觉已被拦截！试图使用群名 ("${chat.name}") 作为角色名。消息内容:`, msgData);
           continue;
         }
 
-        if (chat.isGroup && !msgData.name && msgData.type !== 'narration') {
+        if (chat.isGroup && !msgData.name && !msgData.actorId && msgData.type !== 'narration') {
           if (chat.members && chat.members.length > 0) {
-            const fallbackName = lastThoughtChainName && chat.members.some(m => m.originalName === lastThoughtChainName) ? lastThoughtChainName : chat.members[0].originalName;
+            const fallbackName = lastThoughtChainName && window.CharacterIdentity.candidates(lastThoughtChainName, chat.members).length === 1 ? lastThoughtChainName : (chat.members.length === 1 ? chat.members[0].originalName : null);
             msgData.name = fallbackName;
             console.warn(`[群聊兜底] 消息缺少 name，已自动补全为: ${fallbackName}`, msgData);
           } else {
@@ -702,15 +708,9 @@
           }
         }
 
-        // 纠正AI可能返回群昵称而非本名的问题
-        if (chat.isGroup && msgData.name) {
-          const exactMember = chat.members.find(m => m.originalName === msgData.name);
-          if (!exactMember) {
-            const nicknameMember = chat.members.find(m => m.groupNickname === msgData.name);
-            if (nicknameMember) {
-              msgData.name = nicknameMember.originalName;
-            }
-          }
+        if (!await window.CharacterIdentity.prepare(chat, msgData, isViewingThisChat)) {
+          if (options.candidateContent) throw new Error('尚未确认发言角色，原回复已保留。');
+          continue;
         }
 
         let aiMessage = null;
@@ -718,10 +718,12 @@
         let baseMessage = {
           role: 'assistant',
           senderName: msgData.name || chat.name,
+          senderId: msgData.actorId || null,
           timestamp: currentMessageTimestamp
         };
         if (window.CharacterBond && !chat.isGroup) {
           baseMessage = window.CharacterBond.decorateAssistantBase(baseMessage, msgData, chat);
+          baseMessage.senderId = baseMessage.actorId;
         }
 
         lastResponseTimestamps.push(currentMessageTimestamp);

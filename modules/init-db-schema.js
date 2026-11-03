@@ -156,4 +156,16 @@ db.version(64).stores({
   generationPreferences: '&id, chatId, scope, updatedAt'
 });
 
+// 视频文件单独存储；dataUrl 可被现有 JSON 备份完整序列化。
+db.version(65).stores({ videoAttachments: '&id, chatId' });
+
+// 信息 APP：与 QQ、邮箱分别保存，通过明确的参考设置互通。
+db.version(66).stores({
+  smsSettings: '&id',
+  smsContacts: '&id, &number, chatId, updatedAt',
+  smsMessages: '&id, contactId, timestamp, batchId',
+  smsMemories: '&id, contactId, createdAt',
+  smsJobs: '&id, contactId, status, dueAt'
+});
+
 window.db = db;

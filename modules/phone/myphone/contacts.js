@@ -590,6 +590,7 @@
     }
 
     message.status = choice;
+    const names = window.RemarkNames.participantNames(char);
 
     if (choice === 'declined') {
       // 拒收逻辑 - 添加退款消息
@@ -610,7 +611,7 @@
       if (index === -1) {
         const hiddenMessage = {
           role: 'system',
-          content: `[系统提示：你拒绝并退还了"${message.senderName}"的转账。]`,
+          content: `[系统提示：${names.user}退还了${names.character}的转账。]`,
           timestamp: Date.now() + 1,
           isHidden: true
         };
@@ -647,7 +648,7 @@
       if (index === -1) {
         const hiddenMessage = {
           role: 'system',
-          content: `[系统提示：你接受了"${message.senderName}"的转账。]`,
+          content: `[系统提示：${names.user}收下了${names.character}的转账。]`,
           timestamp: Date.now() + 1,
           isHidden: true
         };

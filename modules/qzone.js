@@ -128,7 +128,7 @@
     } else if (state.chats[post.authorId]) {
       const authorChat = state.chats[post.authorId];
       authorAvatar = authorChat.settings.aiAvatar || defaultAvatar;
-      authorNickname = authorChat.name;
+      authorNickname = window.CharacterIdentity.display(authorChat.originalName, authorChat.id);
     } else if (String(post.authorId).startsWith('npc_')) {
 
       const npcId = parseInt(String(post.authorId).replace('npc_', ''));
@@ -204,7 +204,7 @@
         if (originalAuthorChat) {
           originalAuthorAvatar = originalAuthorChat.settings.aiAvatar || defaultAvatar;
         }
-        originalAuthorNickname = getDisplayNameByOriginalName(post.originalPost.authorOriginalName);
+        originalAuthorNickname = getDisplayNameByOriginalName(post.originalPost.authorOriginalName, post.originalPost.authorId);
       }
       mainContentHtml = `
                     ${repostCommentHtml}
@@ -224,8 +224,8 @@
     }
 
     let likesHtml = '';
-    if (post.likes && post.likes.length > 0) {
-      const displayLikes = post.likes.map(name => getDisplayNameByOriginalName(name)).join('、');
+    if (window.CharacterIdentity.likeLabels(post).length > 0) {
+      const displayLikes = window.CharacterIdentity.likeLabels(post).map(escapeHTML).join('、');
       likesHtml = `<div class="post-likes-section"><svg class="like-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg><span>${displayLikes} 觉得很赞</span></div>`;
     }
 
@@ -238,7 +238,7 @@
         if (typeof comment === 'object' && comment !== null && comment.commenterName) {
           const commenterOriginalName = comment.commenterName;
 
-          const commenterDisplayName = getDisplayNameByOriginalName(commenterOriginalName);
+          const commenterDisplayName = window.CharacterIdentity.commentDisplay(comment);
 
           let innerCommentContent;
           if (STICKER_REGEX.test(comment.text)) {
@@ -250,13 +250,13 @@
           let commentLineHtml = '';
 
           if (comment.replyTo) {
-            const repliedToDisplayName = getDisplayNameByOriginalName(comment.replyTo);
+            const repliedToDisplayName = getDisplayNameByOriginalName(comment.replyTo, comment.replyToId);
             commentLineHtml = `<span class="commenter-name">${commenterDisplayName}</span> 回复 <span class="commenter-name">${repliedToDisplayName}</span>: ${innerCommentContent}`;
           } else {
             commentLineHtml = `<span class="commenter-name">${commenterDisplayName}</span>: ${innerCommentContent}`;
           }
 
-          commentsHtml += `<div class="comment-item" data-post-id="${post.id}" data-commenter-original-name="${commenterOriginalName}" data-commenter-display-name="${commenterDisplayName}">
+          commentsHtml += `<div class="comment-item" data-post-id="${post.id}" data-comment-index="${index}" data-commenter-id="${escapeHTML(String(comment.commenterId || ''))}" data-commenter-original-name="${escapeHTML(commenterOriginalName)}" data-commenter-display-name="${escapeHTML(commenterDisplayName)}">
                                             <div class="comment-text">${commentLineHtml}</div>
                                             <span class="comment-delete-btn" data-comment-index="${index}">×</span>
                                          </div>`;
@@ -273,7 +273,7 @@
 
 
     const userOriginalName = state.qzoneSettings.nickname;
-    const isLikedByUser = post.likes && post.likes.includes(userOriginalName);
+    const isLikedByUser = window.CharacterIdentity.likedBy(post, 'user');
     const isFavoritedByUser = state.favoritedPostIds && state.favoritedPostIds.has(post.id);
 
     let repostIconHtml = '';
@@ -514,10 +514,13 @@
     }
 
     const newComment = {
+      commenterId: 'user',
       commenterName: state.qzoneSettings.nickname,
       text: sticker.url,
       meaning: sticker.name,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      replyTo: currentQzoneReplyContext?.postId === postId ? currentQzoneReplyContext.replyToName : null,
+      replyToId: currentQzoneReplyContext?.postId === postId ? currentQzoneReplyContext.replyToId : null
     };
 
     post.comments.push(newComment);
@@ -532,7 +535,7 @@
     const postSummary = (post.publicText || post.content || `[图片动态]`).substring(0, 30);
 
 
-    for (const chatId in state.chats) {
+    for (const chatId of window.CharacterIdentity.notificationIds(post, newComment)) {
       const chat = state.chats[chatId];
       if (!chat.isGroup) {
         const intelligentPrompt = `[系统提示：'${state.qzoneSettings.nickname}' 在你的动态(ID: ${postId}, 内容摘要: "${postSummary}")下发送了一个表情评论，意思是："${sticker.name}"。请你对此作出回应。]`;
@@ -632,7 +635,7 @@
           authorNickname = state.qzoneSettings.nickname;
         } else if (state.chats[post.authorId]) {
           authorAvatar = state.chats[post.authorId].settings.aiAvatar;
-          authorNickname = state.chats[post.authorId].name;
+          authorNickname = window.CharacterIdentity.display(post.authorOriginalName, post.authorId);
         }
 
         headerHtml = `<img src="${authorAvatar}" class="avatar"><div class="info"><div class="name">${authorNickname}</div></div>`;
@@ -653,12 +656,12 @@
 
         let likesHtml = '';
 
-        if (post.likes && post.likes.length > 0) {
+        if (window.CharacterIdentity.likeLabels(post).length > 0) {
 
           likesHtml = `
                             <div class="post-likes-section">
                                 <svg class="like-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                                <span>${post.likes.join('、')} 觉得很赞</span>
+                                <span>${window.CharacterIdentity.likeLabels(post).map(escapeHTML).join('、')} 觉得很赞</span>
                             </div>`;
         }
 
@@ -672,7 +675,7 @@
             if (typeof comment === 'object' && comment !== null && comment.commenterName) {
 
               const commenterOriginalName = comment.commenterName;
-              const commenterDisplayName = getDisplayNameByOriginalName(commenterOriginalName);
+              const commenterDisplayName = window.CharacterIdentity.commentDisplay(comment);
 
               let innerCommentContent;
               if (STICKER_REGEX.test(comment.text)) {
@@ -683,13 +686,13 @@
 
               let commentLineHtml = '';
               if (comment.replyTo) {
-                const repliedToDisplayName = getDisplayNameByOriginalName(comment.replyTo);
+                const repliedToDisplayName = getDisplayNameByOriginalName(comment.replyTo, comment.replyToId);
                 commentLineHtml = `<span class="commenter-name">${commenterDisplayName}</span> 回复 <span class="commenter-name">${repliedToDisplayName}</span>: ${innerCommentContent}`;
               } else {
                 commentLineHtml = `<span class="commenter-name">${commenterDisplayName}</span>: ${innerCommentContent}`;
               }
 
-              commentsHtml += `<div class="comment-item" data-post-id="${post.id}" data-commenter-original-name="${commenterOriginalName}" data-commenter-display-name="${commenterDisplayName}">
+              commentsHtml += `<div class="comment-item" data-post-id="${post.id}" data-comment-index="${index}" data-commenter-id="${escapeHTML(String(comment.commenterId || ''))}" data-commenter-original-name="${escapeHTML(commenterOriginalName)}" data-commenter-display-name="${escapeHTML(commenterDisplayName)}">
                                         <div class="comment-text">${commentLineHtml}</div>
                                         <span class="comment-delete-btn" data-comment-index="${index}">×</span>
                                      </div>`;
@@ -728,7 +731,7 @@
           if (chat.isGroup) {
 
 
-            const member = chat.members.find(m => m.originalName === msg.senderName);
+            const member = window.CharacterIdentity.member(chat, msg);
 
 
             senderName = msg.senderName;

@@ -8,6 +8,7 @@
       <div class="settings-container">
         <div class="settings-section">
           <div class="settings-item"><label>生成偏好 / 模型沟通</label><div class="settings-right"><button id="generation-preferences-btn" type="button" class="settings-mini-btn">管理</button></div></div>
+          <div class="settings-item"><label>聊天设置模板</label><div class="settings-right"><button type="button" class="settings-mini-btn" data-chat-templates>管理模板</button></div></div>
         </div>
         
         <!-- 第一组：基础信息 -->
@@ -23,6 +24,13 @@
                 <label>对方本名 (AI识别用)</label>
                 <div class="settings-right">
                     <input type="text" id="ai-original-name-input" placeholder="必填">
+                </div>
+            </div>
+
+            <div class="settings-item" id="character-identity-label-group">
+                <label for="character-identity-label-input">角色区分标签（选填）</label>
+                <div class="settings-right">
+                    <input type="text" id="character-identity-label-input" maxlength="40" placeholder="例如：校园线、成年线">
                 </div>
             </div>
 
@@ -363,6 +371,8 @@
                  </div>
             </div>
             
+            <div class="settings-item-block" id="group-memory-settings" hidden></div>
+
             <!-- 记忆模式选择器 -->
             <div class="settings-item-block">
                 <label style="margin-bottom: 8px; display: block;">记忆模式</label>

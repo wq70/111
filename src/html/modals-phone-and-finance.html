@@ -226,6 +226,15 @@
                 <label>书名</label>
                 <input type="text" id="gr-story-title" class="gr-input" placeholder="请输入书名">
             </div>
+            <fieldset class="gr-creation-card">
+                <legend>选择故事形式</legend>
+                <p>长线故事，或随时开启一个新的世界。</p>
+                <label class="gr-mode-card"><input type="radio" name="gr-story-mode" value="serial" checked><span><strong>连载长篇</strong><small>承接前文，保留摘要、时间线与伏笔</small></span></label>
+                <label class="gr-mode-card"><input type="radio" name="gr-story-mode" value="anthology"><span><strong>同书独立短篇</strong><small>每章是一个新故事，不读取其他章节</small></span></label>
+                <label class="gr-mode-card"><input type="radio" name="gr-story-mode" value="standalone"><span><strong>每篇单独成书</strong><small>每次新创作独立保存到书架，原作保留</small></span></label>
+                <div class="gr-context-note" id="gr-context-note" role="status"></div>
+            </fieldset>
+            <label class="gr-reference-switch"><span><strong>参考聊天语气</strong><small>开启后读取所选角色的近期聊天；关闭后只使用人设和作品设定。</small></span><input type="checkbox" id="gr-use-chat-references" checked></label>
             <div class="gr-form-group">
                 <label>作品简介 / 故事前提</label>
                 <textarea id="gr-story-synopsis" class="gr-input" rows="3" placeholder="这部故事讲什么、核心冲突是什么。留空也可以继续使用原有方式创作。"></textarea>

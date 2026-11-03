@@ -72,8 +72,8 @@
         bible.storyCharacters[id] = { name: chat.name, sourceId: id, persona: chat.settings?.aiPersona || '', role: '', goal: '', voice: '', relationships: '', knowledge: '' };
       }
       const p = bible.storyCharacters[id];
-      const toneReferences = (chat.history || []).slice(-Math.max(1, historyLimit || 20)).filter(message => {
-        return message.role !== 'system' && !['red_packet', 'waimai_request', 'transfer'].includes(message.type);
+      const toneReferences = (story.settings.useChatReferences === false ? [] : (chat.history || [])).slice(-Math.max(1, historyLimit || 20)).filter(message => {
+        return message.role !== 'system' && !message.isHidden && !message.excludeFromContext && !['red_packet', 'waimai_request', 'transfer'].includes(message.type);
       }).slice(-Math.min(30, Math.max(1, historyLimit || 20))).map(message => `${message.senderName || (message.role === 'user' ? 'User' : p.name)}：${String(message.content || '').slice(0, 180)}`).join('\n');
       blocks.push(`### ${p.name}\n小说内设定：${p.persona}\n小说内身份：${p.role || '依据作品设定自然确定'}\n当前目标：${p.goal || '根据当前剧情确定'}\n关系状态：${p.relationships || '依据已发生剧情'}\n掌握信息：${p.knowledge || '不得知道尚未获知的秘密'}\n说话特点：${p.voice || '参考基础人设'}${toneReferences ? `\n少量语气参考（只参考说话习惯，不把聊天事件当小说事实）：\n${toneReferences}` : ''}`);
     }
@@ -117,13 +117,14 @@
   function buildGreenRiverWritingPrompt(data) {
     const { story, author, continuity, charsContext, worldContext, userPersona, userDirection, mode, targetMin, targetMax, isReroll } = data;
     const bible = story.storyBible;
+    const isolated = GreenRiverStoryEngine.storyMode(story) !== 'serial';
     return `
 # 身份与目标
-你是负责持续创作这部长篇小说的中文小说作者。作者风格配置：${author?.name || '自定义作者'}；${author?.style || '自然、清晰、贴合人物'}。
+你是负责${isolated ? '创作独立短篇' : '持续创作这部长篇小说'}的中文小说作者。作者风格配置：${author?.name || '自定义作者'}；${author?.style || '自然、清晰、贴合人物'}。
 首要目标是连续性、人物真实感、场景推进和自然表达，不以堆砌辞藻或凑字数为目标。
 
 # 本次写作方式
-${writingModeInstruction(mode, isReroll)}
+${isolated ? (isReroll ? '重新创作当前短篇，不读取或延续其他短篇。' : mode === 'extend' ? '仅延长下方当前短篇的场景，不引入任何其他章节。' : '根据本次设定写一个有起承转合的完整独立短篇；不要续写、回顾或引用其他章节。') : writingModeInstruction(mode, isReroll)}
 用户指示：${userDirection || '没有额外指示，请依据未解决剧情自然发展。'}
 
 # 作品档案
@@ -142,8 +143,8 @@ ${writingModeInstruction(mode, isReroll)}
 最近章节摘要：
 ${continuity.recentSummaries || '这是故事开篇'}
 
-上一章结尾原文（新正文必须直接承接其动作、地点、时间和语气）：
-${continuity.lastChapterTail || '这是故事开篇，请建立清楚而有吸引力的初始场景。'}
+${isolated ? '当前短篇参考（只有主动选择延长当前短篇时提供）' : '上一章结尾原文（新正文必须直接承接其动作、地点、时间和语气）'}：
+${continuity.lastChapterTail || '无前文，请建立独立的初始场景。'}
 
 未解决剧情/伏笔：
 ${continuity.openThreads || '暂无结构化记录，可从最近正文判断'}
@@ -235,7 +236,7 @@ ${worldContext || '没有选中的世界书内容'}
       await db.grStories.put(story);
       await openReader(storyId, chapterIndex);
     } catch (error) {
-      alert(`段评生成失败：${error.message}`);
+      await showCustomAlert('段评生成失败', error.message);
     } finally {
       grState.isGenerating = false;
       if (button) { button.disabled = false; button.textContent = '重生成段评'; }
@@ -266,21 +267,16 @@ ${worldContext || '没有选中的世界书内容'}
       if (btnText) btnText.textContent = '取消';
     }
     try {
-      const contextStory = engine.clone(story);
-      if (isReroll) {
-        const removed = contextStory.chapters.pop();
-        contextStory.storyBible.timeline = (contextStory.storyBible.timeline || []).filter(item => item.chapterId !== removed?.id);
-        contextStory.storyBible.openThreads = (contextStory.storyBible.openThreads || []).filter(item => item.chapterId !== removed?.id);
-      }
-      engine.normalizeStory(contextStory);
+      const sourceStoryId = story.id;
+      const contextStory = engine.prepareGenerationStory(story, mode, isReroll);
       const continuity = engine.buildContinuityContext(contextStory);
-      const charsContext = await buildGreenRiverCharacterContext(story, Math.max(1, Number(story.settings.contextLimit) || 20));
-      const worldContext = await buildGreenRiverWorldContext(story, continuity, userDirection);
-      const userPersona = await getGreenRiverUserPersona(story);
+      const charsContext = await buildGreenRiverCharacterContext(contextStory, Math.max(1, Number(story.settings.contextLimit) || 20));
+      const worldContext = await buildGreenRiverWorldContext(contextStory, continuity, userDirection);
+      const userPersona = await getGreenRiverUserPersona(contextStory);
       const requested = Math.max(200, Number(story.settings.outputLength) || 500);
       const targetMin = Math.max(150, Math.floor(requested * 0.85));
       const targetMax = Math.max(targetMin + 100, Math.ceil(requested * 1.25));
-      const systemPrompt = buildGreenRiverWritingPrompt({ story, author, continuity, charsContext, worldContext, userPersona, userDirection, mode, targetMin, targetMax, isReroll });
+      const systemPrompt = buildGreenRiverWritingPrompt({ story: contextStory, author, continuity, charsContext, worldContext, userPersona, userDirection, mode, targetMin, targetMax, isReroll });
       const result = extractGreenRiverJson(await callGreenRiverModel(systemPrompt, '请根据全部资料完成本次小说写作。', 0.76, grGenerationController.signal));
       const content = String(result.content || '').trim();
       if (content.length < 80) throw new Error('AI返回的正文过短，未保存本次结果');
@@ -290,17 +286,24 @@ ${worldContext || '没有选中的世界书内容'}
         content,
         paragraphs: engine.splitParagraphs(content).map(text => ({ id: engine.makeId('paragraph'), text })),
         summary: String(result.summary || ''),
-        prevSummary: continuity.lastChapter?.summary || (continuity.recentSummaries || '这是故事的开始。'),
+        prevSummary: continuity.lastChapter?.summary || continuity.recentSummaries || '',
         storyDelta: result.storyDelta && typeof result.storyDelta === 'object' ? result.storyDelta : {},
         readerComments: [], revisions: [], generationInstruction: userDirection, writingMode: mode, timestamp: Date.now()
       };
       if (story.settings.readerCommentsEnabled) {
-        try { newChapter.readerComments = await generateReaderCommentsForChapter(story, newChapter, grGenerationController.signal); }
+        try { newChapter.readerComments = await generateReaderCommentsForChapter(contextStory, newChapter, grGenerationController.signal); }
         catch (commentError) { if (commentError.name === 'AbortError') throw commentError; console.warn('正文已完成，但段评生成失败：', commentError); }
       }
-      const generatedBibleState = engine.clone(story.storyBible);
-      story = await db.grStories.get(grState.activeStoryId);
+      const generatedBibleState = engine.clone(contextStory.storyBible);
+      story = await db.grStories.get(sourceStoryId);
+      if (!story) throw new Error('原作品已不存在，本次内容未写入其他作品');
       engine.normalizeStory(story);
+      if (engine.storyMode(contextStory) === 'standalone' && !isReroll && mode !== 'extend' && story.chapters.length) {
+        story = engine.clone(contextStory);
+        delete story.id;
+        story.title = newChapter.title || story.title;
+        story.chapters = [];
+      }
       story.storyBible.storyCharacters = generatedBibleState.storyCharacters || story.storyBible.storyCharacters;
       if (generatedBibleState.readerProfiles) story.storyBible.readerProfiles = generatedBibleState.readerProfiles;
       if (result.globalSummary) story.storyBible.globalSummary = String(result.globalSummary).slice(0, 5000);
@@ -328,19 +331,20 @@ ${worldContext || '没有选中的世界书内容'}
         applyStoryDelta(story, newChapter);
       }
       story.lastUpdated = Date.now();
-      await db.grStories.put(story);
+      if (story.id == null) story.id = await db.grStories.add(story);
+      else await db.grStories.put(story);
       await openReader(story.id, story.chapters.length - 1);
       if (directionInput) directionInput.value = '';
     } catch (error) {
       if (error.name === 'AbortError') await showCustomAlert('已取消', '本次生成已取消，原有章节没有变化。');
-      else { console.error('绿江生成失败:', error); alert(`生成失败：${error.message}`); }
+      else { console.error('绿江生成失败:', error); await showCustomAlert('生成失败', error.message); }
     } finally {
       grState.isGenerating = false;
       grGenerationController = null;
       const currentBtn = document.getElementById('gr-generate-btn');
       if (currentBtn) { currentBtn.disabled = false; currentBtn.classList.remove('is-generating'); currentBtn.title = ''; }
       const currentText = document.getElementById('gr-gen-text');
-      if (currentText) currentText.textContent = '续写';
+      if (currentText) currentText.textContent = grState.storyMode === 'serial' ? '续写' : '创作';
       updateGenButtonBinding();
     }
   }

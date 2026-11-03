@@ -73,9 +73,10 @@
     const preset = await db.apiPresets.get(selectedId);
     if (preset) {
       // 1. 加载预设 (这会覆盖当前的 config)
-      state.apiConfig = {
+      const nextApiConfig = {
         id: 'main',
         embeddingConfig: state.apiConfig.embeddingConfig,
+        videoUnderstanding: state.apiConfig.videoUnderstanding,
         ...window.ttsProvider.apiFields({ ...state.apiConfig, ...preset }),
         proxyUrl: preset.proxyUrl,
         apiKey: preset.apiKey,
@@ -93,6 +94,13 @@
         minimaxApiKey: preset.minimaxApiKey,
         minimaxModel: preset.minimaxModel
       };
+
+      if (window.vectorMemoryManager) {
+        if (!await window.vectorMemoryManager.saveApiConfiguration(nextApiConfig)) {
+          await loadApiPresetsDropdown();
+          return;
+        }
+      } else Object.assign(state.apiConfig, nextApiConfig);
 
 
       const savedImgbbEnabled = localStorage.getItem('imgbb-enabled');

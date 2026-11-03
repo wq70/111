@@ -281,6 +281,7 @@ ${linkedContents}
       systemPrompt = processPromptWithSettings(systemPrompt, chat.isGroup && chat.settings.isOfflineMode ? 'group_offline' : 'single', chat);
 
       systemPrompt += window.RemarkNames.buildContext(chat, filteredHistory);
+      systemPrompt += window.CharacterIdentity.buildContext(chat);
       let messagesForApi = filteredHistory.filter(msg => !window.RemarkNames.getEvent(msg, chat)).map(msg => ({
         role: msg.role,
         content: String(msg.content)
@@ -298,6 +299,7 @@ ${linkedContents}
       let isGemini = proxyUrl === GEMINI_API_URL;
       const propelGuidance = window.GenerationAdjustments ? await window.GenerationAdjustments.prepare(chat, { manual: true }) : null;
       if (propelGuidance) systemPrompt += propelGuidance.block;
+      if (window.SmsEngine && !chat.isGroup) systemPrompt += await window.SmsEngine.qqContext(chat);
       let geminiConfig = toGeminiRequestData(model, apiKey, systemPrompt, messagesForApi);
 
       let reqBody = {
@@ -352,9 +354,12 @@ ${linkedContents}
 
       let messageTimestamp = Date.now();
       for (const msgData of processedActions) {
+        if (!await window.CharacterIdentity.prepare(chat, msgData, state.activeChatId === chat.id)) continue;
+        if (window.SmsEngine && await window.SmsEngine.qqAction(chat, msgData)) continue;
         const aiMessage = {
           role: 'assistant',
-          senderName: chat.originalName,
+          senderName: msgData.name || chat.originalName,
+          senderId: msgData.actorId || null,
           timestamp: messageTimestamp++,
           content: msgData.content || msgData.message,
           type: msgData.type || 'text',
@@ -369,7 +374,7 @@ ${linkedContents}
               chat.customThoughts = {};
             }
             for (const key in msgData) {
-              if (key !== 'type' && key !== 'heartfelt_voice' && key !== 'random_jottings') {
+              if (!['type', 'heartfelt_voice', 'random_jottings', 'actorId', 'senderId', 'name'].includes(key)) {
                 chat.customThoughts[key] = String(msgData[key]);
               }
             }

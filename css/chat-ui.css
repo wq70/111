@@ -478,21 +478,126 @@
 
            /* 智能匹配表情包面板 */
            #smart-sticker-match-panel {
-               background-color: rgba(242, 242, 247, 0.95);
+               background: var(--secondary-bg, #fff);
                backdrop-filter: blur(10px);
                -webkit-backdrop-filter: blur(10px);
-               border-top: 1px solid var(--border-color);
-               border-bottom: 1px solid var(--border-color);
-               padding: 10px;
-               max-height: 150px;
-               overflow-x: auto;
-               overflow-y: hidden;
+               border: 1px solid var(--border-color, #e5e5ea);
+               border-radius: 16px;
+               box-shadow: 0 3px 16px rgba(0, 0, 0, 0.035);
+               padding: 10px 12px 8px;
+               min-width: 0;
+               max-width: 100%;
+               box-sizing: border-box;
+               overflow: hidden;
            }
+
+           #smart-sticker-match-panel .smart-sticker-toolbar,
+           #smart-sticker-match-pagination {
+               display: flex;
+               align-items: center;
+               gap: 4px;
+           }
+
+           #smart-sticker-match-panel .smart-sticker-toolbar {
+               justify-content: space-between;
+               flex-wrap: wrap;
+               gap: 8px;
+               margin-bottom: 5px;
+               font-size: 11px;
+               color: var(--text-primary);
+           }
+
+           #smart-sticker-match-panel .smart-sticker-title {
+               color: var(--text-secondary, #8a8a8a);
+               font-weight: 500;
+               letter-spacing: 0.04em;
+               margin-right: auto;
+               white-space: nowrap;
+           }
+
+           #smart-sticker-match-panel .smart-sticker-mode {
+               display: flex;
+               align-items: center;
+               flex-shrink: 0;
+               padding: 3px;
+               border-radius: 10px;
+               background: rgba(128, 128, 140, 0.09);
+           }
+
+           #smart-sticker-match-panel .smart-sticker-toolbar button {
+               appearance: none;
+               -webkit-appearance: none;
+               display: inline-flex;
+               align-items: center;
+               justify-content: center;
+               min-height: 32px;
+               padding: 0;
+               margin: 0;
+               border: 0;
+               border-radius: 8px;
+               background: transparent;
+               color: var(--text-secondary, #8a8a8a);
+               font: inherit;
+               line-height: 1;
+               cursor: pointer;
+               touch-action: manipulation;
+               transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+           }
+
+           #smart-sticker-match-panel .smart-sticker-mode button {
+               min-width: 42px;
+               min-height: 28px;
+               padding: 0 9px;
+           }
+
+           #smart-sticker-match-panel .smart-sticker-mode button[aria-pressed="true"] {
+               background: var(--secondary-bg, #fff);
+               color: var(--text-primary, #222);
+               font-weight: 600;
+               box-shadow: 0 1px 4px rgba(0, 0, 0, 0.09);
+           }
+
+           #smart-sticker-match-pagination { flex-shrink: 0; gap: 2px; }
+           #smart-sticker-match-pagination button { width: 32px; }
+           #smart-sticker-match-pagination button:not(:disabled):hover {
+               background: rgba(128, 128, 140, 0.09);
+               color: var(--text-primary, #222);
+           }
+           #smart-sticker-match-status {
+               min-width: 30px;
+               text-align: center;
+               font-variant-numeric: tabular-nums;
+               color: var(--text-secondary, #8a8a8a);
+               white-space: nowrap;
+           }
+           #smart-sticker-match-panel button:focus-visible {
+               outline: 2px solid var(--accent-color, #007bff);
+               outline-offset: 2px;
+           }
+
+           #smart-sticker-match-panel button:disabled { opacity: 0.25; cursor: default; }
+           #smart-sticker-match-pagination[hidden] { display: none; }
 
            #smart-sticker-match-grid {
                display: flex;
                gap: 10px;
                align-items: center;
+               min-width: 0;
+               overflow-x: hidden;
+               padding: 8px 0 4px;
+               scrollbar-width: thin;
+               scrollbar-color: rgba(128, 128, 140, 0.25) transparent;
+           }
+
+           #smart-sticker-match-panel[data-mode="pages"] #smart-sticker-match-grid {
+               justify-content: space-around;
+           }
+
+           #smart-sticker-match-panel[data-mode="scroll"] #smart-sticker-match-grid {
+               overflow-x: auto;
+               overscroll-behavior-x: contain;
+               -webkit-overflow-scrolling: touch;
+               touch-action: pan-x pan-y;
            }
 
            #smart-sticker-match-grid .sticker-item {
@@ -503,22 +608,26 @@
                align-items: center;
                gap: 4px;
                cursor: pointer;
-               transition: transform 0.2s;
+               transition: transform 0.15s;
+               padding: 0;
+               border: 0;
+               background: transparent;
+               font: inherit;
            }
 
            #smart-sticker-match-grid .sticker-item:hover {
-               transform: scale(1.1);
+               transform: translateY(-2px);
            }
 
            #smart-sticker-match-grid .sticker-image-container {
                width: 60px;
                height: 60px;
-               background-color: white;
-               border-radius: 8px;
+               background-color: rgba(128, 128, 140, 0.06);
+               border-radius: 12px;
                background-size: contain;
                background-repeat: no-repeat;
                background-position: center;
-               box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.035);
            }
 
            #smart-sticker-match-grid .sticker-name {

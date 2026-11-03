@@ -213,6 +213,11 @@ window.FreeHomeLayout = (() => {
       }
     } else {
       const iconBox = document.createElement('span'); iconBox.className = 'free-home-icon';
+      if (item.kind === 'app' && item.key === 'messages') {
+        iconBox.dataset.smsIcon = '1';
+        const unread = window.SmsApp?.unreadCount || 0;
+        const badge = document.createElement('span'); badge.className = 'sms-app-badge'; badge.hidden = !unread; badge.textContent = unread > 99 ? '99+' : String(unread); iconBox.append(badge);
+      }
       const keys = item.kind === 'folder' ? item.apps.slice(0, 4) : [item.key];
       keys.forEach(key => { const img = document.createElement('img'); img.src = icon(key); img.alt = ''; iconBox.append(img); });
       if (item.kind === 'folder') iconBox.classList.add('free-folder-icon');
@@ -701,6 +706,24 @@ window.FreeHomeLayout = (() => {
     try { layout = normalize(state.globalSettings.freeHomeLayout || defaultLayout()); }
     catch (error) { console.warn('自由布局数据无效，使用默认排列', error); layout = defaultLayout(); }
     mode = state.globalSettings.homeLayoutMode === 'free' ? 'free' : 'classic';
+    if (registry.has('messages') && state.globalSettings.smsAppPlacementVersion !== 2) {
+      let messagesItem;
+      layout.pages = layout.pages.map(items => items.flatMap(item => {
+        if (item.kind === 'app' && item.key === 'messages') { messagesItem ||= item; return []; }
+        if (item.kind === 'folder' && item.apps?.includes('messages')) {
+          const apps = item.apps.filter(key => key !== 'messages');
+          return apps.length ? [{ ...item, apps }] : [];
+        }
+        return [item];
+      }));
+      layout.dock = layout.dock.filter(key => key !== 'messages');
+      const lastPage = layout.pages[layout.pages.length - 1];
+      const spot = firstFree(lastPage, 1, 1);
+      lastPage.push({ ...(messagesItem || makeItem('app', 'messages', spot.x, spot.y)), x: spot.x, y: spot.y, w: 1, h: 1 });
+      state.globalSettings.smsAppInstalled = true;
+      state.globalSettings.smsAppPlacementVersion = 2;
+      await save();
+    }
     page = layout.homePage;
     $('home-screen').classList.toggle('free-home-active', mode === 'free');
     $('home-layout-select').value = mode;

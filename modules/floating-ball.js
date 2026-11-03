@@ -452,7 +452,9 @@
     if (type === 'api') {
       renderApiSubmenu();
     } else if (type === 'template') {
-      renderTemplateSubmenu();
+      floatingBallState.submenuOpen = false;
+      window.openChatSettingsTemplates?.();
+      return;
     }
     
     // 先临时显示子菜单以获取真实尺寸
@@ -706,7 +708,7 @@
     if (!preset) return;
     
     // 加载预设
-    state.apiConfig = {
+    const nextApiConfig = {
       id: 'main',
       embeddingConfig: state.apiConfig.embeddingConfig,
       ...window.ttsProvider.apiFields({ ...state.apiConfig, ...preset }),
@@ -730,7 +732,12 @@
       minimaxModel: preset.minimaxModel
     };
     
-    await db.apiConfig.put(state.apiConfig);
+    if (window.vectorMemoryManager) {
+      if (!await window.vectorMemoryManager.saveApiConfiguration(nextApiConfig)) return;
+    } else {
+      await db.apiConfig.put(nextApiConfig);
+      Object.assign(state.apiConfig, nextApiConfig);
+    }
     
     if (typeof showToast === 'function') {
       showToast(`已切换到：${preset.name}`);

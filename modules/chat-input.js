@@ -409,6 +409,28 @@
 
 // ========== 转账响应处理（从 script.js 补充拆分，原第 26814~26917 行） ==========
 
+  function formatChatTransferEvent(chat, message) {
+    const names = window.RemarkNames.participantNames(chat);
+    const byUser = message.role === 'user';
+    const sender = byUser ? names.user : (chat.isGroup ? message.senderName || '群成员' : names.character);
+    const recipient = chat.isGroup ? message.receiverName || (byUser ? '群聊' : names.user) : (byUser ? names.character : names.user);
+    const amount = `${message.amount} ${message.currency || 'CNY'}`;
+    if (message.isRefund) return `[系统提示：${sender}退还了${recipient}的转账（${amount}）。]`;
+    if (message.isReceived) return `[系统提示：${sender}收下了${recipient}的转账（${amount}）。]`;
+    const status = { accepted: '已收款', declined: '已拒收' }[message.status] || '待收款';
+    return `[系统提示：${sender}向${recipient}转账（${amount}，${status}）。备注：${message.note || ''}]`;
+  }
+
+  function formatLegacyTransferNotice(chat, content) {
+    if (typeof content !== 'string') return content;
+    const match = content.match(/^\[系统提示：你(接受了|拒绝并退还了)"([^"]+)"的转账。\]$/);
+    if (!match) return content;
+    const names = window.RemarkNames.participantNames(chat);
+    const sender = chat.isGroup ? match[2] : names.character;
+    const action = match[1] === '接受了' ? '收下了' : '退还了';
+    return `[系统提示：${names.user}${action}${sender}的转账。]`;
+  }
+
   async function handleUserTransferResponse(choice) {
     if (!activeTransferTimestamp) return;
 
@@ -432,6 +454,8 @@
     }
 
     originalMessage.status = choice;
+    const names = window.RemarkNames.participantNames(chat);
+    const senderName = chat.isGroup ? originalMessage.senderName : names.character;
     let systemContent;
 
     if (choice === 'declined') {
@@ -444,7 +468,7 @@
         timestamp: Date.now()
       };
       chat.history.push(refundMessage);
-      systemContent = `[系统提示：你拒绝并退还了"${originalMessage.senderName}"的转账。]`;
+      systemContent = `[系统提示：${names.user}退还了${senderName}的转账。]`;
 
     } else {
       if (transferAmount > 0) {
@@ -473,6 +497,7 @@
             timestamp: Date.now()
           };
           chat.history.push(receivedMessage);
+          systemContent = `[系统提示：${names.user}收下了${senderName}的转账。]`;
         } else {
           alert("警告：金额入账失败，请检查控制台日志！");
         }
@@ -480,16 +505,11 @@
         alert("无法收款：该转账金额无效 (0元或数据损坏)。");
       }
 
-      systemContent = `[系统提示：你接受了"${originalMessage.senderName}"的转账。]`;
     }
 
-    const hiddenMessage = {
-      role: 'system',
-      content: systemContent,
-      timestamp: Date.now() + 1,
-      isHidden: true
-    };
-    chat.history.push(hiddenMessage);
+    if (systemContent) {
+      chat.history.push({ role: 'system', content: systemContent, timestamp: Date.now() + 1, isHidden: true });
+    }
 
     await db.chats.put(chat);
     hideTransferActionModal();
@@ -498,6 +518,8 @@
   }
 
   // ========== 全局暴露 ==========
+  window.formatChatTransferEvent = formatChatTransferEvent;
+  window.formatLegacyTransferNotice = formatLegacyTransferNotice;
   window.cancelReplyMode = cancelReplyMode;
   window.startReplyToMessage = startReplyToMessage;
   window.addLongPressListener = addLongPressListener;

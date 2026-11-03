@@ -42,19 +42,43 @@
     return chat.lastRemarkChange;
   }
 
+  function participantNames(chat) {
+    const profileName = typeof state !== 'undefined' ? state.qzoneSettings?.nickname : '';
+    const user = [profileName, chat.settings?.myNickname]
+      .map(name => typeof name === 'string' ? name.trim() : '')
+      .find(name => name && !['用户', '我', '{{user}}'].includes(name)) || '对方';
+    return { user, character: chat.originalName || chat.name || '角色' };
+  }
+
   function describe(event, chat) {
-    const actor = event.actor === 'user' ? '用户' : `角色（${chat.originalName || '角色本人'}）`;
+    const names = participantNames(chat);
+    const character = event.characterName || names.character;
+    const actor = event.actorName || names[event.actor];
+    const target = event.actor === 'character' ? '自己的聊天备注' : `${character}的聊天备注`;
     const change = typeof event.oldName === 'string'
       ? `从 ${JSON.stringify(event.oldName)} 修改为 ${JSON.stringify(event.newName)}`
       : `修改为 ${JSON.stringify(event.newName)}（旧备注未记录）`;
-    return `${actor}将角色在此聊天中的备注名${change}。`;
+    return `${actor}将${target}${change}。`;
+  }
+
+  function describeFact(event, chat) {
+    return `${describe(event, chat)}（执行者：${event.actor === 'character' ? '角色本人' : '玩家'}）`;
+  }
+
+  function displayNotice(message, chat) {
+    const event = getEvent(message, chat);
+    if (event && /^(?:用户|角色（[^）]*）)将角色在此聊天中的备注名/.test(message.content)) {
+      return describe(event, chat);
+    }
+    return message.content;
   }
 
   function recordChange(chat, newName, actor, timestamp = Date.now()) {
     if (!chat || chat.isGroup || typeof newName !== 'string' || !['character', 'user'].includes(actor)) return null;
     newName = newName.trim();
     if (!newName || newName === chat.name) return null;
-    const event = { actor, oldName: chat.name, newName, timestamp };
+    const names = participantNames(chat);
+    const event = { actor, actorName: names[actor], characterName: names.character, oldName: chat.name, newName, timestamp };
     if (!Array.isArray(chat.nameHistory)) chat.nameHistory = [];
     if (!chat.nameHistory.includes(chat.name)) chat.nameHistory.push(chat.name);
     chat.name = newName;
@@ -67,7 +91,7 @@
 
   function formatMemoryEvent(message, chat) {
     const event = getEvent(message, chat);
-    return event ? `[系统事件；时间戳：${event.timestamp}] ${describe(event, chat)}` : null;
+    return event ? `[系统事件；时间戳：${event.timestamp}] ${describeFact(event, chat)}` : null;
   }
 
   function buildContext(chat, history = []) {
@@ -76,8 +100,8 @@
     const lines = [
       '# 【当前备注与修改来源】',
       `角色本名：${JSON.stringify(chat.originalName || '')}；当前聊天备注名：${JSON.stringify(chat.name || '')}。本名与备注名独立。`,
-      '备注可以由用户设置，也可以由你执行 change_remark_name 修改。依据下面的系统事实判断修改者；备注这个称呼本身不代表修改者。',
-      latest ? `最近一次修改（时间戳：${latest.timestamp}）：${describe(latest, chat)}` : '当前备注的修改来源未知。没有明确记录时，不推断是谁修改的。'
+      'change_remark_name 改你的聊天显示备注；change_user_nickname 改你对玩家的称呼。两条指令都不改本名。按事件中的执行者判断是谁改的。',
+      latest ? `最近一次修改（时间戳：${latest.timestamp}）：${describeFact(latest, chat)}` : '当前备注的修改来源未知。'
     ];
     const events = [];
     for (const message of history) {
@@ -90,10 +114,10 @@
     }
     if (events.length) {
       lines.push('当前对话窗口内的备注修改事件（系统事实）：');
-      for (const event of events) lines.push(`- 时间戳 ${event.timestamp}：${describe(event, chat)}`);
+      for (const event of events) lines.push(`- 时间戳 ${event.timestamp}：${describeFact(event, chat)}`);
     }
     return '\n\n' + lines.join('\n');
   }
 
-  window.RemarkNames = { getEvent, getCurrentChange, recordChange, formatMemoryEvent, buildContext };
+  window.RemarkNames = { getEvent, getCurrentChange, recordChange, formatMemoryEvent, buildContext, participantNames, displayNotice };
 })();

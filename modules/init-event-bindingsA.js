@@ -1311,6 +1311,7 @@ window.initEventBindingsA = async function(state, db) {
         
         await db.chats.put(chat);
         
+        if (window.GroupMemory?.independent(chat)) return;
         // 如果切换到结构化模式且有长期记忆，提示转换
         if (mode === 'structured' && chat.longTermMemory && chat.longTermMemory.length > 0 && window.structuredMemoryManager) {
           const confirmed = await showCustomConfirm(
@@ -1624,6 +1625,7 @@ window.initEventBindingsA = async function(state, db) {
           longTermMemory: [],
           thoughtsHistory: []
         };
+        window.applyDefaultChatSettings?.(newChat);
         state.chats[newChatId] = newChat;
         await db.chats.put(newChat);
         renderChatList();
@@ -1848,6 +1850,93 @@ window.initEventBindingsA = async function(state, db) {
     let smartMatchDebounceTimer = null;
     const smartMatchPanel = document.getElementById('smart-sticker-match-panel');
     const smartMatchGrid = document.getElementById('smart-sticker-match-grid');
+    const smartMatchPagesMode = document.getElementById('smart-sticker-mode-pages');
+    const smartMatchScrollMode = document.getElementById('smart-sticker-mode-scroll');
+    const smartMatchPagination = document.getElementById('smart-sticker-match-pagination');
+    const smartMatchPrevious = document.getElementById('smart-sticker-match-prev');
+    const smartMatchNext = document.getElementById('smart-sticker-match-next');
+    const smartMatchStatus = document.getElementById('smart-sticker-match-status');
+    const smartMatchPreferenceKey = 'ephone.smartStickerMatchMode';
+    let smartMatchMode = 'pages';
+    try {
+      if (localStorage.getItem(smartMatchPreferenceKey) === 'scroll') smartMatchMode = 'scroll';
+    } catch (_) { /* 存储不可用时仍可在本次使用中切换。 */ }
+    let smartMatchResults = [];
+    let smartMatchChat = null;
+    let smartMatchInput = '';
+    let smartMatchPage = 0;
+    let smartMatchPageSize = 1;
+    function updateSmartMatchModeButtons() {
+      smartMatchPagesMode.setAttribute('aria-pressed', String(smartMatchMode === 'pages'));
+      smartMatchScrollMode.setAttribute('aria-pressed', String(smartMatchMode === 'scroll'));
+    }
+    updateSmartMatchModeButtons();
+
+    function renderSmartStickerMatches() {
+      if (!smartMatchResults.length || !smartMatchChat) return;
+      smartMatchPanel.style.display = 'block';
+      smartMatchPanel.dataset.mode = smartMatchMode;
+      smartMatchPagination.hidden = smartMatchMode !== 'pages';
+      // 每张70px，间隔10px；按可用宽度分页，窄屏也不会裁掉当前页的表情。
+      smartMatchPageSize = Math.max(1, Math.floor((smartMatchGrid.clientWidth + 10) / 80));
+      const pageCount = Math.ceil(smartMatchResults.length / smartMatchPageSize);
+      smartMatchPage = Math.max(0, Math.min(smartMatchPage, pageCount - 1));
+      const visibleMatches = smartMatchMode === 'scroll' ? smartMatchResults :
+        smartMatchResults.slice(smartMatchPage * smartMatchPageSize, (smartMatchPage + 1) * smartMatchPageSize);
+      smartMatchGrid.replaceChildren();
+      visibleMatches.forEach(({ sticker }) => {
+        const stickerItem = document.createElement('button');
+        stickerItem.type = 'button';
+        stickerItem.className = 'sticker-item';
+        stickerItem.setAttribute('aria-label', `发送表情：${sticker.name}`);
+        const image = document.createElement('div');
+        image.className = 'sticker-image-container';
+        image.style.backgroundImage = `url(${JSON.stringify(sticker.url)})`;
+        const name = document.createElement('div');
+        name.className = 'sticker-name';
+        name.textContent = sticker.name;
+        stickerItem.append(image, name);
+        stickerItem.addEventListener('click', () => {
+          if (state.activeChatId !== smartMatchChat.id || chatInput.value.trim() !== smartMatchInput ||
+              !smartMatchChat.settings.enableStickerSmartMatch) return;
+          sendSmartMatchedSticker(sticker, smartMatchChat);
+        });
+        smartMatchGrid.appendChild(stickerItem);
+      });
+      smartMatchGrid.scrollLeft = 0;
+      smartMatchStatus.textContent = `${smartMatchPage + 1}/${pageCount}`;
+      smartMatchPrevious.disabled = smartMatchPage === 0;
+      smartMatchNext.disabled = smartMatchPage === pageCount - 1;
+    }
+
+    function setSmartMatchMode(mode) {
+      if (smartMatchMode === mode) return;
+      smartMatchMode = mode;
+      updateSmartMatchModeButtons();
+      try { localStorage.setItem(smartMatchPreferenceKey, smartMatchMode); } catch (_) {}
+      smartMatchPage = 0;
+      renderSmartStickerMatches();
+    }
+    smartMatchPagesMode.addEventListener('click', () => setSmartMatchMode('pages'));
+    smartMatchScrollMode.addEventListener('click', () => setSmartMatchMode('scroll'));
+    smartMatchPrevious.addEventListener('click', () => {
+      smartMatchPage--;
+      renderSmartStickerMatches();
+    });
+    smartMatchNext.addEventListener('click', () => {
+      smartMatchPage++;
+      renderSmartStickerMatches();
+    });
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        if (smartMatchPanel.style.display === 'none' || smartMatchMode !== 'pages') return;
+        const size = Math.max(1, Math.floor((smartMatchGrid.clientWidth + 10) / 80));
+        if (size !== smartMatchPageSize) {
+          smartMatchPage = Math.floor(smartMatchPage * smartMatchPageSize / size);
+          renderSmartStickerMatches();
+        }
+      }).observe(smartMatchGrid);
+    }
 
     // 输入框输入事件监听
     chatInput.addEventListener('input', () => {
@@ -1855,6 +1944,8 @@ window.initEventBindingsA = async function(state, db) {
       if (smartMatchDebounceTimer) {
         clearTimeout(smartMatchDebounceTimer);
       }
+      smartMatchPanel.style.display = 'none';
+      smartMatchResults = [];
 
       // 检查是否启用智能匹配
       if (!state.activeChatId) return;
@@ -1874,6 +1965,8 @@ window.initEventBindingsA = async function(state, db) {
 
       // 防抖：延迟300ms后执行匹配
       smartMatchDebounceTimer = setTimeout(() => {
+        if (state.activeChatId !== chat.id || chatInput.value.trim() !== inputText ||
+            !chat.settings.enableStickerSmartMatch) return;
         performSmartStickerMatch(inputText, chat);
       }, 300);
     });
@@ -1932,34 +2025,19 @@ window.initEventBindingsA = async function(state, db) {
         }
       });
 
-      // 按分数排序，取前5个
+      // 保留全部匹配结果，由分页或滑动模式控制浏览。
       matches.sort((a, b) => b.score - a.score);
-      const topMatches = matches.slice(0, 5);
 
-      if (topMatches.length === 0) {
+      if (matches.length === 0) {
         smartMatchPanel.style.display = 'none';
         return;
       }
 
-      // 渲染匹配结果
-      smartMatchGrid.innerHTML = '';
-      topMatches.forEach(({ sticker }) => {
-        const stickerItem = document.createElement('div');
-        stickerItem.className = 'sticker-item';
-        stickerItem.innerHTML = `
-          <div class="sticker-image-container" style="background-image: url('${sticker.url}');"></div>
-          <div class="sticker-name">${escapeHTML(sticker.name)}</div>
-        `;
-        
-        // 点击表情包发送
-        stickerItem.addEventListener('click', () => {
-          sendSmartMatchedSticker(sticker, chat);
-        });
-
-        smartMatchGrid.appendChild(stickerItem);
-      });
-
-      smartMatchPanel.style.display = 'block';
+      smartMatchResults = matches;
+      smartMatchChat = chat;
+      smartMatchInput = inputText;
+      smartMatchPage = 0;
+      renderSmartStickerMatches();
     }
 
     // 发送智能匹配的表情包
@@ -2377,8 +2455,12 @@ window.initEventBindingsA = async function(state, db) {
       saveLegacySetting('github-auto-backup', githubAutoBackup);
       saveLegacySetting('github-backup-interval', backupInterval);
 
-      await (window.saveSettingsRecord ? window.saveSettingsRecord(db.apiConfig, nextApiConfig) : db.apiConfig.put(nextApiConfig));
-      Object.assign(state.apiConfig, nextApiConfig);
+      if (window.vectorMemoryManager) {
+        if (!await window.vectorMemoryManager.saveApiConfiguration(nextApiConfig)) return;
+      } else {
+        await (window.saveSettingsRecord ? window.saveSettingsRecord(db.apiConfig, nextApiConfig) : db.apiConfig.put(nextApiConfig));
+        Object.assign(state.apiConfig, nextApiConfig);
+      }
       apiConfigSaved = true;
       flushLegacySettings();
 
@@ -3304,6 +3386,8 @@ window.initEventBindingsA = async function(state, db) {
       document.getElementById('ai-avatar-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('assign-group-section').style.display = isGroup ? 'none' : 'block';
       document.getElementById('ai-original-name-group').style.display = isGroup ? 'none' : 'block';
+      window.CharacterIdentity?.renderSettings(chat);
+      window.CharacterTodos.renderSettings(chat);
       document.getElementById('ai-voice-id-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('inject-thought-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('todo-list-setting-group').style.display = isGroup ? 'none' : 'flex';
@@ -3737,6 +3821,7 @@ window.initEventBindingsA = async function(state, db) {
       const customCssInput = document.getElementById('custom-css-input');
       customCssInput.value = chat.settings.customCss || '';
       updateSettingsPreview();
+      window.GroupMemoryUI?.load(chat);
       document.getElementById('auto-memory-toggle').checked = chat.settings.enableAutoMemory || false;
       document.getElementById('auto-memory-interval').value = chat.settings.autoMemoryInterval || 20;
       document.getElementById('diary-mode-toggle').checked = chat.settings.enableDiaryMode || false;
@@ -4200,6 +4285,8 @@ window.initEventBindingsA = async function(state, db) {
 
       const newName = document.getElementById('chat-name-input').value.trim();
       if (!newName) return alert('备注名/群名不能为空！');
+      try { await window.GroupMemoryUI?.save(chat); }
+      catch (error) { showToast(error.message, 'error'); return; }
       if (!chat.isGroup && window.CharacterBond) {
         window.CharacterBond.setSwitches(
           chat,
@@ -4443,6 +4530,8 @@ window.initEventBindingsA = async function(state, db) {
         const newOriginalName = document.getElementById('ai-original-name-input').value.trim();
         if (!newOriginalName) return alert('对方本名不能为空！');
         chat.originalName = newOriginalName;
+        window.CharacterIdentity?.saveSettings(chat);
+        window.CharacterTodos.saveSettings(chat);
         chat.settings.aiPersona = document.getElementById('ai-persona').value;
         
         // 保存动态年龄设置

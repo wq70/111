@@ -163,15 +163,21 @@
   }
   async function detail(chat, fragment) {
     const e = engine();
+    const manager = window.vectorMemoryManager;
+    const legacy = !fragment.clockVersion;
+    const settings = e.config(chat);
+    const timelines = settings.timelines || [{ id: settings.timelineId, name: settings.timelineName }];
     const timeZone = fragment.memoryTimeZone || e.zone();
     const panel = document.createElement('div');
     panel.className = 'vm-fullscreen-panel memory-time-detail';
-    const options = [['keep', '保留当前日期'], ['auto', '恢复提取时的自动规则'], ['world', '来源消息的世界时间'],
-      ['real', '来源消息的现实时间'], ['explicit', '原文明示日期'], ['unknown', '时间不明'], ['manual', '自己指定日期']];
+    const options = [['keep', '保留当前日期'], ['unknown', '时间不明'], ['manual', '自己指定日期']];
+    if (!legacy) options.push(['auto', '恢复提取时的自动规则'], ['world', '来源消息的世界时间'],
+      ['real', '来源消息的现实时间'], ['explicit', '原文明示日期']);
     panel.innerHTML = `<div class="vm-panel-header"><button type="button" class="memory-time-back" data-time-close aria-label="返回">‹</button><span class="vm-panel-title">记忆时间</span><span class="memory-time-header-spacer"></span></div>
       <div class="vm-panel-body memory-time-settings"><div class="memory-time-help">${escape(fragment.content)}</div>
-      <div class="memory-time-help">当前日期：${escape(window.MemoryExtractionSupport.formatTime(fragment))} · ${e.label(fragment)}</div>
-      <div class="memory-time-help">记录写入：${escape(e.format(fragment.createdAt, e.zone()))} · 时间线：${escape(fragment.timelineName || '默认时间线')}</div>
+      <div class="memory-time-help">当前日期：${escape(window.MemoryExtractionSupport.formatTime(fragment))} · ${legacy ? '旧版记忆' : escape(e.label(fragment))}</div>
+      <div class="memory-time-help">记录写入：${escape(e.format(fragment.createdAt, e.zone()))} · 时间线：${escape(legacy ? '未指定' : fragment.timelineName || fragment.timelineId)}</div>
+      ${legacy ? select('assignTimeline', '归入时间线', '', [['', '保留旧版归属'], ...timelines.map((item, index) => [String(index), escape(item.name)])]) : ''}
       ${select('dateSource', '日期来源', 'keep', options)}
       <div data-time-manual hidden><label class="memory-time-field"><span>事件时间</span><input type="datetime-local" data-time-start class="settings-num-input" value="${e.toInput(fragment.memoryTime, timeZone)}"></label>
       <label class="memory-time-field"><span>结束时间（可留空）</span><input type="datetime-local" data-time-end class="settings-num-input" value="${e.toInput(fragment.memoryTimeEnd, timeZone)}"></label>
@@ -179,11 +185,13 @@
       <div class="memory-time-help" data-time-preview aria-live="polite"></div>
       <div class="memory-time-help">时间依据：${escape(fragment.timeEvidence || '未记录明确日期原文')}</div>
       <div class="memory-time-evidence">${(fragment.sourceEvidence || []).map(source => `<p>${escape(source.content)}</p>`).join('')}</div>
-      <div class="memory-time-actions"><button type="button" data-time-save>保存日期</button><button type="button" data-time-close>取消</button></div></div>`;
+      <div class="memory-time-actions"><button type="button" data-time-save>保存</button><button type="button" data-time-close>取消</button></div></div>`;
     document.body.appendChild(panel);
     panel.querySelectorAll('[data-time-close]').forEach(button => button.addEventListener('click', () => panel.remove()));
     let pending = null;
     const sourceSelect = panel.querySelector('[data-memory-time="dateSource"]');
+    const timelineSelect = panel.querySelector('[data-memory-time="assignTimeline"]');
+    const selectedTimeline = () => timelineSelect?.value ? timelines[Number(timelineSelect.value)] : null;
     function resolve() {
       const choice = sourceSelect.value;
       panel.querySelector('[data-time-manual]').hidden = choice !== 'manual';
@@ -218,25 +226,43 @@
       return { ...result, timeBasis: 'manual', timeSource: choice === 'explicit' ? result.timeSource : choice, automaticTime: fragment.automaticTime };
     }
     const preview = () => {
-      try { pending = resolve(); panel.querySelector('[data-time-preview]').textContent = pending ? `将改为：${window.MemoryExtractionSupport.formatTime(pending)}` : '日期保持原样'; }
+      try {
+        pending = resolve();
+        const timeline = selectedTimeline();
+        const date = pending ? `将改为：${window.MemoryExtractionSupport.formatTime({ ...fragment, ...pending })}` : '日期保持原样';
+        panel.querySelector('[data-time-preview]').textContent = timeline ? `将归入「${timeline.name}」 · ${date}` : date;
+      }
       catch (error) { pending = null; panel.querySelector('[data-time-preview]').textContent = error.message; }
     };
     sourceSelect.addEventListener('change', preview);
+    timelineSelect?.addEventListener('change', preview);
     panel.querySelectorAll('input').forEach(input => input.addEventListener('change', preview));
     panel.querySelector('[data-time-save]').addEventListener('click', async event => {
       const button = event.currentTarget;
       button.disabled = true;
       try {
-        if (window.vectorMemoryManager._extractionLocks.get(chat)) throw new Error('请先结束记忆提取再修改日期');
+        if (manager._extractionLocks.get(chat)) throw new Error('请先结束当前记忆任务');
+        if (manager.getFragment(chat, fragment.id) !== fragment) throw new Error('这条记忆已经变化，请重新打开详情');
         pending = resolve();
-        if (!pending) { panel.remove(); return; }
+        const timeline = selectedTimeline();
+        if (!pending && !timeline) { panel.remove(); return; }
         const before = JSON.parse(JSON.stringify(fragment));
+        const vm = manager.getVariableMemory(chat);
+        const cache = vm._retrievalCache;
+        if (timeline) Object.assign(fragment, {
+          clockVersion: 1, timelineId: timeline.id, timelineName: timeline.name, timeSource: 'real', memoryTimeZone: timeZone,
+          memoryTime: window.MemoryExtractionSupport.validTime(fragment.memoryTime), timeBasis: fragment.timeBasis || 'manual'
+        });
         Object.assign(fragment, pending);
+        vm._retrievalCache = manager._emptyRetrievalCache();
         try { await window.db.chats.put(chat); }
-        catch (error) { Object.keys(fragment).forEach(key => delete fragment[key]); Object.assign(fragment, before); throw error; }
-        chat.variableMemory._retrievalCache = { query: '', resultIds: [], timestamp: 0, msgCount: 0 };
-        panel.remove(); renderVectorMemoryView(); toast('记忆日期已保存');
-      } catch (error) { toast(error.message, 'error'); }
+        catch (error) {
+          Object.keys(fragment).forEach(key => delete fragment[key]); Object.assign(fragment, before);
+          vm._retrievalCache = cache;
+          throw error;
+        }
+        panel.remove(); renderVectorMemoryView(); toast(timeline ? '已归入指定时间线' : '记忆日期已保存');
+      } catch (error) { panel.querySelector('[data-time-preview]').textContent = error.message; }
       finally { button.disabled = false; }
     });
     preview();

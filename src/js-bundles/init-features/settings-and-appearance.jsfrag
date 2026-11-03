@@ -17,6 +17,7 @@ window.initFeatures = function(state, db) {
     // 所有按钮、弹窗、批量选择与歌曲添加能力保持不变。
     if (window.__initFeaturesReady) return;
     window.__initFeaturesReady = true;
+    window.SmsApp?.initialize().catch(error => console.warn('[信息初始化]', error.message));
 
 
 
@@ -149,6 +150,8 @@ window.initFeatures = function(state, db) {
     document.getElementById('close-music-account-btn')?.addEventListener('click', closeMusicAccountCenter);
     document.getElementById('netease-login-btn')?.addEventListener('click', startNeteaseQrLogin);
     document.getElementById('netease-logout-btn')?.addEventListener('click', logoutNeteaseMusic);
+    document.getElementById('netease-account-retry-btn')?.addEventListener('click', refreshNeteaseAccountView);
+    document.getElementById('netease-playlists-retry-btn')?.addEventListener('click', refreshNeteaseAccountView);
     document.getElementById('cancel-music-search-btn')?.addEventListener('click', () => {
       document.getElementById('music-search-results-modal').classList.remove('visible');
     });

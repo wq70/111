@@ -139,6 +139,7 @@
       }
 
 
+      if (post.authorAvatar) avatarUrl = post.authorAvatar;
       const itemEl = document.createElement('div');
       itemEl.className = 'douban-post-item';
       itemEl.dataset.postId = post.id;
@@ -171,14 +172,14 @@
             <div class="douban-checkbox" style="display: none;"></div>
             <div style="flex: 1; min-width: 0;">
             <div class="douban-post-header">
-                <img src="${avatarUrl}" class="douban-post-avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
+                <img src="${escapeHTML(avatarUrl || '')}" class="douban-post-avatar" onerror="this.onerror=null; this.src=defaultAvatar;">
                 <div class="douban-author-info">
-                    <div class="douban-author-name">${post.authorName}</div>
-                    <div class="douban-group-name">来自 ${post.groupName}</div>
+                    <div class="douban-author-name">${escapeHTML(post.authorName || '')}</div>
+                    <div class="douban-group-name">来自 ${escapeHTML(post.groupName || '')}</div>
                 </div>
             </div>
-            <div class="douban-post-title">${post.postTitle}</div>
-            <div class="douban-post-content">${post.content.replace(/\n/g, '<br>')}</div>
+            <div class="douban-post-title">${escapeHTML(post.postTitle || '')}</div>
+            <div class="douban-post-content">${escapeHTML(post.content || '').replace(/\n/g, '<br>')}</div>
             <div class="douban-post-footer">
                  <div class="douban-post-actions">
                     <span class="douban-action-likes"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.5L12 3a2 2 0 0 1 3 2.88z"></path></svg> <span>${post.likesCount}</span></span>

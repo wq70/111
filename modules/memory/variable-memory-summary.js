@@ -289,6 +289,7 @@ async function handleVectorDateRestore(chat) {
 async function triggerVectorMemorySummary(chatId, force = false) {
   const chat = state.chats[chatId];
   if (!chat || !window.vectorMemoryManager) return;
+  if (window.GroupMemory?.independent(chat)) return force ? window.GroupMemory.summarize(chat) : window.GroupMemory.auto(chat);
   try {
     const vm = window.vectorMemoryManager.getVariableMemory(chat);
     const lastIdx = vm.settings.lastExtractedMsgIndex !== undefined ? vm.settings.lastExtractedMsgIndex : -1;

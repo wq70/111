@@ -1,0 +1,25 @@
+.douban-transfer-modal { z-index: 1010; }
+.douban-transfer-dialog { width: min(520px, calc(100% - 24px)); max-height: 90%; color: var(--text-primary, #222); background: var(--secondary-bg, #fff); }
+.douban-transfer-dialog .modal-body { min-height: 0; overflow-y: auto; padding: 16px; }
+.douban-transfer-dialog .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.douban-transfer-dialog button[data-close] { border: 0; color: inherit; background: transparent; font-size: 26px; min-width: 36px; min-height: 36px; cursor: pointer; }
+.douban-transfer-intro, .douban-transfer-note { margin: 0 0 14px; color: var(--text-secondary, #666); font-size: 13px; line-height: 1.7; }
+.douban-transfer-options { margin: 0 0 16px; padding: 6px 12px 12px; border: 1px solid var(--border-color, #ddd); border-radius: 12px; min-width: 0; }
+.douban-transfer-options legend { padding: 0 6px; font-size: 13px; }
+.douban-transfer-options label, .douban-transfer-posts label { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; cursor: pointer; font-size: 14px; line-height: 1.5; }
+.douban-transfer-dialog input { flex: none; width: 18px; height: 18px; margin: 2px 0 0; accent-color: #278c59; }
+.douban-transfer-dialog label span { min-width: 0; overflow-wrap: anywhere; }
+.douban-transfer-dialog small { display: block; margin-top: 3px; color: var(--text-secondary, #666); font-size: 12px; line-height: 1.6; }
+.douban-transfer-list-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 8px; }
+.douban-transfer-list-header label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.douban-transfer-posts { max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color, #ddd); border-radius: 12px; padding: 0 12px; margin-bottom: 16px; }
+.douban-transfer-posts label + label { border-top: 1px solid var(--border-color, #ddd); }
+.douban-transfer-posts > p { color: var(--text-secondary, #666); font-size: 13px; line-height: 1.7; }
+.douban-transfer-error { color: #c94747; font-size: 13px; overflow-wrap: anywhere; }
+.douban-transfer-dialog .modal-footer { flex-shrink: 0; gap: 10px; padding: 12px 16px; }
+.douban-transfer-dialog .modal-footer button { min-height: 44px; min-width: 0; white-space: normal; }
+.douban-transfer-dialog .modal-footer .cancel { background: var(--primary-bg, #fff); color: var(--text-primary, #222); }
+.douban-transfer-dialog [hidden] { display: none !important; }
+.douban-transfer-shortcuts { display: flex; gap: 10px; margin-top: 12px; }
+.douban-transfer-shortcuts button { flex: 1; min-height: 42px; border: 1px solid var(--border-color, #ddd); border-radius: 10px; background: var(--primary-bg, #f6f7f8); color: var(--text-primary, #222); font: inherit; cursor: pointer; }
+button.douban-dropdown-item { border: 0; background: transparent; font-family: inherit; text-align: left; width: 100%; }

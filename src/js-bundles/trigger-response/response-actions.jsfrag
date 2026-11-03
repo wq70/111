@@ -212,14 +212,9 @@
             if (postToComment) {
               if (!postToComment.comments) postToComment.comments = [];
 
-              // 防御：如果模型错误地填了用户的名字，强制纠正为角色本名
-              const userNickname = state.qzoneSettings?.nickname;
-              let commenterName = msgData.name || chat.originalName;
-              if (userNickname && commenterName === userNickname) {
-                console.warn(`[动态防御] 角色 "${chat.originalName}" 试图用用户名字 "${userNickname}" 评论，已纠正`);
-                commenterName = chat.originalName;
-              }
+              const commenterName = msgData.name;
               const createCommentObject = (text, meaning = null, replyTo = null) => ({
+                ...window.CharacterIdentity.commentFields(msgData),
                 commenterName,
                 text: processMentions(text, chat),
                 meaning,
@@ -260,10 +255,10 @@
             const postToLike = await db.qzonePosts.get(parseInt(msgData.postId));
             if (postToLike) {
               if (!postToLike.likes) postToLike.likes = [];
-              if (!postToLike.likes.includes(chat.name)) {
-                postToLike.likes.push(chat.name);
+              if (window.CharacterIdentity.addLike(postToLike, msgData.actorId, msgData.name)) {
                 await db.qzonePosts.update(postToLike.id, {
-                  likes: postToLike.likes
+                  likes: postToLike.likes,
+                  likeActors: postToLike.likeActors
                 });
                 updateUnreadIndicator(unreadPostsCount + 1);
                 if (isViewingThisChat && document.getElementById('qzone-screen').classList.contains('active')) {
@@ -278,7 +273,8 @@
               const newPost = {
                 type: 'repost',
                 timestamp: Date.now(),
-                authorId: chatId,
+                authorId: msgData.actorId,
+                authorOriginalName: msgData.name,
                 authorGroupId: chat.groupId,
                 repostComment: msgData.comment || '',
                 originalPost: originalPost,
@@ -333,7 +329,7 @@
           case 'pat_user':
             let patterName;
             if (chat.isGroup) {
-              const member = chat.members.find(m => m.originalName === msgData.name);
+              const member = window.CharacterIdentity.member(chat, msgData);
               patterName = member ? member.groupNickname : msgData.name;
             } else {
               patterName = chat.name;
@@ -396,7 +392,7 @@
 
                   let changerName;
                   if (chat.isGroup) {
-                    const member = chat.members.find(m => m.originalName === msgData.name);
+                    const member = window.CharacterIdentity.member(chat, msgData);
                     changerName = member ? member.groupNickname : msgData.name;
                   } else {
                     changerName = chat.name;
@@ -445,6 +441,10 @@
               await db.memories.add(newCountdown);
               console.log(`AI "${chat.name}" 创建了一个新约定:`, msgData.title);
             }
+            continue;
+          case 'share_sms_number':
+          case 'send_sms':
+            if (!isPreview && window.SmsEngine) await window.SmsEngine.qqAction(chat, msgData);
             continue;
           case 'block_user':
             if (!chat.isGroup) {
@@ -616,11 +616,10 @@
                 packetToOpen.claimedBy[msgData.name] = claimedAmountAI;
 
 
-                const claimerMember = chat.members.find(m => m.originalName === msgData.name);
-                const claimerDisplayName = claimerMember ? claimerMember.groupNickname : msgData.name;
-
-
-                const senderDisplayName = getDisplayNameInGroup(chat, packetToOpen.senderName);
+                const claimerDisplayName = msgData.name;
+                const senderDisplayName = packetToOpen.role === 'user'
+                  ? window.RemarkNames.participantNames(chat).user
+                  : packetToOpen.senderName;
 
                 const aiClaimedMessage = {
                   role: 'system',
@@ -630,7 +629,7 @@
                 };
                 chat.history.push(aiClaimedMessage);
 
-                let hiddenContentForAI = `[系统提示：你 (${claimerDisplayName}) 成功抢到了 ${claimedAmountAI.toFixed(2)} 元。`;
+                let hiddenContentForAI = `[系统提示：${claimerDisplayName}领取了${senderDisplayName}的红包，金额 ${claimedAmountAI.toFixed(2)} 元。`;
                 if ((packetToOpen.unclaimedAmounts && packetToOpen.unclaimedAmounts.length === 0) || (Object.keys(packetToOpen.claimedBy).length >= packetToOpen.count)) {
                   packetToOpen.isFullyClaimed = true;
                   const finishedMessage = {
@@ -655,8 +654,9 @@
                     });
                   }
                   if (luckyKing.name) {
-                    const luckyKingMember = chat.members.find(m => m.originalName === luckyKing.name);
-                    const luckyKingDisplayName = luckyKingMember ? luckyKingMember.groupNickname : luckyKing.name;
+                    const luckyKingDisplayName = luckyKing.name === (state.qzoneSettings.nickname || '{{user}}')
+                      ? window.RemarkNames.participantNames(chat).user
+                      : luckyKing.name;
                     hiddenContentForAI += ` 红包已被领完，手气王是 ${luckyKingDisplayName}！`;
                   } else {
                     hiddenContentForAI += ` 红包已被领完。`;
@@ -761,7 +761,7 @@
 
               chat.name = newName;
 
-              const changerMember = chat.members.find(m => m.originalName === msgData.name);
+              const changerMember = window.CharacterIdentity.member(chat, msgData);
               const changerDisplayName = changerMember ? changerMember.groupNickname : msgData.name;
 
               const systemMessage = {

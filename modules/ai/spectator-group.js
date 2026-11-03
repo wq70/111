@@ -100,7 +100,10 @@ ${linkedContents}
       // 构建用于向量检索的查询词（如果有）
       const queryTextForVector = filteredHistory.slice(-5).map(m => typeof m.content === 'string' ? m.content : '').join(' ');
 
-      for (const member of chat.members) {
+      if (window.GroupMemory?.independent(chat)) {
+          longTermMemoryContext = await window.GroupMemory.context(chat, queryTextForVector);
+        } else {
+        for (const member of chat.members) {
         if (!allowMemberMemory(member)) continue;
         const memberChat = state.chats[member.id];
         if (memberChat) {
@@ -128,13 +131,16 @@ ${linkedContents}
       }
 
 
-      let linkedMemoryContext = '';
+      
+        }
+
+        let linkedMemoryContext = '';
       const memoryCount = chat.settings.linkedMemoryCount || 10;
       if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
 
       }
 
-      const membersList = chat.members.map(m => `- **${m.groupNickname}** (本名: ${m.originalName}): ${m.persona}`).join('\n');
+      const membersList = chat.members.map(m => `- **${m.groupNickname}** (本名: ${m.originalName}, actorId: ${JSON.stringify(String(m.id))}): ${m.persona}`).join('\n');
       const stickerContext = getGroupStickerContextForPrompt(chat);
       let aiAgeContext = getDynamicAgeContext(chat);
       let currencyExchangeContext = chat.settings.enableDynamicCurrency ? getCurrencyExchangeContext() : '';
@@ -156,7 +162,7 @@ ${linkedContents}
         'longTermMemoryContext': longTermMemoryContext,
         'worldBookContent': worldBookContent,
         'linkedMemoryContext': linkedMemoryContext,
-        'historySliceStr': historySlice.map(msg => `${getDisplayNameInGroup(chat, msg.senderName)}: ${msg.content}`).join('\n'),
+        'historySliceStr': historySlice.map(msg => `${getDisplayNameInGroup(chat, msg.senderName, msg.senderId)}: ${msg.content}`).join('\n'),
         'membersList': membersList,
         'stickerContext': stickerContext
       };
@@ -172,9 +178,10 @@ ${linkedContents}
         systemPrompt += `\n# 【【【线下聚会模式 (最高优先级)】】】\n- **当前情景**: 你们现在正处于【线下现实聚会】状态，不在网络群聊中！大家正面对面聚在一起。\n- **现场人员**: 现场有【${participantNames}】（注意：本次聚会用户不在场）。\n- **行为规范**: \n  - 你们可以产生互相的肢体接触、观察对方的神态、注意周围的环境。\n  - 请在发言的文本内容中，像小说一样自然地加入动作、神态、环境描写（建议将动作描写用括号或星号包裹，比如：*喝了一口咖啡*）。\n  - 绝不能表现出"正在用手机打字群聊"的状态！\n  - **【重要字数要求】**: 每个角色的单次回复文本长度必须在 ${minLength} 到 ${maxLength} 字之间。\n  - **绝对注意**: 这个字数限制是针对【每一个发言的角色】单独计算的，绝不是所有人的字数总和！请确保每个人的描写都足够充实。\n`;
       }
 
+      systemPrompt += window.CharacterIdentity.buildContext(chat);
       let messagesPayload = filteredHistory.map(msg => ({
         role: 'user',
-        content: `${getDisplayNameInGroup(chat, msg.senderName)}: ${msg.content}`
+        content: `${getDisplayNameInGroup(chat, msg.senderName, msg.senderId)}: ${msg.content}`
       }));
 
       if (typeof ThoughtChainManager !== 'undefined' && ThoughtChainManager.enabled) {
@@ -238,18 +245,8 @@ ${linkedContents}
       let messageTimestamp = Date.now();
       for (const msgData of messagesArray) {
 
-        if (!msgData || !msgData.type || !msgData.name) continue;
-
-        // 纠正AI可能返回群昵称而非本名的问题
-        if (chat.isGroup && msgData.name) {
-          const exactMember = chat.members.find(m => m.originalName === msgData.name);
-          if (!exactMember) {
-            const nicknameMember = chat.members.find(m => m.groupNickname === msgData.name);
-            if (nicknameMember) {
-              msgData.name = nicknameMember.originalName;
-            }
-          }
-        }
+        if (!msgData || !msgData.type) continue;
+        if (!await window.CharacterIdentity.prepare(chat, msgData, true)) continue;
 
         let aiMessage = null;
         const currentMessageTimestamp = messageTimestamp++;
@@ -257,6 +254,7 @@ ${linkedContents}
         const baseMessage = {
           role: 'assistant',
           senderName: msgData.name,
+          senderId: msgData.actorId || null,
           timestamp: currentMessageTimestamp
         };
 

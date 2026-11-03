@@ -79,22 +79,26 @@
 // ============================================================
 
   // 根据本名查找显示名称（非群聊场景）
-  function getDisplayNameByOriginalName(nameIdentifier) {
+  function getDisplayNameByOriginalName(nameIdentifier, characterId) {
+    if (window.CharacterIdentity) return window.CharacterIdentity.display(nameIdentifier, characterId);
     if (!nameIdentifier) return '';
 
     if (state.qzoneSettings && nameIdentifier === state.qzoneSettings.nickname) {
       return state.qzoneSettings.nickname;
     }
 
-    let characterChat = Object.values(state.chats).find(chat => !chat.isGroup && chat.originalName === nameIdentifier);
+    const matches = Object.values(state.chats).filter(chat => !chat.isGroup && chat.originalName === nameIdentifier);
+    let characterChat = matches.length === 1 ? matches[0] : null;
+    if (matches.length > 1) return nameIdentifier;
     if (characterChat) {
       return characterChat.name;
     }
 
-    characterChat = Object.values(state.chats).find(chat =>
+    const historicalMatches = Object.values(state.chats).filter(chat =>
       !chat.isGroup &&
       (chat.nameHistory && chat.nameHistory.includes(nameIdentifier))
     );
+    characterChat = historicalMatches.length === 1 ? historicalMatches[0] : null;
     if (characterChat) {
       return characterChat.name;
     }

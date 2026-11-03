@@ -282,7 +282,7 @@ ${linkedContents}
         if (filteredHistory.length > 0) {
           filteredHistory.forEach(msg => {
 
-            const sender = msg.role === 'user' ? (linkedChat.settings.myNickname || '我') : (getDisplayNameInGroup(linkedChat, msg.senderName) || linkedChat.name);
+            const sender = msg.role === 'user' ? (linkedChat.settings.myNickname || '我') : (getDisplayNameInGroup(linkedChat, msg.senderName, msg.senderId) || linkedChat.name);
 
             let prefix = "";
 
@@ -385,18 +385,11 @@ ${linkedContents}
         if (post.comments && post.comments.length > 0) {
           for (const comment of post.comments) {
             if (typeof comment === 'object' && comment.commenterName) {
-              const commenterDisplayName = getDisplayNameByOriginalName(comment.commenterName);
+              const commenterDisplayName = window.CharacterIdentity.commentContext(comment, chat.id);
               let commentText = comment.meaning ? `[表情: '${comment.meaning}']` : comment.text;
 
 
-              if (comment.commenterName === chat.originalName) {
-
-
-                postsContext += `  - 你评论说: ${commentText}\n`;
-              } else {
-
-                postsContext += `  - 评论: ${commenterDisplayName} (本名: ${comment.commenterName}): ${commentText}\n`;
-              }
+              postsContext += `  - 评论: ${commenterDisplayName}: ${commentText}\n`;
             }
           }
         }
@@ -479,7 +472,7 @@ ${(() => {
 ` : '';
 
 
-    const systemPrompt = `
+    let systemPrompt = `
         # 你的任务
         你正在扮演角色"${chat.originalName}"（你的本名）。现在你有机会【主动】做点什么，来表现你的个性和独立生活。这是一个秘密的、后台的独立行动。
 
@@ -553,6 +546,7 @@ ${backgroundTimeAwarenessContext || `- **时间**: 当前是${currentTime} (${ti
         ${dynamicContext}
 `;
 
+    systemPrompt += window.CharacterIdentity.buildContext(chat);
     const messagesPayload = [{
       role: 'system',
       content: systemPrompt
@@ -572,6 +566,7 @@ ${backgroundTimeAwarenessContext || `- **时间**: 当前是${currentTime} (${ti
     ];
 
     try {
+      if (window.SmsEngine) systemPrompt += await window.SmsEngine.qqContext(chat, { withActions: false });
       const messagesPayload = [{
         role: 'user',
         content: `${systemPrompt}\n\n[系统指令：请根据你在上面读到的规则和以下最新信息，开始你的独立行动。]\n${dynamicContext}`
@@ -642,6 +637,7 @@ ${backgroundTimeAwarenessContext || `- **时间**: 当前是${currentTime} (${ti
         }
       }
       for (const action of processedActions) {
+        if (!await window.CharacterIdentity.prepare(chat, action)) continue;
         chat.lastActionType = action.type;
         chat.lastActionTimestamp = actionTimestamp;
 
@@ -649,6 +645,7 @@ ${backgroundTimeAwarenessContext || `- **时间**: 当前是${currentTime} (${ti
         const baseMessage = {
           role: 'assistant',
           senderName: chat.originalName,
+          senderId: chat.id,
           timestamp: actionTimestamp++
         };
 
@@ -767,10 +764,10 @@ ${backgroundTimeAwarenessContext || `- **时间**: 当前是${currentTime} (${ti
             const postToLike = await db.qzonePosts.get(parseInt(action.postId));
             if (postToLike) {
               if (!postToLike.likes) postToLike.likes = [];
-              if (!postToLike.likes.includes(chat.originalName)) {
-                postToLike.likes.push(chat.originalName);
+              if (window.CharacterIdentity.addLike(postToLike, chat.id, chat.originalName)) {
                 await db.qzonePosts.update(postToLike.id, {
-                  likes: postToLike.likes
+                  likes: postToLike.likes,
+                  likeActors: postToLike.likeActors
                 });
                 updateUnreadIndicator(unreadPostsCount + 1);
                 console.log(`后台活动: 角色 "${chat.name}" 点赞了动态 #${action.postId}`);
@@ -791,6 +788,7 @@ ${backgroundTimeAwarenessContext || `- **时间**: 当前是${currentTime} (${ti
               }
 
               const createCommentObject = (text, meaning = null, replyTo = null) => ({
+                ...window.CharacterIdentity.commentFields(action),
                 commenterName,
                 text: processMentions(text, chat),
                 meaning,

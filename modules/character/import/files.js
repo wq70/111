@@ -153,6 +153,7 @@
               thoughtsHistory: []
             };
 
+            window.applyDefaultChatSettings?.(newChat);
             state.chats[newChatId] = newChat;
             await db.chats.put(newChat);
             importedCount++;

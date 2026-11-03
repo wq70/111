@@ -12,7 +12,7 @@ function renderVectorMemoryView() {
 }
 
 function bindVectorMemoryEvents(chat, container) {
-  const mutationSelectors = '#vm-add-fragment-btn, #vm-add-core-btn, #vm-import-btn, #vm-batch-delete-btn, #vm-batch-shift-time-btn, #vm-batch-undo-time-btn, .vm-edit-core-btn, .vm-delete-core-btn, .vm-pin-btn, .vm-edit-frag-btn, .vm-delete-frag-btn, #vm-consolidate-btn';
+  const mutationSelectors = '#vm-add-fragment-btn, #vm-add-core-btn, #vm-import-btn, #vm-batch-delete-btn, #vm-batch-shift-time-btn, #vm-batch-undo-time-btn, .vm-edit-core-btn, .vm-delete-core-btn, .vm-pin-btn, .vm-edit-frag-btn, .vm-delete-frag-btn, .vm-category-btn, #vm-consolidate-btn, #vm-consolidate-undo';
   if (container._vmMutationGuard) container.removeEventListener('click', container._vmMutationGuard, true);
   container._vmMutationGuard = event => {
     if (window.vectorMemoryManager._extractionLocks.get(chat) && event.target.closest(mutationSelectors)) {
@@ -24,6 +24,16 @@ function bindVectorMemoryEvents(chat, container) {
   };
   container.addEventListener('click', container._vmMutationGuard, true);
   container.querySelector('#vm-consolidate-btn')?.addEventListener('click', () => openVectorConsolidation(chat));
+  container.querySelector('#vm-consolidate-undo')?.addEventListener('click', async () => {
+    if (!await showCustomConfirm('撤销上次整合', '恢复上次整合涉及的原记忆，保留之后新增或修改的条目。')) return;
+    try {
+      const skipped = await window.vectorMemoryManager.undoConsolidation(chat);
+      renderVectorMemoryView();
+      showToast(skipped ? '已撤销，保留后续修改' : '已撤销上次整合', 'success');
+    } catch (error) {
+      await showCustomAlert('撤销失败', window.vectorMemoryManager._escapeHtml(error.message));
+    }
+  });
   container.querySelectorAll('[data-vm-task-action]').forEach(button => {
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -235,29 +245,29 @@ function bindVectorMemoryEvents(chat, container) {
   const addFragBtn = container.querySelector('#vm-add-fragment-btn');
   if (addFragBtn) {
     addFragBtn.addEventListener('click', async () => {
-      const content = await showCustomPrompt('添加记忆片段', '输入记忆内容：', '', 'textarea');
-      if (!content || !content.trim()) return;
-      const tags = await showCustomPrompt('添加标签', '输入关键词标签（逗号分隔）：', '');
-      const tagArr = tags ? tags.split(/[,，]/).map(t => t.trim()).filter(Boolean) : [];
-      const draft = {
-        ...(window.MemoryWorldTime?.manualData(chat) || {}),
-        content: content.trim(),
-        tags: tagArr,
-        sourceLanguage: window.vectorMemoryManager.detectLanguage(content),
-        conversationLanguages: [window.vectorMemoryManager.detectLanguage(content)].filter(language => language !== 'unknown')
-      };
-      const embeddingText = window.vectorMemoryManager._embeddingTextFor(chat, draft);
-      const embedding = await window.vectorMemoryManager.getEmbedding(embeddingText, chat);
-      window.vectorMemoryManager.createFragment(chat, {
-        ...draft, category: 'E', importance: 5,
-        emotionalWeight: 3, embedding,
-        embeddingSignature: embedding ? window.vectorMemoryManager._embeddingSignature(chat) : '',
-        embeddingTextHash: embedding ? window.vectorMemoryManager._hashEmbeddingText(embeddingText) : '',
-        source: 'manual'
-      });
-      await db.chats.put(chat);
-      renderVectorMemoryView();
-      showToast('记忆片段已添加', 'success');
+      const manager = window.vectorMemoryManager;
+      const draft = await showVectorMemoryAddForm(chat);
+      if (!draft || manager._extractionLocks.get(chat)) return;
+      const signature = manager._embeddingSignature(chat);
+      const embeddingText = manager._embeddingTextFor(chat, draft);
+      const runtime = { type: 'manual-edit' };
+      manager._extractionLocks.set(chat, runtime);
+      const memory = manager.getVariableMemory(chat);
+      let id;
+      try {
+        const vector = await manager.getEmbedding(embeddingText, chat);
+        const embedding = signature === manager._embeddingSignature(chat) ? vector : null;
+        id = manager.createFragment(chat, {
+          ...draft, embedding, embeddingSignature: embedding ? signature : '',
+          embeddingTextHash: embedding ? manager._hashEmbeddingText(embeddingText) : '', source: 'manual'
+        });
+        await db.chats.put(chat);
+        if (state.activeChatId === chat.id) renderVectorMemoryView();
+        showToast('记忆片段已添加', 'success');
+      } catch (error) {
+        if (id) manager.deleteFragment(chat, id);
+        await showCustomAlert('添加失败', manager._escapeHtml(error.message));
+      } finally { manager._extractionLocks.delete(chat); }
     });
   }
 
@@ -397,14 +407,38 @@ function bindVectorMemoryEvents(chat, container) {
         // 重新生成embedding
         const embedding = await window.vectorMemoryManager.getEmbedding(newContent.trim(), chat);
         if (embedding) {
-          frag.embedding = embedding;
-          frag.embeddingSignature = window.vectorMemoryManager._embeddingSignature(chat);
+          window.vectorMemoryManager._storeEmbedding(chat, frag, embedding);
         }
         await db.chats.put(chat);
         renderVectorMemoryView();
       }
     });
   });
+  container.querySelectorAll('.vm-category-btn').forEach(button => button.addEventListener('click', async () => {
+    const manager = window.vectorMemoryManager;
+    const fragment = manager.getFragment(chat, button.dataset.id);
+    if (!fragment) return;
+    const choices = Object.entries(manager.getCategories(chat))
+      .filter(([code]) => code !== 'C')
+      .map(([value, item]) => ({ value, text: manager._escapeHtml(item.name) + (value === fragment.category ? '（当前）' : '') }));
+    const category = await showChoiceModal('修改记忆分类', choices);
+    if (!category || category === fragment.category || manager._extractionLocks.get(chat) ||
+        manager.getFragment(chat, fragment.id) !== fragment) return;
+    const vm = manager.getVariableMemory(chat);
+    const before = { category: fragment.category, updated: vm.stats.lastUpdated, cache: vm._retrievalCache };
+    manager.editFragment(chat, fragment.id, { category });
+    vm._retrievalCache = manager._emptyRetrievalCache();
+    try {
+      await db.chats.put(chat);
+      if (state.activeChatId === chat.id) renderVectorMemoryView();
+      showToast('记忆分类已更新', 'success');
+    } catch (error) {
+      fragment.category = before.category;
+      vm.stats.lastUpdated = before.updated;
+      vm._retrievalCache = before.cache;
+      await showCustomAlert('修改分类失败', manager._escapeHtml(error.message));
+    }
+  }));
   container.querySelectorAll('.vm-delete-frag-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const confirmed = await showCustomConfirm('确认删除', '确定要删除这条记忆片段吗？');
@@ -449,37 +483,242 @@ function showVectorConsolidationProgress(runtime, text, cancellable = true) {
   return close;
 }
 
-function showVectorConsolidationPreview(chat, snapshot, rows) {
+function showVectorMemoryAddForm(chat) {
+  const manager = window.vectorMemoryManager;
+  const time = window.MemoryWorldTime;
+  const settings = time?.config(chat);
+  const timelines = settings?.timelines || [];
+  const escape = value => manager._escapeHtml(String(value));
+  const options = Object.entries(manager.getCategories(chat)).filter(([code]) => code !== 'C');
+  return new Promise(resolve => {
+    const close = setupVectorConsolidationModal('添加记忆', `
+      <div class="vm-memory-form">
+        <label>记忆内容<textarea id="vm-add-content" rows="4"></textarea></label>
+        <label>分类<select id="vm-add-category">${options.map(([code, category], index) =>
+          `<option value="${index}" ${code === 'E' ? 'selected' : ''}>${escape(category.name)}</option>`).join('')}</select></label>
+        <label>标签（选填）<input id="vm-add-tags" placeholder="用逗号分隔"></label>
+        ${time ? `<details><summary>日期和时间线</summary>
+          <label>时间线<select id="vm-add-timeline"><option value="">当前时间线 · ${escape(settings.timelineName)}</option>
+            ${timelines.filter(item => item.id !== settings.timelineId).map(item =>
+              `<option value="${timelines.indexOf(item)}">${escape(item.name)}</option>`).join('')}</select></label>
+          <label>日期来源<select id="vm-add-date-mode"><option value="now">当前时间</option>
+            <option value="unknown">时间不明</option><option value="manual">指定时间</option></select></label>
+          <div id="vm-add-date-fields" hidden>
+            <label>发生时间<input id="vm-add-start" type="datetime-local"></label>
+            <label>结束时间（选填）<input id="vm-add-end" type="datetime-local"></label>
+          </div>
+        </details>` : ''}
+        <p id="vm-add-error" class="vm-memory-error" role="alert"></p>
+      </div>`, '<button id="custom-modal-cancel">取消</button><button id="custom-modal-confirm" class="confirm-btn">添加</button>');
+    const field = id => document.getElementById(id);
+    const finish = value => { close(); resolve(value); };
+    window._modalResolve = () => finish(null);
+    field('custom-modal-cancel').onclick = window._modalResolve;
+    if (time) field('vm-add-date-mode').onchange = event => { field('vm-add-date-fields').hidden = event.target.value !== 'manual'; };
+    field('custom-modal-confirm').onclick = () => {
+      try {
+        const content = field('vm-add-content').value.trim();
+        if (!content) throw new Error('请输入记忆内容');
+        const date = time?.manualData(chat) || {};
+        if (time) {
+          const timelineIndex = field('vm-add-timeline').value;
+          const timeline = timelineIndex ? timelines[Number(timelineIndex)] : null;
+          if (timeline) Object.assign(date, { timelineId: timeline.id, timelineName: timeline.name });
+          const mode = field('vm-add-date-mode').value;
+          if (mode === 'unknown') Object.assign(date, { memoryTime: null, timePrecision: 'unknown' });
+          if (mode === 'manual') {
+            const start = field('vm-add-start').value, end = field('vm-add-end').value;
+            if (!start) throw new Error('请填写发生时间');
+            date.memoryTime = time.parseInput(start, date.memoryTimeZone);
+            date.memoryTimeEnd = end ? time.parseInput(end, date.memoryTimeZone) : null;
+            if (end && date.memoryTimeEnd < date.memoryTime) throw new Error('结束时间不能早于发生时间');
+          }
+        }
+        const language = manager.detectLanguage(content);
+        finish({ ...date, content, category: options[Number(field('vm-add-category').value)][0],
+          tags: field('vm-add-tags').value.split(/[,，]/).map(tag => tag.trim()).filter(Boolean),
+          sourceLanguage: language, conversationLanguages: language === 'unknown' ? [] : [language] });
+      } catch (error) { field('vm-add-error').textContent = error.message; }
+    };
+  });
+}
+
+function showVectorConsolidationPair(snapshot, legacy, current) {
+  const manager = window.vectorMemoryManager;
+  const escape = value => manager._escapeHtml(String(value));
+  const describe = fragment => escape(window.MemoryExtractionSupport.formatTime(fragment));
+  const sources = new Map(snapshot.originals.map(fragment => [fragment.id, fragment]));
+  const showSources = row => row.sourceIds.map(id => sources.get(id)).map(source =>
+    `<p>${describe(source)}<br>${escape(source.content)}</p>`).join('');
+  const sourceIds = [...current.sourceIds, ...legacy.sourceIds];
+  const sameDates = sourceIds.every(id => describe(sources.get(id)) === describe(current.fragment));
+  const sourceOptions = sourceIds.map((id, index) => {
+    const source = sources.get(id);
+    const name = source.clockVersion ? source.timelineName || source.timelineId : '旧版';
+    return `<option value="${index}" ${sameDates && id === current.fragment.id ? 'selected' : ''}>${escape(name)} · ${describe(source)}${current.sourceIds.length > 1 || legacy.sourceIds.length > 1
+      ? ` · ${escape(source.content.slice(0, 42))}` : ''}</option>`;
+  }).join('');
+  const timeline = escape(current.fragment.timelineName || current.fragment.timelineId);
+  const draft = [...new Set([current.fragment.content.trim(), legacy.fragment.content.trim()])].join('\n');
+  return new Promise(resolve => {
+    const close = setupVectorConsolidationModal('确认是同一条记忆', `
+      <div class="vm-memory-form">
+        <div class="vm-memory-compare">
+          <div><strong>旧版记忆</strong>${showSources(legacy)}</div>
+          <div><strong>${timeline}</strong>${showSources(current)}</div>
+        </div>
+        <p>合并后归入「${timeline}」。如果是两次不同的经历，请分别保留。</p>
+        <label>合并后采用的时间<select id="vm-pair-date">
+          <option value="">请选择</option>${sourceOptions}<option value="unknown">时间不明</option>
+        </select></label>
+        <label>合并后的正文<textarea id="vm-pair-content" rows="4">${escape(draft)}</textarea></label>
+        <p id="vm-pair-error" class="vm-memory-error" role="alert"></p>
+      </div>`, '<button id="custom-modal-cancel">分别保留</button><button id="custom-modal-confirm" class="confirm-btn">加入合并预览</button>');
+    const finish = value => { close(); resolve(value); };
+    window._modalResolve = () => finish(null);
+    document.getElementById('custom-modal-cancel').onclick = window._modalResolve;
+    document.getElementById('custom-modal-confirm').onclick = () => {
+      try {
+        const choice = document.getElementById('vm-pair-date').value;
+        if (!choice) throw new Error('请选择合并后采用的时间');
+        const dateId = choice === 'unknown' ? null : sourceIds[Number(choice)];
+        finish(manager.confirmConsolidationPair(snapshot, legacy, current, dateId, document.getElementById('vm-pair-content').value));
+      } catch (error) { document.getElementById('vm-pair-error').textContent = error.message; }
+    };
+  });
+}
+
+function showVectorConsolidationPreview(snapshot, rows, timelineGroups, pairs) {
   const manager = window.vectorMemoryManager;
   const escape = value => manager._escapeHtml(String(value || ''));
+  const originals = new Map(snapshot.originals.map(fragment => [fragment.id, fragment]));
+  const legacy = rows.filter(row => !row.preserve && !row.fragment.clockVersion);
+  const current = rows.filter(row => !row.preserve && !row.approval && row.fragment.clockVersion && row.fragment.timelineId);
+  const normalized = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, '');
+  const phrases = text => new Set(Array.from({ length: Math.max(0, Math.min(text.length, 240) - 2) }, (_, i) => text.slice(i, i + 3)));
+  const byText = new Map();
+  const byEvidence = new Map();
+  const byPhrase = new Map();
+  const sizes = [];
+  for (const [index, row] of current.entries()) {
+    const combined = new Set();
+    for (const id of row.sourceIds) {
+      const fragment = originals.get(id);
+      const text = normalized(fragment.content);
+      if (text.length >= 4 && !byText.has(text)) byText.set(text, index);
+      for (const key of fragment.sourceMessageKeys || []) if (!byEvidence.has(key)) byEvidence.set(key, index);
+      for (const phrase of phrases(text)) combined.add(phrase);
+    }
+    sizes[index] = combined.size;
+    for (const phrase of combined) {
+      if (!byPhrase.has(phrase)) byPhrase.set(phrase, []);
+      const posting = byPhrase.get(phrase);
+      if (posting.length < 24) posting.push(index);
+    }
+  }
+  const suggestions = [];
+  for (const [index, row] of legacy.entries()) {
+    const matches = row.sourceIds.flatMap(id => {
+      const fragment = originals.get(id);
+      return [byText.get(normalized(fragment.content)), ...(fragment.sourceMessageKeys || []).map(key => byEvidence.get(key))];
+    });
+    let match = matches.find(value => value !== undefined);
+    if (match === undefined) {
+      const combined = new Set(row.sourceIds.flatMap(id => [...phrases(normalized(originals.get(id).content))]));
+      const overlaps = new Map();
+      for (const phrase of combined) {
+        const posting = byPhrase.get(phrase);
+        if (posting && posting.length < 24) {
+          for (const candidate of posting) overlaps.set(candidate, (overlaps.get(candidate) || 0) + 1);
+        }
+      }
+      let bestScore = 0.45;
+      for (const [candidate, overlap] of overlaps) {
+        const score = 2 * overlap / (combined.size + sizes[candidate]);
+        if (overlap >= 3 && score >= bestScore) { bestScore = score; match = candidate; }
+      }
+    }
+    if (match !== undefined) suggestions.push([index, match]);
+    if (suggestions.length === 5) break;
+  }
+  const date = fragment => escape(window.MemoryExtractionSupport.formatTime(fragment));
+  const timeline = fragment => escape(fragment.clockVersion ? fragment.timelineName || fragment.timelineId || '未命名时间线' : '旧版记忆');
+  const options = items => items.map(({ fragment }, index) =>
+    `<option value="${index}">${timeline(fragment)} · ${date(fragment)} · ${escape(fragment.content.slice(0, 110))}</option>`).join('');
+  const failures = timelineGroups.map((group, index) => group.error ? `<div class="vm-memory-status">
+      <strong>${escape(group.name)} · 整理失败</strong><p class="vm-memory-error">${escape(group.error)}</p>
+      <div class="vm-memory-actions"><button id="vm-group-retry-${index}">只重试这一组</button>
+      <button id="vm-group-keep-${index}">原样保留这一组</button></div>
+    </div>` : group.kept ? `<div class="vm-memory-status">${escape(group.name)} · 原样保留</div>` : '').join('');
   const groups = manager.getConsolidationCategories(snapshot.scope).map(code => {
     const items = rows.filter(row => row.fragment.category === code);
     if (!items.length) return '';
-    return `<div class="vm-consolidation-group"><div class="vm-consolidation-category">${escape(manager.DEFAULT_CATEGORIES[code].name)} (${items.length})</div>${items.map(row =>
-      `<div class="vm-consolidation-item">${escape(row.fragment.content)}${row.sourceIds.length > 1 ? `<div class="vm-consolidation-note">合并了 ${row.sourceIds.length} 条原记忆</div>` : ''}</div>`).join('')}</div>`;
+    return `<div class="vm-consolidation-group"><div class="vm-consolidation-category">${escape(manager.DEFAULT_CATEGORIES[code].name)} (${items.length})</div>${items.map(row => {
+      const sources = row.sourceIds.map(id => originals.get(id));
+      const changedCategory = [...new Set(sources.filter(source => source.category !== code)
+        .map(source => manager.DEFAULT_CATEGORIES[source.category].name))];
+      const changed = !row.keep && !row.preserve;
+      const pairIndex = pairs.findIndex(pair => pair.result === row);
+      return `<div class="vm-consolidation-item">${escape(row.fragment.content)}
+        <div class="vm-consolidation-note">${timeline(row.fragment)} · ${date(row.fragment)} ·
+        ${row.sourceIds.length > 1 ? `合并 ${row.sourceIds.length} 条` : changed ? '已整理' : '原样保留'}
+        ${changedCategory.length ? ` · 原分类 ${escape(changedCategory.join('、'))}` : ''}</div>
+        ${changed ? `<details><summary>查看原记忆</summary>${sources.map(source =>
+          `<p>${timeline(source)} · ${date(source)}<br>${escape(source.content)}</p>`).join('')}</details>` : ''}
+        ${pairIndex >= 0 ? `<button id="vm-pair-remove-${pairIndex}">取消这组跨版本合并</button>` : ''}</div>`;
+    }).join('')}</div>`;
   }).join('');
   return new Promise(resolve => {
-    const close = setupVectorConsolidationModal('整合完成，请确认',
+    const hasFailures = timelineGroups.some(group => group.error);
+    const close = setupVectorConsolidationModal(hasFailures ? '部分记忆需要处理' : '整合完成，请确认',
       `<p>${snapshot.scope === 'all' ? '全部七类' : escape(manager.DEFAULT_CATEGORIES[snapshot.scope].name)}：${snapshot.originals.length} 条 → ${rows.length} 条</p>
-      <div class="vm-consolidation-preview">${groups}</div>
-      <p class="vm-consolidation-note">确认后替换所选范围。需要调整时，填写反馈让AI重写。</p>
-      <textarea id="vm-consolidation-feedback" aria-label="整合反馈" placeholder="例如：保留那次争吵的原因，不要省略约定日期"></textarea>`,
-      '<button id="custom-modal-cancel">取消</button><button id="vm-consolidation-rewrite">让AI重写</button><button id="custom-modal-confirm" class="confirm-btn btn-danger">确认替换</button>');
+      <div class="vm-consolidation-preview">
+        ${failures}
+        ${legacy.length && current.length ? `<div class="vm-memory-status">
+          <strong>新旧记忆默认分别保留</strong>
+          ${suggestions.length ? `<p>发现内容相近或来源相同的条目，可以核对后合并。</p>
+            ${suggestions.map(([left, right], index) => `<button id="vm-pair-suggestion-${index}">核对 · ${escape(legacy[left].fragment.content.slice(0, 55))}</button>`).join('')}` : ''}
+          <details><summary>手动核对新旧重复记忆</summary><div class="vm-memory-form">
+            <label>旧版记忆<select id="vm-pair-legacy">${options(legacy)}</select></label>
+            <label>新版记忆<select id="vm-pair-current">${options(current)}</select></label>
+            <button id="vm-pair-compare">对照这两条</button>
+          </div></details>
+        </div>` : ''}
+        ${groups}
+      </div>
+      <p class="vm-consolidation-note">${hasFailures ? '请先重试失败的组，或选择原样保留。' : '确认后保存，可撤销本次整合。'}</p>
+      ${!pairs.length && !hasFailures ? '<textarea id="vm-consolidation-feedback" aria-label="整合反馈" placeholder="选填，例如保留约定的日期"></textarea>' : ''}`,
+      `<button id="custom-modal-cancel">取消</button>${!pairs.length && !hasFailures ? '<button id="vm-consolidation-rewrite">让AI重写</button>' : ''}
+      <button id="custom-modal-confirm" class="confirm-btn" ${hasFailures ? 'disabled' : ''}>确认保存</button>`);
     const finish = action => { close(); resolve(action); };
     window._modalResolve = () => finish({ action: 'cancel' });
     document.getElementById('custom-modal-cancel').onclick = () => finish({ action: 'cancel' });
-    document.getElementById('custom-modal-confirm').onclick = () => finish({ action: 'confirm' });
-    document.getElementById('vm-consolidation-rewrite').onclick = () => {
+    document.getElementById('custom-modal-confirm').onclick = () => { if (!hasFailures) finish({ action: 'confirm' }); };
+    if (!pairs.length && !hasFailures) document.getElementById('vm-consolidation-rewrite').onclick = () => {
       const feedback = document.getElementById('vm-consolidation-feedback').value.trim();
       if (!feedback) { showToast('请先填写需要调整的内容', 'info'); return; }
       finish({ action: 'rewrite', feedback });
     };
+    timelineGroups.forEach((group, index) => {
+      if (!group.error) return;
+      document.getElementById(`vm-group-retry-${index}`).onclick = () => finish({ action: 'retry', group });
+      document.getElementById(`vm-group-keep-${index}`).onclick = () => finish({ action: 'keep', group });
+    });
+    const compare = (left, right) => finish({ action: 'compare', legacy: legacy[left], current: current[right] });
+    suggestions.forEach(([left, right], index) => {
+      document.getElementById(`vm-pair-suggestion-${index}`).onclick = () => compare(left, right);
+    });
+    if (legacy.length && current.length) document.getElementById('vm-pair-compare').onclick = () =>
+      compare(document.getElementById('vm-pair-legacy').value, document.getElementById('vm-pair-current').value);
+    pairs.forEach((_, index) => {
+      document.getElementById(`vm-pair-remove-${index}`).onclick = () => finish({ action: 'removePair', index });
+    });
   });
 }
 
 async function openVectorConsolidation(chat) {
   const manager = window.vectorMemoryManager;
-  if (manager._extractionLocks.get(chat)) { showToast('请先结束当前记忆任务', 'info'); return; }
+  if (manager._extractionLocks.get(chat) || manager._embeddingRebuilds.has(chat)) { showToast('请先结束当前记忆任务', 'info'); return; }
   if (chat.variableMemory?._metadataEnrichmentCancelled === false) { showToast('请先结束多语言信息补全', 'info'); return; }
   const runtime = { type: 'consolidation', controller: new AbortController() };
   manager._extractionLocks.set(chat, runtime);
@@ -493,16 +732,43 @@ async function openVectorConsolidation(chat) {
     ]);
     if (!scope) return;
     const snapshot = manager.captureConsolidation(chat, scope);
+    const groups = manager.groupConsolidation(snapshot);
+    const pairs = [];
     let feedback = '';
+    const generate = async selected => {
+      for (const [index, group] of selected.entries()) {
+        const name = manager._escapeHtml(group.name);
+        closeProgress = showVectorConsolidationProgress(runtime, `正在整理 ${name}（${index + 1}/${selected.length}）…`);
+        try {
+          group.rows = await manager.generateConsolidation(chat, group, feedback, runtime.controller.signal);
+          group.error = '';
+        } catch (error) {
+          if (runtime.controller.signal.aborted) throw error;
+          group.error = error.message || '整理请求失败';
+          group.rows = manager.preserveConsolidationGroup(group);
+        } finally { closeProgress(); closeProgress = null; }
+      }
+    };
+    await generate(groups);
     let rows;
     while (true) {
-      closeProgress = showVectorConsolidationProgress(runtime, '正在整理已有记忆…');
-      rows = await manager.generateConsolidation(chat, snapshot, feedback, runtime.controller.signal);
-      closeProgress(); closeProgress = null;
-      const result = await showVectorConsolidationPreview(chat, snapshot, rows);
+      const paired = new Set(pairs.flatMap(pair => [pair.legacy, pair.current]));
+      rows = [...groups.flatMap(group => group.rows.filter(row => !paired.has(row))), ...pairs.map(pair => pair.result)];
+      const result = await showVectorConsolidationPreview(snapshot, rows, groups, pairs);
       if (!result || result.action === 'cancel') { showToast('已取消，旧记忆未修改', 'info'); return; }
       if (result.action === 'confirm') break;
-      feedback = [feedback, result.feedback].filter(Boolean).join('\n');
+      if (result.action === 'compare') {
+        const { legacy, current } = result;
+        const combined = await showVectorConsolidationPair(snapshot, legacy, current);
+        if (combined) pairs.push({ legacy, current, result: combined });
+      }
+      if (result.action === 'removePair') pairs.splice(result.index, 1);
+      if (result.action === 'keep') { result.group.error = ''; result.group.kept = true; }
+      if (result.action === 'retry') await generate([result.group]);
+      if (result.action === 'rewrite') {
+        feedback = [feedback, result.feedback].filter(Boolean).join('\n');
+        await generate(groups.filter(group => !group.kept));
+      }
     }
     closeProgress = showVectorConsolidationProgress(runtime, '正在更新向量…');
     const result = await manager.saveConsolidation(chat, snapshot, rows, runtime.controller.signal, () => {
@@ -516,7 +782,9 @@ async function openVectorConsolidation(chat) {
     if (state.activeChatId === chat.id) renderVectorMemoryView();
     showToast(`整合完成：${result.before} 条 → ${result.after} 条${result.local ? `；${result.local} 条暂用本地检索，可在设置中补全向量` : ''}`, 'success');
   } catch (error) {
-    showToast(runtime.controller.signal.aborted ? '已取消，旧记忆未修改' : `整合未保存：${error.message.replace(/提取/g, '整合')}`, runtime.controller.signal.aborted ? 'info' : 'error');
+    closeProgress?.(); closeProgress = null;
+    if (runtime.controller.signal.aborted) showToast('已取消，旧记忆未修改', 'info');
+    else await showCustomAlert('整合未保存', manager._escapeHtml(error.message.replace(/提取/g, '整合')));
   } finally {
     closeProgress?.();
     if (manager._extractionLocks.get(chat) === runtime) manager._extractionLocks.delete(chat);
@@ -554,10 +822,9 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
   document.body.appendChild(panel);
   window.MemoryWorldTimeUI?.bind(panel.querySelector('.memory-time-settings'), chat);
   let metadataEnrichmentRunning = false;
-  const savePanelSettings = () => {
+  const savePanelSettings = async () => {
     try {
-      window.vectorMemoryManager.saveSettingsFromUI(chat);
-      return true;
+      return await window.vectorMemoryManager.saveSettingsWithEmbeddingChoice(chat);
     } catch (error) {
       showToast(error.message, 'error');
       panel.querySelector('#vm-auto-interval')?.focus();
@@ -754,18 +1021,23 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
   const reembedBtn = panel.querySelector('#vm-reembed-btn');
   if (reembedBtn) {
     reembedBtn.addEventListener('click', async () => {
+      if (window.vectorMemoryManager._embeddingRebuilds.has(chat)) {
+        window.vectorMemoryManager.cancelEmbeddingRebuild(chat);
+        reembedBtn.disabled = true;
+        reembedBtn.textContent = '正在停止…';
+        return;
+      }
       const confirmed = await showCustomConfirm('补全/重建向量', '将为缺失或与当前模型不一致的记忆重新请求向量，会消耗 Embedding API 额度。确定继续吗？');
       if (!confirmed) return;
-      if (!savePanelSettings()) return;
-      reembedBtn.disabled = true;
-      reembedBtn.textContent = '处理中...';
+      if (!await savePanelSettings()) return;
+      reembedBtn.textContent = '停止重建（保留进度）';
       try {
         const result = await window.vectorMemoryManager.rebuildEmbeddings(chat, (completed, failed) => {
           if (statusEl) statusEl.textContent = `处理中：成功 ${completed}，失败 ${failed}`;
         });
-        await db.chats.put(chat);
-        if (statusEl) statusEl.textContent = `处理完成：成功 ${result.completed}，失败 ${result.failed}`;
-        showToast(`向量处理完成：成功 ${result.completed}，失败 ${result.failed}`, result.failed ? 'info' : 'success');
+        const progressText = `${result.cancelled ? '已停止' : '处理完成'}：新生成 ${result.completed}，失败 ${result.failed}，已有 ${result.skipped}。进度已保存，可继续。`;
+        if (statusEl) statusEl.textContent = progressText;
+        showToast(progressText, result.failed || result.cancelled ? 'info' : 'success');
       } catch (error) {
         if (statusEl) statusEl.textContent = `处理失败：${error.message}`;
         showToast(`向量处理失败：${error.message}`, 'error');
@@ -775,6 +1047,25 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
       }
     });
   }
+
+  panel.querySelector('#vm-new-embedding-model-btn')?.addEventListener('click', async () => {
+    if (!await showCustomConfirm('作为新模型使用', '停止沿用其他模型的向量，旧向量仍然保留。本操作不会自动请求接口；之后可手动补全/重建。')) return;
+    try {
+      if (!await savePanelSettings()) return;
+      await window.vectorMemoryManager.useCurrentInterfaceAsNewModel(chat);
+      if (statusEl) statusEl.textContent = window.vectorMemoryManager.embeddingStatusText(chat);
+      showToast('已作为新模型使用，旧向量已保留', 'success');
+    } catch (error) { showToast(error.message, 'error'); }
+  });
+
+  panel.querySelector('#vm-reuse-embedding-btn')?.addEventListener('click', async () => {
+    try {
+      if (!await savePanelSettings()) return;
+      if (!await window.vectorMemoryManager.chooseSavedEmbeddings(chat)) return;
+      if (statusEl) statusEl.textContent = window.vectorMemoryManager.embeddingStatusText(chat);
+      showToast('向量使用方式已保存', 'success');
+    } catch (error) { showToast(error.message, 'error'); }
+  });
 
   const multilingualStatusEl = panel.querySelector('#vm-multilingual-status');
   const testMultilingualBtn = panel.querySelector('#vm-test-multilingual-btn');
@@ -818,7 +1109,7 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
       }
       const confirmed = await showCustomConfirm('补全多语言信息', `将使用聊天模型整理 ${coverage.missing} 条待补全记忆的双语检索词，并在接口可用时重新生成向量。原记忆正文不会被覆盖，会消耗 API 额度。确定继续吗？`);
       if (!confirmed) return;
-      if (!savePanelSettings()) return;
+      if (!await savePanelSettings()) return;
       metadataEnrichmentRunning = true;
       enrichMetadataBtn.textContent = '停止补全';
       try {
@@ -854,18 +1145,10 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
     diagnosticBtn.textContent = '测试中...';
     if (diagnosticResults) diagnosticResults.textContent = '正在计算召回分数…';
     const vmState = window.vectorMemoryManager.getVariableMemory(chat);
-    const savedSettings = {
-      ...vmState.settings,
-      scoreWeights: { ...(vmState.settings.scoreWeights || {}) }
-    };
-    const savedCache = vmState._retrievalCache;
-    const savedEmbeddingSignatures = vmState.fragments.map(fragment => ({
-      fragment,
-      embeddingSignature: fragment.embeddingSignature
-    }));
+    const diagnosticChat = { ...chat, variableMemory: JSON.parse(JSON.stringify(vmState)) };
     try {
-      if (!savePanelSettings()) return;
-      const rows = await window.vectorMemoryManager.diagnoseRetrieval(chat, query, 10);
+      window.vectorMemoryManager.saveSettingsFromUI(diagnosticChat);
+      const rows = await window.vectorMemoryManager.diagnoseRetrieval(diagnosticChat, query, 10);
       diagnosticResults.innerHTML = '';
       if (!rows.length) {
         diagnosticResults.textContent = '没有可供测试的普通记忆。';
@@ -892,9 +1175,6 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
     } catch (error) {
       if (diagnosticResults) diagnosticResults.textContent = `测试失败：${error.message}`;
     } finally {
-      vmState.settings = savedSettings;
-      vmState._retrievalCache = savedCache;
-      savedEmbeddingSignatures.forEach(item => { item.fragment.embeddingSignature = item.embeddingSignature; });
       diagnosticBtn.disabled = false;
       diagnosticBtn.textContent = '测试';
     }
@@ -908,8 +1188,7 @@ async function openVectorMemorySettings(chat, defaultTab = 'settings') {
   const saveBtn = panel.querySelector('#vm-save-settings-btn');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
-      if (!savePanelSettings()) return;
-      await db.chats.put(chat);
+      if (!await savePanelSettings()) return;
       panel.remove();
       renderVectorMemoryView();
       showToast(`设置已保存：间隔${vm.settings.autoExtractionMsgInterval}条，${vm.settings.extractionBatchEnabled ? `每批${vm.settings.extractionBatchSize}条` : '不分批'}`, 'success');

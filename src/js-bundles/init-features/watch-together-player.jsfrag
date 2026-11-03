@@ -986,7 +986,7 @@ ${linkedContents}
         let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
-          const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== watchTogetherState.chatId);
+          const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== watchTogetherState.chatId));
 
           if (idsToMount.length > 0) {
             linkedMemoryContext += `\n# 参考记忆 (其他聊天的记忆)\n`;

@@ -58,6 +58,7 @@ window.initEventBindingsB = function(state, db) {
             // 长期记忆（总结的记忆）
             longTermMemory: chat.longTermMemory ? JSON.parse(JSON.stringify(chat.longTermMemory)) : [],
             normalMemory: window.normalMemoryManager?.transfer(chat) || null,
+            groupMemory: window.GroupMemory?.transfer(chat) || null,
             structuredMemory: chat.structuredMemory ? JSON.parse(JSON.stringify(chat.structuredMemory)) : null,
             variableMemory: cloneVectorMemoryForArchive(chat.variableMemory),
             vectorMemory: cloneVectorMemoryForArchive(chat.vectorMemory),
@@ -80,6 +81,9 @@ window.initEventBindingsB = function(state, db) {
               autoMemoryInterval: chat.settings.autoMemoryInterval,
               enableDiaryMode: chat.settings.enableDiaryMode,
               memoryMode: chat.settings.memoryMode,
+              groupMemoryMode: chat.settings.groupMemoryMode,
+              groupMemoryAllowLinks: chat.settings.groupMemoryAllowLinks,
+              groupMemoryNpcIds: [...(chat.settings.groupMemoryNpcIds || [])],
               enableStructuredMemory: chat.settings.enableStructuredMemory,
               longTermMemoryLimit: chat.settings.longTermMemoryLimit,
 
@@ -229,6 +233,8 @@ window.initEventBindingsB = function(state, db) {
       if (!confirmed) return;
 
       try {
+        if (window.GroupMemory?.locks.has(String(chat.id))) throw new Error('请先停止本群记忆总结再读取存档');
+        if (Object.prototype.hasOwnProperty.call(archive.data, 'groupMemory')) chat.groupMemory = archive.data.groupMemory ? JSON.parse(JSON.stringify(archive.data.groupMemory)) : undefined;
         const currentEmbeddingApiKey = chat.variableMemory?.settings?.embeddingApiKey || chat.vectorMemory?.settings?.embeddingApiKey || '';
         if (window.normalMemoryManager?.locks.has(chat)) throw new Error('请先暂停普通记忆梳理再读取存档');
         window.normalMemoryManager?.validateState(archive.data.normalMemory);
@@ -260,6 +266,9 @@ window.initEventBindingsB = function(state, db) {
 
         // 恢复所有设置
         const savedSettings = archive.data.settings;
+        for (const key of ['groupMemoryMode', 'groupMemoryAllowLinks', 'groupMemoryNpcIds']) {
+          if (Object.prototype.hasOwnProperty.call(savedSettings, key)) chat.settings[key] = JSON.parse(JSON.stringify(savedSettings[key] ?? null));
+        }
         chat.settings.aiPersona = savedSettings.aiPersona;
         chat.settings.aiAvatar = savedSettings.aiAvatar;
         chat.settings.myPersona = savedSettings.myPersona;
@@ -949,7 +958,10 @@ window.initEventBindingsB = function(state, db) {
         chat.randomJottings = '...';
         chat.customThoughts = {};
         
-        if (shouldClearMemory) {
+        window.GroupMemory?.stop(chat);
+        if (shouldClearMemory && window.GroupMemory?.independent(chat)) {
+          chat.groupMemory = { version: 1, members: {}, startedAt: Date.now(), startKeys: [] };
+        } else if (shouldClearMemory) {
            chat.longTermMemory = [];
            if (chat.structuredMemory) {
              const customCategories = JSON.parse(JSON.stringify(chat.structuredMemory._customCategories || {}));

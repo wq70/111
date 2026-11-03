@@ -176,6 +176,7 @@ async function convertLongTermMemoryToStructured(chatId) {
 // ==================== 结构化动态记忆 - 自动总结 ====================
 async function triggerStructuredMemorySummary(chatId, forceUpdate = false) {
   const chat = state.chats[chatId];
+  if (window.GroupMemory?.independent(chat)) return forceUpdate ? window.GroupMemory.summarize(chat) : window.GroupMemory.auto(chat);
   if (!chat || !window.structuredMemoryManager) return;
   window._structuredMemoryExtractionLocks ||= new Set();
   if (window._structuredMemoryExtractionLocks.has(chatId)) return;

@@ -635,6 +635,30 @@
         <span class="slider"></span> 
     </label>
 </div>
+<section id="char-todo-settings" style="display: none;">
+    <div class="settings-item">
+        <label for="char-todo-manual">手动生成 Char 待办</label>
+        <label class="toggle-switch"><input id="char-todo-manual" type="checkbox"><span class="slider"></span></label>
+    </div>
+    <div class="settings-item">
+        <div>
+            <label for="char-todo-auto">自动生成 Char 待办</label>
+            <div class="settings-desc">当天第一次聊天时生成，已有当天安排则跳过。</div>
+        </div>
+        <label class="toggle-switch"><input id="char-todo-auto" type="checkbox"><span class="slider"></span></label>
+    </div>
+    <div class="settings-item" id="char-todo-source-row">
+        <label for="char-todo-source">Char 作息来源</label>
+        <select id="char-todo-source" class="settings-select">
+            <option value="persona">根据人设推断</option>
+            <option value="custom">使用我填写的作息</option>
+        </select>
+    </div>
+    <div class="form-group" id="char-todo-routine-row">
+        <label for="char-todo-routine">Char 作息</label>
+        <textarea id="char-todo-routine" rows="3" maxlength="500" placeholder="例如 07:30 起床，09:00 上班，晚上练琴"></textarea>
+    </div>
+</section>
              <!-- 表情包识图 -->
              <div class="settings-item" id="sticker-vision-group">
                  <div>

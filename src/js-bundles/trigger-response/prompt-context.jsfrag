@@ -20,6 +20,9 @@
         // 构建用于向量检索的查询词（如果有）
         const queryTextForVector = filteredHistory.slice(-5).map(m => typeof m.content === 'string' ? m.content : '').join(' ');
 
+        if (window.GroupMemory?.independent(chat)) {
+          longTermMemoryContext = await window.GroupMemory.context(chat, queryTextForVector);
+        } else {
         for (const member of chat.members) {
           const memberChat = state.chats[member.id];
           if (memberChat) {
@@ -46,6 +49,9 @@
           longTermMemoryContext += '- (暂无)';
         }
 
+
+        
+        }
 
         let timeContextText = '';
         let longTimeNoSee = false;
@@ -99,7 +105,7 @@
               contactsText = `TA的好友包括: ${friendChats.map(f => f.name).join('、 ')}`;
             }
           }
-          return `- **${member.groupNickname}** (本名: ${member.originalName}): ${member.persona} [社交背景: ${contactsText}]`;
+          return `- **${member.groupNickname}** (本名: ${member.originalName}, actorId: ${JSON.stringify(String(member.id))}): ${member.persona} [社交背景: ${contactsText}]`;
         }).join('\n');
 
           const myNickname = chat.settings.myNickname || '我';
@@ -350,11 +356,11 @@
             }
           }
 
-          const sender = msg.role === 'user' ? myNickname : msg.senderName;
+          const sender = msg.role === 'user' ? myNickname : `${getDisplayNameInGroup(chat, msg.senderName, msg.senderId)}${msg.senderId ? ` [角色ID: ${msg.senderId}]` : ''}`;
           let prefix = `(Timestamp: ${msg.timestamp}) ${sender}`;
 
           if (msg.quote) {
-            const quotedSenderDisplayName = getDisplayNameInGroup(chat, msg.quote.senderName);
+            const quotedSenderDisplayName = getDisplayNameInGroup(chat, msg.quote.senderName, msg.quote.senderId);
             const quotedContent = String(msg.quote.content || '').substring(0, 50);
             prefix += ` (回复 ${quotedSenderDisplayName} 的消息: "${quotedContent}...")`;
           }
@@ -368,23 +374,7 @@
           else if (msg.type === 'openaiimag') content = `[${sender} 分享了一张GPT图片，prompt: ${msg.prompt}]`;
           else if (msg.type === 'voice_message') content = `[${sender} 发送了一条语音，内容是：'${msg.content}']`;
           else if (msg.type === 'transfer') {
-            // --- 修复开始：明确转账状态和方向 ---
-            let currencySuffix = '';
-            if (msg.currency && msg.currency !== 'CNY') {
-                currencySuffix = `(币种: \${msg.currency})`;
-            }
-            let statusText = '';
-            if (msg.status === 'accepted') statusText = ' (✅已收款)';
-            else if (msg.status === 'declined') statusText = ' (❌已拒收)';
-            else statusText = ' (⏳等待对方确认)';
-
-            if (msg.isRefund) {
-              // 如果是退款，明确告诉AI这是“退回”的钱，不是新给的
-              content = `[系统提示：\${msg.senderName} 将之前的转账退还给了 \${msg.receiverName} (金额: \${msg.amount}\${currencySuffix})，此交易已结束。]`;
-            } else {
-              content = `[\${msg.senderName} 向 \${msg.receiverName} 转账 \${msg.amount}\${currencySuffix}, 备注: \${msg.note}\${statusText}]`;
-            }
-            // --- 修复结束 ---
+            content = window.formatChatTransferEvent(chat, msg);
           }
           else if (msg.type === 'location_share') {
             content = `[${sender} 分享了Ta的位置：'${msg.content}']`;
@@ -427,7 +417,7 @@
             }
             content = instructionText;
           } else if (msg.type === 'gift') {
-            const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName);
+            const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
             const itemsSummary = msg.items.map(item => `${item.name} x${item.quantity}`).join('、 ');
 
             let recipientSummary = '';
@@ -496,7 +486,7 @@
 
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
 
-          const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== chatId);
+          const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
 
           if (idsToMount.length > 0) {
 
@@ -723,6 +713,7 @@ ${enabledEntries}
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;
             if (msg.isHidden) return null;
+            if (msg.type === 'transfer') return { role: 'user', content: `(Timestamp: ${msg.timestamp}) ${window.formatChatTransferEvent(chat, msg)}` };
 
 
 
@@ -789,14 +780,6 @@ ${enabledEntries}
                 role: 'user',
                 content: `${prefix}[你发送了一条语音消息，内容是：'${msg.content}']`
               };
-              if (msg.type === 'transfer') {
-                let cur = '';
-                if (msg.currency && msg.currency !== 'CNY') cur = ` (币种: \${msg.currency})`;
-                return {
-                  role: 'user',
-                  content: `\${prefix}[系统提示：你于时间戳 \${msg.timestamp} 向对方发起了转账: \${msg.amount}\${cur}, 备注: \${msg.note}。等待对方处理。]`
-                };
-              }
               if (msg.type === 'couple_invite' || msg.type === 'couple_invite_response') return null;
               if (msg.type === 'waimai_request') return {
                 role: 'user',
@@ -829,10 +812,6 @@ ${enabledEntries}
               if (msg.type === 'sticker') {
 
                 assistantMsgObject.meaning = msg.meaning;
-              } else if (msg.type === 'transfer') {
-                assistantMsgObject.amount = msg.amount;
-                if (msg.currency) assistantMsgObject.currency = msg.currency;
-                assistantMsgObject.note = msg.note;
               } else if (msg.type === 'waimai_request') {
                 assistantMsgObject.productInfo = msg.productInfo;
                 assistantMsgObject.amount = msg.amount;

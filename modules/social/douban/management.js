@@ -42,11 +42,11 @@
       item.innerHTML = `
         <div class="checkbox"></div>
         <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-          <img src="${authorAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.src=defaultAvatar;">
+          <img src="${escapeHTML(post.authorAvatar || authorAvatar)}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.src=defaultAvatar;">
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 500; font-size: 14px; margin-bottom: 2px;">${post.postTitle}</div>
-            <div style="font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${postContent}</div>
-            <div style="font-size: 11px; color: #bbb; margin-top: 2px;">${post.authorName} · ${timeStr}</div>
+            <div style="font-weight: 500; font-size: 14px; margin-bottom: 2px;">${escapeHTML(post.postTitle || '')}</div>
+            <div style="font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHTML(postContent)}</div>
+            <div style="font-size: 11px; color: #bbb; margin-top: 2px;">${escapeHTML(post.authorName || '')} · ${timeStr}</div>
           </div>
         </div>
       `;
@@ -117,8 +117,8 @@
     let htmlContent = '<div class="douban-forward-card"><div class="douban-forward-card-header"><svg class="douban-logo-icon" viewBox="0 0 1024 1024"><path d="M170.666667 170.666667h128v682.666666h-128zM426.666667 170.666667h170.666666v682.666666h-170.666666zM725.333333 170.666667h128v682.666666h-128z"></path></svg><span class="douban-forward-card-title">转发的豆瓣帖子</span></div><div class="douban-forward-card-body">';
     
     selectedData.forEach(p => {
-        const textContent = p.content.replace(/<br>/g, '\n');
-        htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">${p.groupName}</span><span class="douban-forward-author">${p.authorName}</span></div><div class="douban-forward-post-title">${p.postTitle}</div><div class="douban-forward-text">${textContent}</div></div>`;
+        const textContent = escapeHTML(p.content.replace(/<br>/g, '\n'));
+        htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">${escapeHTML(p.groupName || '')}</span><span class="douban-forward-author">${escapeHTML(p.authorName || '')}</span></div><div class="douban-forward-post-title">${escapeHTML(p.postTitle || '')}</div><div class="douban-forward-text">${textContent}</div></div>`;
     });
     
     htmlContent += '</div></div>';
@@ -177,7 +177,7 @@
         const newComments = [];
         post.comments.forEach(comment => {
             const isUserComment = comment.isUser || comment.commenter === '我' || comment.commenter === appState.qzoneSettings?.nickname || comment.commenter === appState.globalSettings?.doubanUserNickname;
-            const displayCommenterName = isUserComment ? myNickname : comment.commenter;
+            const displayCommenterName = comment.commenterDisplayName || (isUserComment ? myNickname : comment.commenter);
             const commentId = btoa(unescape(encodeURIComponent(displayCommenterName + comment.text))).replace(/[^a-zA-Z0-9]/g, '');
             if (!selectedDoubanComments.has(commentId)) {
                 newComments.push(comment);
@@ -198,11 +198,11 @@
     const post = await db.doubanPosts.get(activeDoubanPostId);
     if (!post) return;
     
-    let htmlContent = `<div class="douban-forward-card"><div class="douban-forward-card-header"><svg class="douban-logo-icon" viewBox="0 0 1024 1024"><path d="M170.666667 170.666667h128v682.666666h-128zM426.666667 170.666667h170.666666v682.666666h-170.666666zM725.333333 170.666667h128v682.666666h-128z"></path></svg><span class="douban-forward-card-title">《${post.postTitle}》的回应</span></div><div class="douban-forward-card-body">`;
+    let htmlContent = `<div class="douban-forward-card"><div class="douban-forward-card-header"><svg class="douban-logo-icon" viewBox="0 0 1024 1024"><path d="M170.666667 170.666667h128v682.666666h-128zM426.666667 170.666667h170.666666v682.666666h-170.666666zM725.333333 170.666667h128v682.666666h-128z"></path></svg><span class="douban-forward-card-title">《${escapeHTML(post.postTitle || '')}》的回应</span></div><div class="douban-forward-card-body">`;
     
     if (selectedDoubanComments.has('post_body')) {
-        const textContent = post.content.replace(/<br>/g, '\n');
-        htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">楼主</span><span class="douban-forward-author">${post.authorName}</span></div><div class="douban-forward-text">${textContent}</div></div>`;
+        const textContent = escapeHTML(post.content.replace(/<br>/g, '\n'));
+        htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">楼主</span><span class="douban-forward-author">${escapeHTML(post.authorName || '')}</span></div><div class="douban-forward-text">${textContent}</div></div>`;
     }
     
     if (post.comments) {
@@ -210,10 +210,10 @@
         const myNickname = appState.globalSettings?.doubanUserNickname || appState.qzoneSettings?.nickname || '我';
         post.comments.forEach(comment => {
             const isUserComment = comment.isUser || comment.commenter === '我' || comment.commenter === appState.qzoneSettings?.nickname || comment.commenter === appState.globalSettings?.doubanUserNickname;
-            const displayCommenterName = isUserComment ? myNickname : comment.commenter;
+            const displayCommenterName = comment.commenterDisplayName || (isUserComment ? myNickname : comment.commenter);
             const commentId = btoa(unescape(encodeURIComponent(displayCommenterName + comment.text))).replace(/[^a-zA-Z0-9]/g, '');
             if (selectedDoubanComments.has(commentId)) {
-                htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">回应</span><span class="douban-forward-author">${displayCommenterName}</span></div><div class="douban-forward-text">${comment.text}</div></div>`;
+                htmlContent += `<div class="douban-forward-item"><div class="douban-forward-item-header"><span class="douban-forward-tag">回应</span><span class="douban-forward-author">${escapeHTML(displayCommenterName || '')}</span></div><div class="douban-forward-text">${escapeHTML(comment.text || '')}</div></div>`;
             }
         });
     }

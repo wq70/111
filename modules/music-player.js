@@ -2530,12 +2530,20 @@
   }
 
   let neteaseQrPollTimer = null;
+  let neteaseQrDeadlineTimer = null;
   let activeNeteaseQrKey = null;
+  let neteaseAccountRevision = 0;
+  let neteaseQrDeadline = 0;
+  let neteaseQrFailures = 0;
+  const NETEASE_QR_WAIT = 180000;
 
   function stopNeteaseQrPolling() {
-    if (neteaseQrPollTimer) clearInterval(neteaseQrPollTimer);
+    if (neteaseQrPollTimer) clearTimeout(neteaseQrPollTimer);
+    if (neteaseQrDeadlineTimer) clearTimeout(neteaseQrDeadlineTimer);
     neteaseQrPollTimer = null;
+    neteaseQrDeadlineTimer = null;
     activeNeteaseQrKey = null;
+    neteaseAccountRevision++;
   }
 
   function closeMusicAccountCenter() {
@@ -2574,6 +2582,7 @@
   }
 
   async function renderNeteasePlaylists() {
+    const revision = neteaseAccountRevision;
     const section = document.getElementById('netease-playlists-section');
     const loading = document.getElementById('netease-playlists-loading');
     const list = document.getElementById('netease-playlists-list');
@@ -2581,9 +2590,12 @@
     loading.hidden = false;
     loading.textContent = '正在读取歌单…';
     list.innerHTML = '';
+    const retry = document.getElementById('netease-playlists-retry-btn');
+    retry.hidden = true;
 
     try {
       const playlists = await getOnlineMusicServices().account.getUserPlaylists();
+      if (revision !== neteaseAccountRevision) return;
       loading.hidden = playlists.length > 0;
       if (playlists.length === 0) loading.textContent = '账号中没有可导入的歌单';
 
@@ -2610,25 +2622,42 @@
         list.appendChild(item);
       });
     } catch (error) {
-      console.error('[音乐账号] 读取网易云歌单失败:', error);
+      if (revision !== neteaseAccountRevision) return;
       loading.hidden = false;
       loading.textContent = error.message || '歌单读取失败，请稍后重试';
+      retry.hidden = false;
+      if (error.code === 'login_expired') {
+        retry.hidden = true;
+        getOnlineMusicServices().account.clearSession();
+        showNeteaseProfile(null);
+        setNeteaseAccountStatus(error.message);
+        document.getElementById('netease-login-btn').textContent = '重新扫码';
+      }
     }
   }
 
   async function refreshNeteaseAccountView() {
+    stopNeteaseQrPolling();
+    const revision = neteaseAccountRevision;
     const account = getOnlineMusicServices().account;
     const session = account.loadSession();
+    const retry = document.getElementById('netease-account-retry-btn');
+    const login = document.getElementById('netease-login-btn');
+    retry.hidden = true;
     document.getElementById('netease-playlists-section').hidden = true;
     document.getElementById('netease-qr-area').hidden = true;
     if (!session) {
       showNeteaseProfile(null);
+      login.textContent = '扫码登录';
       return;
     }
 
-    setNeteaseAccountStatus('正在验证登录状态…');
+    showNeteaseProfile(session.profile || null);
+    login.disabled = true;
+    setNeteaseAccountStatus(session.profile ? '正在验证登录状态…' : '扫码已确认，正在读取账号…');
     try {
       const profile = await account.getLoginStatus(session);
+      if (revision !== neteaseAccountRevision) return;
       if (!profile) {
         account.clearSession();
         showNeteaseProfile(null);
@@ -2638,9 +2667,21 @@
       showNeteaseProfile(profile);
       await renderNeteasePlaylists();
     } catch (error) {
-      console.error('[音乐账号] 登录状态检查失败:', error);
+      if (revision !== neteaseAccountRevision) return;
+      if (error.code === 'login_expired') {
+        account.clearSession();
+        showNeteaseProfile(null);
+        setNeteaseAccountStatus(error.message);
+        login.textContent = '重新扫码';
+        return;
+      }
       showNeteaseProfile(session.profile || null);
-      setNeteaseAccountStatus('公共登录节点暂时无法连接');
+      setNeteaseAccountStatus(`${session.profile ? '' : '扫码已确认，但'}${error.message || '读取账号失败，请重试'}。登录状态已保留。`);
+      retry.hidden = false;
+      document.getElementById('netease-logout-btn').hidden = false;
+      login.textContent = '重新扫码';
+    } finally {
+      if (revision === neteaseAccountRevision) login.disabled = false;
     }
   }
 
@@ -2649,38 +2690,78 @@
     await refreshNeteaseAccountView();
   }
 
-  async function pollNeteaseQrLogin() {
-    if (!activeNeteaseQrKey || document.hidden) return;
+  function finishNeteaseQrAttempt(message) {
+    stopNeteaseQrPolling();
+    document.getElementById('netease-qr-message').textContent = message;
+    const login = document.getElementById('netease-login-btn');
+    login.disabled = false;
+    login.textContent = '重新生成二维码';
+    // An expired or failed QR must not continue to invite scanning.
+    document.getElementById('netease-qr-image').hidden = true;
+    document.getElementById('netease-qr-link').hidden = true;
+    setNeteaseAccountStatus(message);
+  }
+
+  async function pollNeteaseQrLogin(revision = neteaseAccountRevision) {
+    if (revision !== neteaseAccountRevision || !activeNeteaseQrKey) return;
+    if (Date.now() >= neteaseQrDeadline) {
+      finishNeteaseQrAttempt('等待扫码确认已超时，请重新生成二维码');
+      return;
+    }
+    if (document.hidden) {
+      neteaseQrPollTimer = setTimeout(() => pollNeteaseQrLogin(revision), 3000);
+      return;
+    }
+    const key = activeNeteaseQrKey;
     const qrMessage = document.getElementById('netease-qr-message');
     try {
-      const result = await getOnlineMusicServices().account.checkQrLogin(activeNeteaseQrKey);
+      const account = getOnlineMusicServices().account;
+      const result = await account.checkQrLogin(key);
+      if (revision !== neteaseAccountRevision || key !== activeNeteaseQrKey) return;
+      if (Date.now() >= neteaseQrDeadline) {
+        finishNeteaseQrAttempt('等待扫码确认已超时，请重新生成二维码');
+        return;
+      }
+      neteaseQrFailures = 0;
       if (result?.code === 801) {
         qrMessage.textContent = '等待扫码…';
       } else if (result?.code === 802) {
         qrMessage.textContent = '已扫码，请在网易云音乐中确认';
       } else if (result?.code === 803) {
+        account.acceptQrLogin(result);
         stopNeteaseQrPolling();
-        qrMessage.textContent = '登录成功';
-        showNeteaseProfile(result.profile);
-        await renderNeteasePlaylists();
+        await refreshNeteaseAccountView();
+        return;
       } else if (result?.code === 800) {
-        stopNeteaseQrPolling();
-        qrMessage.textContent = '二维码已过期，请重新生成';
-        document.getElementById('netease-login-btn').disabled = false;
+        finishNeteaseQrAttempt('二维码已过期，请重新生成');
+        return;
+      } else {
+        finishNeteaseQrAttempt('查询扫码状态：登录服务返回异常结果，请重新生成二维码');
+        return;
       }
     } catch (error) {
-      console.warn('[音乐账号] 二维码状态检查失败:', error.message);
-      qrMessage.textContent = '网络波动，正在继续等待…';
+      if (revision !== neteaseAccountRevision || key !== activeNeteaseQrKey) return;
+      neteaseQrFailures++;
+      if (!error.retryable || neteaseQrFailures >= 3) {
+        finishNeteaseQrAttempt(`${error.message || '查询扫码状态失败'}。请重新生成二维码`);
+        return;
+      }
+      qrMessage.textContent = `${error.message}（连续失败 ${neteaseQrFailures}/3，稍后自动重试）`;
+    }
+    // Schedule only after the previous request completes; slow requests cannot overlap.
+    if (revision === neteaseAccountRevision && key === activeNeteaseQrKey) {
+      neteaseQrPollTimer = setTimeout(() => pollNeteaseQrLogin(revision), 3000);
     }
   }
 
   async function startNeteaseQrLogin() {
+    const beforeConfirm = neteaseAccountRevision;
     const confirmed = await showCustomConfirm(
       '使用公共节点扫码登录',
-      '登录由第三方公共节点处理，该节点能够接触你的网易云登录会话。请勿在任何页面输入账号、密码或短信验证码。是否继续？',
+      `本次登录服务：${new URL(getOnlineMusicServices().account.node).hostname}\n登录由第三方公共服务处理，该服务能够接触你的网易云登录会话。请勿在任何页面输入账号、密码或短信验证码。是否继续？`,
       { confirmText: '生成二维码' }
     );
-    if (!confirmed) return;
+    if (!confirmed || beforeConfirm !== neteaseAccountRevision) return;
 
     const loginBtn = document.getElementById('netease-login-btn');
     const qrArea = document.getElementById('netease-qr-area');
@@ -2690,22 +2771,35 @@
     loginBtn.disabled = true;
     setNeteaseAccountStatus('正在生成二维码…');
     stopNeteaseQrPolling();
+    const revision = neteaseAccountRevision;
+    document.getElementById('netease-account-retry-btn').hidden = true;
+    document.getElementById('netease-playlists-section').hidden = true;
+    qrArea.hidden = true;
 
     try {
       const qr = await getOnlineMusicServices().account.createQrLogin();
+      if (revision !== neteaseAccountRevision) return;
       activeNeteaseQrKey = qr.key;
+      neteaseQrFailures = 0;
+      neteaseQrDeadline = Date.now() + NETEASE_QR_WAIT;
       qrImage.src = qr.qrimg;
+      qrImage.hidden = false;
       qrLink.href = qr.qrurl;
+      qrLink.hidden = !qr.qrurl;
       qrMessage.textContent = '请使用网易云音乐 App 扫码并确认';
       qrArea.hidden = false;
       setNeteaseAccountStatus('等待扫码登录');
-      neteaseQrPollTimer = setInterval(pollNeteaseQrLogin, 3000);
-      await pollNeteaseQrLogin();
+      neteaseQrDeadlineTimer = setTimeout(() => {
+        if (revision === neteaseAccountRevision) finishNeteaseQrAttempt('等待扫码确认已超时，请重新生成二维码');
+      }, NETEASE_QR_WAIT);
+      await pollNeteaseQrLogin(revision);
     } catch (error) {
-      console.error('[音乐账号] 创建二维码失败:', error);
+      if (revision !== neteaseAccountRevision) return;
       loginBtn.disabled = false;
+      loginBtn.textContent = '重试生成二维码';
       qrArea.hidden = true;
-      setNeteaseAccountStatus('公共登录节点暂时不可用，请稍后再试');
+      setNeteaseAccountStatus(error.message || '生成二维码失败，请重试');
+      if (getOnlineMusicServices().account.loadSession()) document.getElementById('netease-account-retry-btn').hidden = false;
     }
   }
 
@@ -2713,16 +2807,20 @@
     stopNeteaseQrPolling();
     getOnlineMusicServices().account.clearSession();
     showNeteaseProfile(null);
+    document.getElementById('netease-login-btn').textContent = '扫码登录';
+    document.getElementById('netease-account-retry-btn').hidden = true;
     document.getElementById('netease-playlists-section').hidden = true;
     document.getElementById('netease-qr-area').hidden = true;
   }
 
   async function importNeteasePlaylist(remotePlaylist, button) {
+    const revision = neteaseAccountRevision;
     const originalText = button.textContent;
     button.disabled = true;
     button.textContent = '导入中…';
     try {
       const songs = await getOnlineMusicServices().account.getUserPlaylistTracks(remotePlaylist.id);
+      if (revision !== neteaseAccountRevision) return;
       if (songs.length === 0) throw new Error('这个歌单中没有可导入的歌曲');
 
       const playlistId = `netease_${remotePlaylist.id}`;
@@ -2965,6 +3063,7 @@
   window.executeDeleteSelectedSongs = executeDeleteSelectedSongs;
   window.executeMoveToPlaylist = executeMoveToPlaylist;
   window.openMusicAccountCenter = openMusicAccountCenter;
+  window.refreshNeteaseAccountView = refreshNeteaseAccountView;
   window.closeMusicAccountCenter = closeMusicAccountCenter;
   window.startNeteaseQrLogin = startNeteaseQrLogin;
   window.logoutNeteaseMusic = logoutNeteaseMusic;

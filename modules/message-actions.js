@@ -606,6 +606,8 @@
 
 
 
+  let messageEditorBlockId = 0;
+
   function createMessageEditorBlock(initialContent = '') {
     const block = document.createElement('div');
     block.className = 'message-editor-block';
@@ -663,8 +665,13 @@
     };
 
     block.innerHTML = `
-        <button class="delete-block-btn" title="删除此条">×</button>
-        <textarea>${initialContent}</textarea>
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 6px;">
+          <button type="button" class="message-editor-expand-btn" title="放大编辑" aria-label="放大编辑" style="background: none; border: none; cursor: pointer; color: #888; padding: 4px; display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          </button>
+          <button type="button" class="delete-block-btn" title="删除此条" style="margin-top: 0;">×</button>
+        </div>
+        <textarea></textarea>
         <div class="format-helpers">
             <button class="format-btn" data-template='${JSON.stringify(templates.voice)}'>语音</button>
             <button class="format-btn" data-template='${JSON.stringify(templates.image)}'>图片</button>
@@ -679,6 +686,13 @@
             </div>
     `;
 
+
+    const textarea = block.querySelector('textarea');
+    textarea.id = `message-editor-textarea-${++messageEditorBlockId}`;
+    textarea.value = initialContent;
+    block.querySelector('.message-editor-expand-btn').addEventListener('click', () => {
+      openFullscreenEditor(textarea.id, '消息内容');
+    });
 
     block.querySelector('.delete-block-btn').addEventListener('click', () => {
 
@@ -935,6 +949,7 @@
             newMessage.quote = {
               timestamp: parsedResult.target_timestamp,
               senderName: originalSenderName,
+              senderId: originalQuotedMsg.role === 'user' ? 'user' : originalQuotedMsg.senderId,
               content: String(originalQuotedMsg.content || '')
             };
           } else {
@@ -1334,6 +1349,23 @@
 
   async function saveEditedAiResponse() {
 
+    const chat = state.chats[state.activeChatId];
+    if (!chat) return;
+    const editorContainer = document.getElementById('ai-response-editor-container');
+    const editorTextareas = editorContainer.querySelectorAll('textarea');
+    const editedRawBlocks = Array.from(editorTextareas).map(ta => ta.value.trim()).filter(Boolean);
+    const newMessagesArray = [];
+    for (const rawContent of editedRawBlocks) {
+      try { newMessagesArray.push(JSON.parse(rawContent)); }
+      catch (error) { console.warn('跳过无法解析的编辑块:', error); }
+    }
+    // Resolve identities before undoing the previous response. Cancellation keeps it intact.
+    for (const action of newMessagesArray) {
+      if (action && action.type && !await window.CharacterIdentity.prepare(chat, action, true)) return;
+    }
+    if (state.activeChatId !== chat.id || state.chats[chat.id] !== chat) return;
+    if (JSON.stringify(Array.from(editorTextareas).map(ta => ta.value.trim()).filter(Boolean)) !== JSON.stringify(editedRawBlocks)) return;
+
     const chatsToUpdate = new Map();
     let oldMessageTimestampProvider = null;
 
@@ -1366,16 +1398,6 @@
       lastPrivateMessagesSent = [];
     }
 
-    const chat = state.chats[state.activeChatId];
-    if (!chat) return;
-
-
-    const editorContainer = document.getElementById('ai-response-editor-container');
-    const editorTextareas = editorContainer.querySelectorAll('textarea');
-    const editedRawBlocks = Array.from(editorTextareas).map(ta => ta.value.trim()).filter(Boolean);
-
-
-
     const originalAiMessages = chat.history.filter(msg => lastResponseTimestamps.includes(msg.timestamp));
     chat.history = chat.history.filter(msg => !lastResponseTimestamps.includes(msg.timestamp));
 
@@ -1389,19 +1411,6 @@
       lastResponseTimestamps = [];
       return;
     }
-
-
-    let newMessagesArray = [];
-    for (const rawContent of editedRawBlocks) {
-      try {
-
-        const parsedObject = JSON.parse(rawContent);
-        newMessagesArray.push(parsedObject);
-      } catch (e) {
-        console.warn("跳过一个无法解析为JSON的编辑块:", rawContent);
-      }
-    }
-
 
 
     const originalNaiMsgs = originalAiMessages.filter(m => m.type === 'naiimag');
@@ -1418,21 +1427,11 @@
         continue;
       }
 
-      // 纠正AI可能返回群昵称而非本名的问题
-      if (chat.isGroup && msgData.name) {
-        const exactMember = chat.members.find(m => m.originalName === msgData.name);
-        if (!exactMember) {
-          const nicknameMember = chat.members.find(m => m.groupNickname === msgData.name);
-          if (nicknameMember) {
-            msgData.name = nicknameMember.originalName;
-          }
-        }
-      }
-
       let aiMessage = null;
       const baseMessage = {
         role: 'assistant',
         senderName: msgData.name || chat.originalName,
+        senderId: msgData.actorId || null,
         timestamp: messageTimestamp++
       };
 
@@ -1526,7 +1525,7 @@
           const userOriginalName = state.qzoneSettings.nickname || '{{user}}';
 
           if (recipientOriginalName === userOriginalName) {
-            const privateChat = Object.values(state.chats).find(c => !c.isGroup && c.originalName === senderOriginalName);
+            const privateChat = window.CharacterIdentity.privateChat(chat, msgData);
 
             if (privateChat) {
 
@@ -1554,6 +1553,7 @@
                 const privateMessage = {
                   role: 'assistant',
                   senderName: senderOriginalName,
+                senderId: msgData.actorId,
                   content: contentString,
                   timestamp: timestampToUse
                 };
@@ -1600,9 +1600,8 @@
 
           // 查找目标群聊，并确保AI是该群的成员
           const targetGroupChat = Object.values(state.chats).find(c =>
-            c.isGroup &&
-            c.name === targetGroupName &&
-            c.members.some(m => m.originalName === senderOriginalName)
+            String(c.id) === String(msgData.targetGroupId) && c.isGroup &&
+            c.members.some(m => String(m.id) === String(msgData.actorId))
           );
 
           if (targetGroupChat) {
@@ -1621,6 +1620,7 @@
               const groupMessage = {
                 role: 'assistant',
                 senderName: senderOriginalName,
+                senderId: msgData.actorId,
                 content: contentString,
                 timestamp: messageTimestamp++ // 使用统一的时间戳递增
               };
@@ -1895,7 +1895,7 @@
               chat.customThoughts = {};
             }
             for (const key in msgData) {
-              if (key !== 'type' && key !== 'heartfelt_voice' && key !== 'random_jottings') {
+              if (!['type', 'heartfelt_voice', 'random_jottings', 'actorId', 'senderId', 'name'].includes(key)) {
                 chat.customThoughts[key] = String(msgData[key]);
               }
             }
@@ -1957,6 +1957,7 @@
             quoteContext = {
               timestamp: originalMessage.timestamp,
               senderName: quotedSenderDisplayName, // 使用修复后的昵称
+              senderId: originalMessage.role === 'user' ? 'user' : originalMessage.senderId,
               content: String(originalMessage.content || '') // 确保内容是字符串
             };
           } else {
@@ -2010,7 +2011,7 @@
     document.getElementById('ai-response-editor-modal').classList.remove('visible');
 
 
-    lastRawAiResponse = editedRawBlocks.join('\n\n');
+    lastRawAiResponse = newMessagesArray.map(action => JSON.stringify(action)).join('\n\n');
     lastResponseTimestamps = newTimestamps;
 
 

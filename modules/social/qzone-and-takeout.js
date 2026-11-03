@@ -241,7 +241,7 @@
       item.innerHTML = `
             <div class="checkbox"></div>
             <img src="${contact.settings.aiAvatar || defaultAvatar}" class="avatar">
-            <span class="name">${contact.name} <small style="color:#888;">(角色)</small></span>
+            <span class="name">${escapeHTML(window.CharacterIdentity.display(contact.originalName, contact.id))} <small style="color:#888;">(角色)</small></span>
         `;
       listEl.appendChild(item);
     });
@@ -349,6 +349,7 @@
     };
 
     state.chats[newChatId] = newGroupChat;
+    window.applyDefaultChatSettings?.(newGroupChat);
     await db.chats.put(newGroupChat);
 
     await renderChatList();
@@ -377,7 +378,7 @@
       item.innerHTML = `
             <div class="checkbox"></div>
             <img src="${contact.settings.aiAvatar || defaultAvatar}" class="avatar">
-            <span class="name">${contact.name} <small style="color:#888;">(角色)</small></span>
+            <span class="name">${escapeHTML(window.CharacterIdentity.display(contact.originalName, contact.id))} <small style="color:#888;">(角色)</small></span>
         `;
       listEl.appendChild(item);
     });
@@ -480,6 +481,7 @@
     };
 
     state.chats[newChatId] = newGroupChat;
+    window.applyDefaultChatSettings?.(newGroupChat);
     await db.chats.put(newGroupChat);
 
     await renderChatList();
@@ -507,7 +509,7 @@
 
       item.innerHTML = `
                     <img src="${member.avatar}" class="avatar">
-                    <span class="name">${member.groupNickname}</span>
+                    <span class="name">${escapeHTML(window.CharacterIdentity.display(member.originalName, member.id, chat))}</span>
                     <button class="remove-member-btn" data-member-id="${member.id}" title="移出群聊">-</button>
                 `;
       listEl.appendChild(item);
@@ -592,7 +594,7 @@
         item.innerHTML = `
                 <div class="checkbox"></div>
                 <img src="${contact.settings.aiAvatar || defaultAvatar}" class="avatar">
-                <span class="name">${contact.name} <small style="color:#888;">(角色)</small></span>
+                <span class="name">${escapeHTML(window.CharacterIdentity.display(contact.originalName, contact.id))} <small style="color:#888;">(角色)</small></span>
             `;
         listEl.appendChild(item);
       });

@@ -253,13 +253,13 @@
     }
 
     // 生成聊天消息
-    const myDisplayName = getDisplayNameInGroup(chat, myOriginalName);
-    const senderDisplayName = getDisplayNameInGroup(chat, packet.senderName);
+    const myDisplayName = window.RemarkNames.participantNames(chat).user;
+    const senderDisplayName = packet.senderName === myOriginalName ? myDisplayName : packet.senderName;
 
     const visibleMessage = {
       role: 'system',
       type: 'pat_message',
-      content: `你领取了 ${senderDisplayName} 的红包`,
+      content: `${myDisplayName}领取了${senderDisplayName}的红包`,
       timestamp: timestamp++
     };
     chat.history.push(visibleMessage);
@@ -283,11 +283,11 @@
           }
         });
       }
-      const luckyKingDisplayName = luckyKing.name ? getDisplayNameInGroup(chat, luckyKing.name) : '无';
-      hiddenMessageContent = `[系统提示：用户 (${myDisplayName}) 领取了最后一个红包。红包已被领完，手气王是 ${luckyKingDisplayName}！请对此事件发表评论。]`;
+      const luckyKingDisplayName = luckyKing.name === myOriginalName ? myDisplayName : (luckyKing.name || '无');
+      hiddenMessageContent = `[系统提示：${myDisplayName}领完了${senderDisplayName}的红包，手气王是${luckyKingDisplayName}。请对此事件发表评论。]`;
 
     } else {
-      hiddenMessageContent = `[系统提示：用户 (${myDisplayName}) 刚刚领取了红包 (时间戳: ${packet.timestamp})。红包还未领完，你现在可以使用 'open_red_packet' 指令来尝试领取。]`;
+      hiddenMessageContent = `[系统提示：${myDisplayName}领取了${senderDisplayName}的红包 (时间戳: ${packet.timestamp})。红包还未领完，可以使用 'open_red_packet' 指令领取。]`;
     }
 
     const hiddenMessage = {

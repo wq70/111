@@ -127,6 +127,18 @@
         <div id="chat-at-mention-popup" class="at-mention-popup"></div>
         <!-- 智能匹配表情包显示区域 -->
         <div id="smart-sticker-match-panel" style="display: none;">
+          <div class="smart-sticker-toolbar">
+            <span class="smart-sticker-title">匹配表情</span>
+            <div class="smart-sticker-mode" role="group" aria-label="匹配表情浏览方式">
+              <button id="smart-sticker-mode-pages" type="button" aria-pressed="true">分页</button>
+              <button id="smart-sticker-mode-scroll" type="button" aria-pressed="false">滑动</button>
+            </div>
+            <div id="smart-sticker-match-pagination">
+              <button id="smart-sticker-match-prev" type="button" aria-label="上一页匹配表情"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+              <span id="smart-sticker-match-status" role="status" aria-live="polite"></span>
+              <button id="smart-sticker-match-next" type="button" aria-label="下一页匹配表情"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+            </div>
+          </div>
           <div id="smart-sticker-match-grid"></div>
         </div>
         <div id="reply-preview-bar">
@@ -155,7 +167,7 @@
               <path d="M21 3.5H3C2.44772 3.5 2 3.94772 2 4.5V19.5C2 20.0523 2.44772 20.5 3 20.5H21C21.5523 20.5 22 20.0523 22 19.5V4.5C22 3.94772 21.5523 3.5 21 3.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
               <path d="M16.5 13.5C17.6046 13.5 18.5 12.6046 18.5 11.5C18.5 10.3954 17.6046 9.5 16.5 9.5C15.3954 9.5 14.5 10.3954 14.5 11.5C14.5 12.6046 15.3954 13.5 16.5 13.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
               <path d="M22 14.5L18 10.5L10.3333 18.5M12.5 16L9 12.5L2 19.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg> </button><button id="transfer-btn" class="chat-action-icon-btn action-button" title="转账">
+            </svg> </button><button id="send-video-btn" class="chat-action-icon-btn action-button" title="发送视频" aria-label="发送视频"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></button><button id="transfer-btn" class="chat-action-icon-btn action-button" title="转账">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="2" y="6" width="20" height="12" rx="2"></rect>
         <circle cx="12" cy="12" r="2"></circle>

@@ -125,9 +125,7 @@
                 recipientOriginalName === '我' ||
                 recipientOriginalName === '{{user}}') {
 
-              const privateChat = Object.values(state.chats).find(c =>
-                !c.isGroup && c.originalName === senderOriginalName
-              );
+              const privateChat = window.CharacterIdentity.privateChat(chat, msgData);
 
               if (privateChat) {
 
@@ -142,6 +140,7 @@
                   const privateMessage = {
                     role: 'assistant',
                     senderName: senderOriginalName,
+                    senderId: msgData.actorId,
                     content: contentString,
                     timestamp: messageTimestamp++
                   };
@@ -194,17 +193,13 @@
             const targetGroupName = msgData.targetGroupName;
             const messagesToSend = Array.isArray(msgData.content) ? msgData.content : [String(msgData.content)];
 
-            if (!targetGroupName) {
+            if (!targetGroupName && !msgData.targetGroupId) {
               console.warn(`AI ${senderOriginalName} 尝试发送群聊消息，但未指定 targetGroupName。`);
               continue;
             }
 
             // 1. 查找目标群聊，并确保AI是该群的成员
-            const targetGroupChat = Object.values(state.chats).find(c =>
-              c.isGroup &&
-              c.name === targetGroupName &&
-              c.members.some(m => m.originalName === senderOriginalName)
-            );
+            const targetGroupChat = await window.CharacterIdentity.targetGroup(chat, msgData);
 
             if (targetGroupChat) {
               // 2. 找到了群聊，准备发送消息
@@ -216,6 +211,7 @@
                 const groupMessage = {
                   role: 'assistant',
                   senderName: senderOriginalName, // AI的本名
+                  senderId: msgData.actorId,
                   content: contentString,
                   timestamp: messageTimestamp++ // 使用主循环的时间戳
                 };
@@ -231,7 +227,7 @@
                   targetGroupChat.unreadCount = (targetGroupChat.unreadCount || 0) + newMessagesCount;
 
                   // 为了通知，获取AI在该群的群昵称
-                  const member = targetGroupChat.members.find(m => m.originalName === senderOriginalName);
+                  const member = window.CharacterIdentity.member(targetGroupChat, msgData);
                   const senderDisplayName = member ? member.groupNickname : senderOriginalName;
 
                   showNotification(targetGroupChat.id, `${senderDisplayName}: ${messagesToSend[0]}`);
@@ -426,7 +422,7 @@
                 chat.customThoughts = {};
               }
               for (const key in msgData) {
-                if (key !== 'type' && key !== 'heartfelt_voice' && key !== 'random_jottings') {
+                if (!['type', 'heartfelt_voice', 'random_jottings', 'actorId', 'senderId', 'name'].includes(key)) {
                   chat.customThoughts[key] = String(msgData[key]);
                 }
               }
@@ -468,26 +464,19 @@
             }
             continue;
           case 'change_user_nickname':
-            if (!chat.isGroup && msgData.new_name) {
+            if (!chat.isGroup && typeof msgData.new_name === 'string') {
               const newNickname = msgData.new_name.trim();
-              if (newNickname) {
+              if (newNickname && newNickname !== chat.settings.myNickname) {
+                const names = window.RemarkNames.participantNames(chat);
                 chat.settings.myNickname = newNickname;
 
                 const systemMessage = {
                   role: 'system',
                   type: 'pat_message',
-                  content: `“${chat.name}” 将对你的称呼修改为 “${newNickname}”`,
+                  content: `${names.character}将对${names.user}的称呼改为“${newNickname}”。`,
                   timestamp: messageTimestamp++
                 };
                 chat.history.push(systemMessage);
-
-                const hiddenMemoryMessage = {
-                  role: 'system',
-                  content: `[系统提示：你刚刚成功将对用户的称呼修改为了“${newNickname}”。]`,
-                  timestamp: messageTimestamp++,
-                  isHidden: true
-                };
-                chat.history.push(hiddenMemoryMessage);
 
                 if (isViewingThisChat) {
                   appendMessage(systemMessage, chat);
@@ -596,7 +585,8 @@
               hiddenContent: msgData.hiddenContent || '',
               image_prompt: msgData.image_prompt || '',
               timestamp: Date.now(),
-              authorId: chatId,
+              authorId: msgData.actorId,
+              authorOriginalName: msgData.name,
               authorGroupId: chat.groupId,
               visibleGroupIds: null
             };

@@ -130,6 +130,10 @@
     document.getElementById('todo-next-day-btn')?.addEventListener('click', () => changeTodoDate(1));
 
     document.getElementById('add-todo-btn')?.addEventListener('click', () => openTodoEditor(null));
+    document.getElementById('char-todo-generate')?.addEventListener('click', window.CharacterTodos.generateForSelectedDate);
+    for (const id of ['char-todo-manual', 'char-todo-auto', 'char-todo-source']) {
+      document.getElementById(id)?.addEventListener('change', window.CharacterTodos.updateSettingsVisibility);
+    }
 
     document.getElementById('cancel-todo-editor-btn')?.addEventListener('click', () => {
       document.getElementById('todo-editor-modal').classList.remove('visible');

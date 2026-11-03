@@ -4,7 +4,7 @@
   async function showAdvancedExportImportModal() {
     // 定义数据类别及其对应的表
     const dataCategories = {
-      '聊天与消息': ['chats'],
+      '聊天与消息': ['chats', 'videoAttachments'],
       '空间与社交': ['qzoneSettings', 'qzonePosts', 'qzoneAlbums', 'qzonePhotos', 'qzoneGroups', 'doubanPosts'],
       '世界书与预设': ['worldBooks', 'worldBookCategories', 'presets', 'presetCategories', 'personaPresets'],
       'API与配置': ['apiConfig', 'apiPresets', 'soundPresets', 'globalSettings', 'renderingRules', 'naiPresets'],
@@ -16,6 +16,7 @@
       'NPC与故事': ['npcs', 'npcGroups', 'grAuthors', 'grStories'],
       '快捷回复': ['quickReplies', 'quickReplyCategories'],
       '邮件系统': ['emails', 'mailThreads', 'mailContacts', 'mailAccounts', 'mailEvents', 'mailPublicBoxes', 'mailSettings'],
+      '信息与短信': ['smsSettings', 'smsContacts', 'smsMessages', 'smsMemories', 'smsJobs'],
       'MCP连接': ['mcpConnections', 'mcpActivities', 'mcpSettings'],
       '外观设置': ['appearancePresets', 'customWidgetPackages', 'customWidgetInstances']
     };
@@ -521,6 +522,7 @@
         backupData.data.chatMemories = memoryChats.map(chat => ({
           chatId: chat.id,
           chatName: chat.name,
+          groupMemory: window.GroupMemory?.transfer(chat) || null,
           longTermMemory: JSON.parse(JSON.stringify(chat.longTermMemory || [])),
           normalMemory: window.normalMemoryManager?.transfer(chat) || null,
           structuredMemory: chat.structuredMemory ? JSON.parse(JSON.stringify(chat.structuredMemory)) : null,
@@ -531,6 +533,9 @@
           memoryArchives: chat.memoryArchives ? sanitizeMemorySecrets(chat.memoryArchives) : [],
           memorySettings: {
             memoryMode: chat.settings?.memoryMode,
+            groupMemoryMode: chat.settings?.groupMemoryMode,
+            groupMemoryAllowLinks: chat.settings?.groupMemoryAllowLinks,
+            groupMemoryNpcIds: chat.settings?.groupMemoryNpcIds,
             enableStructuredMemory: chat.settings?.enableStructuredMemory,
             enableAutoMemory: chat.settings?.enableAutoMemory,
             autoMemoryInterval: chat.settings?.autoMemoryInterval,
@@ -579,6 +584,8 @@
           post.authorId === 'user'
         );
       
+      case 'videoAttachments':
+        return tableData.filter(record => selectedChatIds.includes(record.chatId));
       case 'memories':
         // 过滤长期记忆
         return tableData.filter(memory => selectedChatIds.includes(memory.chatId));
@@ -769,6 +776,7 @@
           for (const record of records) {
             const chat = state.chats[record.chatId];
             if (!chat) continue;
+            if (record.groupMemory && window.GroupMemory) chat.groupMemory = window.GroupMemory.merge(chat, record.groupMemory);
             if (window.normalMemoryManager?.locks.has(chat)) throw new Error('请先暂停该角色的普通记忆梳理再导入备份');
             window.normalMemoryManager?.validateState(record.normalMemory);
             chat.longTermMemory = Array.isArray(chat.longTermMemory) ? chat.longTermMemory : [];

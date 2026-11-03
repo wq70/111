@@ -315,7 +315,7 @@
           const linkedMemories = [];
           for (const linkedId of chat.settings.linkedChatIds) {
             const linkedChat = state.chats[linkedId];
-            if (linkedChat && linkedChat.history.length > 0) {
+            if (linkedChat && (!window.GroupMemory || window.GroupMemory.canMount(chat, linkedChat)) && linkedChat.history.length > 0) {
               const recentMessages = linkedChat.history.slice(-5).map(msg =>
                 `${msg.role === 'user' ? userNickname : linkedChat.name}: ${String(msg.content)}`
               ).join('\n');

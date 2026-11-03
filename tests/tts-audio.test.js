@@ -10,7 +10,7 @@ function fixture() {
   const player = { dataset: {}, paused: true, src: '', async play() { this.paused = false; }, pause() { this.paused = true; }, removeAttribute() {}, load() {} };
   const c = { state: { activeChatId: 'a', chats: { a: { id: 'a', settings: { ttsProvider: 'elevenlabs', elevenlabsVoiceId: 'a-voice' } } },
     apiConfig: { elevenlabsApiKey: 'key', minimaxApiKey: 'mini-key', minimaxGroupId: 'group', fishApiKey: 'fish-test-only' }, ttsCache: new Map() },
-    localStorage: { getItem: () => null }, document: { getElementById: () => player, querySelectorAll: () => [] },
+    localStorage: { getItem: () => null }, document: { getElementById: () => player, querySelectorAll: () => [], addEventListener() {} },
     Map, Set, URL, Blob, DOMException, AbortController, Uint8Array, console: { error() {} }, setTimeout, clearTimeout, FormData, URLSearchParams,
     fetch: async (url, options) => {
       requests.push(JSON.parse(options.body));

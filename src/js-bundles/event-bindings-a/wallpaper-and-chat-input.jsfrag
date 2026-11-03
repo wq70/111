@@ -406,8 +406,12 @@
       saveLegacySetting('github-auto-backup', githubAutoBackup);
       saveLegacySetting('github-backup-interval', backupInterval);
 
-      await (window.saveSettingsRecord ? window.saveSettingsRecord(db.apiConfig, nextApiConfig) : db.apiConfig.put(nextApiConfig));
-      Object.assign(state.apiConfig, nextApiConfig);
+      if (window.vectorMemoryManager) {
+        if (!await window.vectorMemoryManager.saveApiConfiguration(nextApiConfig)) return;
+      } else {
+        await (window.saveSettingsRecord ? window.saveSettingsRecord(db.apiConfig, nextApiConfig) : db.apiConfig.put(nextApiConfig));
+        Object.assign(state.apiConfig, nextApiConfig);
+      }
       apiConfigSaved = true;
       flushLegacySettings();
 

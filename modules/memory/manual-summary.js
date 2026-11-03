@@ -20,6 +20,7 @@
   function openManualSummaryModal() {
     const chat = state.chats[state.activeChatId];
     if (!chat) return;
+    if (window.GroupMemory?.independent(chat)) return window.GroupMemoryUI.open(chat);
     if (chat.settings.enableDiaryMode) {
       if (typeof handleDiaryModeSummary === 'function') handleDiaryModeSummary();
       return;

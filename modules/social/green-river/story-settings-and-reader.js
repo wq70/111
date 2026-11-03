@@ -1,8 +1,34 @@
+  let grSettingsPreviousFocus;
+  function showStorySettingsModal() {
+    const modal = document.getElementById('gr-settings-modal');
+    grSettingsPreviousFocus = document.activeElement;
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', '作品设定');
+    if (!modal.dataset.keyboardBound) {
+      modal.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeStorySettingsModal(); }
+        if (event.key === 'Tab') {
+          const items = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled)')].filter(el => el.getClientRects().length);
+          const first = items[0], last = items.at(-1);
+          if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) { event.preventDefault(); (event.shiftKey ? last : first)?.focus(); }
+        }
+      });
+      modal.dataset.keyboardBound = 'true';
+    }
+    modal.classList.add('visible');
+    document.getElementById('gr-story-title').focus({ preventScroll: true });
+  }
+  function closeStorySettingsModal() {
+    window.ChoicePicker?.close();
+    document.getElementById('gr-settings-modal').classList.remove('visible');
+    if (grSettingsPreviousFocus?.isConnected) grSettingsPreviousFocus.focus({ preventScroll: true });
+  }
   async function createNewStory() {
     grState.activeStoryId = null; // 标记为新建
     document.getElementById('gr-story-title').value = '';
     await loadStorySettingsUI();
-    document.getElementById('gr-settings-modal').classList.add('visible');
+    showStorySettingsModal();
   }
 
   async function openStorySettings() {
@@ -13,7 +39,7 @@
     document.getElementById('gr-story-title').value = story.title;
     await loadStorySettingsUI(story.settings, story.authorId, story.storyBible);
 
-    document.getElementById('gr-settings-modal').classList.add('visible');
+    showStorySettingsModal();
   }
 
   // 加载设置弹窗中的选项
@@ -99,6 +125,13 @@
     // 如果 settings 里有值，就用 settings 里的；如果没有（新建时），就用默认值 500 和 20
     document.getElementById('gr-output-length').value = settings.outputLength || 500;
     document.getElementById('gr-context-limit').value = settings.contextLimit || 20;
+    const selectedMode = window.GreenRiverStoryEngine.storyMode({ settings });
+    document.querySelectorAll('[name="gr-story-mode"]').forEach(input => {
+      input.checked = input.value === selectedMode;
+      input.onchange = syncStoryContextSettings;
+    });
+    document.getElementById('gr-use-chat-references').checked = settings.useChatReferences !== false;
+    document.getElementById('gr-use-chat-references').onchange = syncStoryContextSettings;
     document.getElementById('gr-reader-comments-enabled').checked = settings.readerCommentsEnabled || false;
     document.getElementById('gr-reader-comment-density').value = settings.readerCommentDensity || 'natural';
     document.getElementById('gr-reader-comment-tone').value = settings.readerCommentTone || 'mixed';
@@ -112,6 +145,8 @@
     document.getElementById('gr-story-tense').value = storyBible.tense || '自然叙事';
     document.getElementById('gr-ending-direction').value = storyBible.endingDirection || '';
     document.getElementById('gr-forbidden-content').value = storyBible.forbiddenContent || '';
+    syncStoryContextSettings();
+    window.ChoicePicker?.enhance(document.getElementById('gr-settings-modal'));
 
     // 绑定按钮事件
     const saveBtn = document.getElementById('gr-save-story-btn');
@@ -126,7 +161,18 @@
 
     newSaveBtn.textContent = grState.activeStoryId ? '保存设定' : '开始创作';
     newSaveBtn.onclick = () => saveStorySettings();
-    newCancelBtn.onclick = () => document.getElementById('gr-settings-modal').classList.remove('visible');
+    newCancelBtn.onclick = closeStorySettingsModal;
+  }
+
+  function syncStoryContextSettings() {
+    const mode = document.querySelector('[name="gr-story-mode"]:checked')?.value || 'serial';
+    const references = document.getElementById('gr-use-chat-references').checked;
+    const limit = document.getElementById('gr-context-limit');
+    limit.disabled = !references;
+    limit.closest('.gr-form-group').hidden = !references;
+    document.getElementById('gr-context-note').textContent = mode === 'serial'
+      ? '本作品会读取前文章节与剧情存档，适合连续发展。'
+      : '不读取其他章节正文、摘要、累计时间线或伏笔。选择“延长当前场景”时，仅参考当前短篇。';
   }
 
   // 5. 修复版：保存作品设置
@@ -152,8 +198,9 @@
     const readerCommentDensity = document.getElementById('gr-reader-comment-density').value;
     const readerCommentTone = document.getElementById('gr-reader-comment-tone').value;
     const macroWorldView = macroWorldViewInput.value.trim();
-    if (!title) return alert("请输入书名");
-    if (charIds.length === 0) return alert("请至少选择一个角色或群聊");
+    if (!title) return showCustomAlert('给故事起个名字', '请先填写书名。');
+    if (charIds.length === 0) return showCustomAlert('选择登场人物', '请至少选择一个角色或群聊。');
+    if (!Number.isFinite(authorId)) return showCustomAlert('选择作者风格', '请先在作者管理中添加一位作者，再选择文风。');
 
     const existingStory = grState.activeStoryId ? await db.grStories.get(grState.activeStoryId) : null;
     const settings = Object.assign({}, existingStory?.settings || {}, {
@@ -167,6 +214,8 @@
       readerCommentDensity,
       readerCommentTone
     });
+    settings.storyMode = document.querySelector('[name="gr-story-mode"]:checked')?.value || 'serial';
+    settings.useChatReferences = document.getElementById('gr-use-chat-references').checked;
 
     const oldBible = existingStory?.storyBible || {};
     const storyBible = Object.assign({}, window.GreenRiverStoryEngine.DEFAULT_STORY_BIBLE, oldBible, {
@@ -274,6 +323,7 @@
     const contentArea = document.getElementById('gr-reader-content');
     contentArea.innerHTML = '';
     bindWritingModePicker();
+    syncGreenRiverWritingMode(story);
 
     // --- 场景 A: 尚未开始 (没有章节) ---
     if (totalChapters === 0) {
@@ -281,7 +331,7 @@
       contentArea.innerHTML = `
             <div style="text-align:center; padding-top:100px; color:#888;">
                 <p>故事尚未开始。</p>
-                <p>请在下方输入第一章的剧情走向，点击"续写"开始创作。</p>
+                <p>在下方写下灵感，开始你的${window.GreenRiverStoryEngine.storyMode(story) === 'serial' ? '第一章' : '独立短篇'}。</p>
             </div>
         `;
       // 显示写作控制栏，隐藏翻页栏
@@ -380,7 +430,7 @@
                 </div>
                 <textarea class="gr-summary-input" data-index="${chapterIndex}" placeholder="在此处概括本章关键剧情点，供AI记忆..."></textarea>
                  <div class="gr-summary-footer">
-                    * AI续写时将读取此框内容作为唯一记忆依据。
+                    ${engine.storyMode(story) === 'serial' ? '续写会参考剧情存档、作品档案与近期正文。' : '此存档仅属于本篇，创作其他独立短篇时不会读取。'}
                 </div>
             </div>
         `;
@@ -423,7 +473,7 @@
       contentArea.style.paddingBottom = '120px';
     } else {
       // 如果是最后一章
-      nextBtn.textContent = "续写下一章";
+      nextBtn.textContent = engine.storyMode(story) === 'serial' ? '续写下一章' : '创作新短篇';
       nextBtn.onclick = () => {
         // 点击下一章按钮时，显示写作栏，并自动滚动到底部
         writingDiv.style.display = 'flex';
@@ -450,6 +500,23 @@
   }
 
   // 辅助：绑定自定义写作方式选择器
+  function syncGreenRiverWritingMode(story) {
+    const isolated = window.GreenRiverStoryEngine.storyMode(story) !== 'serial';
+    grState.storyMode = window.GreenRiverStoryEngine.storyMode(story);
+    const labels = isolated
+      ? { continue: ['创作新短篇', '独立起承转合，不承接其他章节'], direction: ['按灵感创作', '把这次的剧情梗写成独立故事'], extend: ['延长当前短篇', '仅参考当前短篇，不读取其他篇目'], dialogue: ['对话型短篇', '以人物对话为中心，创作独立故事'] }
+      : { continue: ['自然续写', '承接上一章，自然推进剧情'], direction: ['按方向续写', '按照你给出的剧情方向展开'], extend: ['延长当前场景', '继续描写当前场景，不急着切换'], transition: ['补写自然过渡', '补足场景之间的连接和转折'], dialogue: ['加强人物对话', '让对话更有潜台词和推进感'] };
+    const select = document.getElementById('gr-writing-mode');
+    if (!labels[select.value]) select.value = 'continue';
+    document.querySelectorAll('#gr-writing-mode-options [data-value]').forEach(button => {
+      const label = labels[button.dataset.value];
+      button.hidden = !label;
+      if (label) { button.firstChild.textContent = label[0]; button.querySelector('span').textContent = label[1]; }
+    });
+    document.getElementById('gr-writing-mode-trigger').textContent = labels[select.value][0];
+    document.getElementById('gr-gen-text').textContent = isolated ? '创作' : '续写';
+  }
+
   function bindWritingModePicker() {
     const trigger = document.getElementById('gr-writing-mode-trigger');
     const select = document.getElementById('gr-writing-mode');

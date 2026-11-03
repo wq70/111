@@ -83,7 +83,7 @@
       const bubble = document.createElement('div');
       bubble.className = 'message-bubble system-bubble';
       bubble.dataset.timestamp = msg.timestamp;
-      bubble.textContent = msg.content;
+      bubble.textContent = window.RemarkNames.displayNotice(msg, chat);
       wrapper.appendChild(bubble);
       addLongPressListener(wrapper, () => showMessageActions(msg.timestamp));
       wrapper.addEventListener('click', () => {
@@ -106,14 +106,13 @@
     }
     if ((chat.isGroup && !isUser) || (!isUser && msg.actorType === 'pet')) {
       const member = chat.isGroup
-        ? (chat.members.find(m => m.originalName === msg.senderName)
-          || chat.members.find(m => m.groupNickname === msg.senderName))
+        ? window.CharacterIdentity.member(chat, msg)
         : null;
       const senderNameDiv = document.createElement('div');
       senderNameDiv.className = 'sender-name';
       senderNameDiv.textContent = msg.actorType === 'pet'
         ? (msg.senderName || chat.sharedPet?.name || '小精灵')
-        : (member ? member.groupNickname : (msg.senderName || '未知成员'));
+        : (member ? window.CharacterIdentity.display(msg.senderName, member.id, chat) : (msg.senderName || '未知成员'));
       wrapper.appendChild(senderNameDiv);
     }
 
@@ -134,8 +133,7 @@
         avatarSrc = msg.avatarSnapshot || chat.sharedPet?.avatar || defaultAvatar;
         avatarFrameSrc = '';
       } else if (chat.isGroup) {
-        const member = chat.members.find(m => m.originalName === msg.senderName)
-                    || chat.members.find(m => m.groupNickname === msg.senderName);
+        const member = window.CharacterIdentity.member(chat, msg);
         if (member) {
           const characterProfile = state.chats[member.id];
           avatarSrc = member.avatar || (characterProfile ? characterProfile.settings.aiAvatar : defaultGroupMemberAvatar);
@@ -162,7 +160,7 @@
     let contentHtml;
     let quoteHtml = '';
     if (msg.quote) {
-      const quotedSenderDisplayName = getDisplayNameInGroup(chat, msg.quote.senderName);
+      const quotedSenderDisplayName = getDisplayNameInGroup(chat, msg.quote.senderName, msg.quote.senderId);
       const fullQuotedContent = String(msg.quote.content || '');
       quoteHtml = `
                     <div class="quoted-message" data-original-timestamp="${msg.quote.timestamp}" style="cursor: pointer;">
@@ -182,6 +180,9 @@
     if (msg.type === 'mcp_activity' && window.mcpManager && typeof window.mcpManager.renderMessageCard === 'function') {
       bubble.classList.add('is-card-like', 'is-mcp-activity');
       contentHtml = window.mcpManager.renderMessageCard(msg);
+    } else if (msg.type === 'video_message' && window.ChatVideo) {
+      bubble.classList.add('is-card-like', 'is-video-message');
+      contentHtml = window.ChatVideo.renderCard(msg);
     } else if (typeof rawContent === 'string' && rawContent.trim().startsWith('<') && rawContent.trim().endsWith('>')) {
       contentHtml = rawContent;
       bubble.classList.add('is-raw-html');
@@ -480,7 +481,7 @@
         bubble.classList.add('is-transfer', 'is-card-like');
         let titleText, noteText;
         const myNickname = chat.isGroup ? (chat.settings.myNickname || '我') : '我';
-        const senderDisplayName = getDisplayNameInGroup(chat, msg.senderName);
+        const senderDisplayName = getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
         const receiverDisplayName = getDisplayNameInGroup(chat, msg.receiverName || chat.name);
         if (isUser) {
           if (msg.isRefund) {
@@ -533,7 +534,7 @@
       } else if (msg.type === 'waimai_request') {
         bubble.classList.add('is-waimai-request', 'is-card-like');
         if (msg.status === 'paid' || msg.status === 'rejected') bubble.classList.add(`status-${msg.status}`);
-        const senderDisplayName = getDisplayNameInGroup(chat, msg.senderName);
+        const senderDisplayName = getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
         const requestTitle = `来自 ${senderDisplayName} 的代付请求`;
         let actionButtonsHtml = '';
         if (msg.status === 'pending' && !isUser) {
@@ -552,7 +553,7 @@
         }, 0);
       } else if (msg.type === 'waimai_order') {
         bubble.classList.add('is-waimai-request', 'is-card-like');
-        const senderDisplayName = getDisplayNameInGroup(chat, msg.senderName);
+        const senderDisplayName = getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
 
         let recipientDisplayName = '你';
         if (chat.isGroup) {
@@ -889,6 +890,7 @@
                     ${contentHtml}
                 </div>
             `;
+    if (msg.type === 'video_message' && window.ChatVideo) window.ChatVideo.bindCard(bubble, chat, msg);
     if (msg.type === 'synth_music') {
       const playButton = bubble.querySelector('.synth-play-btn');
       if (playButton) {

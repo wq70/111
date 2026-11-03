@@ -1,0 +1,18 @@
+.history-transfer-overlay { position: fixed; inset: 0; z-index: 11000; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 12px; }
+.history-transfer-dialog { display: flex; flex-direction: column; width: min(480px,100%); max-height: 90dvh; border-radius: 16px; overflow: hidden; color: var(--text-primary,#222); background: var(--secondary-bg,#fff); box-shadow: 0 16px 60px #0003; font: 14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+.history-transfer-dialog header { display: flex; align-items: center; justify-content: space-between; padding: 16px; gap: 12px; }
+.history-transfer-dialog h2 { margin: 0; font-size: 18px; }
+.history-transfer-dialog header button { font-size: 24px; border: 0; background: transparent; padding: 0; }
+.history-transfer-body { padding: 0 16px 12px; overflow-y: auto; min-height: 0; overflow-wrap: anywhere; }
+.history-transfer-body p { margin: 0 0 14px; color: var(--text-secondary,#666); }
+.history-transfer-dates { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+.history-transfer-dates label { flex: 1; min-width: 120px; }
+.history-transfer-dates input { display: block; box-sizing: border-box; width: 100%; max-width: 100%; min-width: 0; margin-top: 6px; padding: 10px 8px; border: 1px solid var(--border-color,#ddd); border-radius: 8px; color: inherit; background: var(--primary-bg,#f5f5f5); font: inherit; }
+.history-transfer-dialog button { cursor: pointer; min-height: 42px; border-radius: 8px; font: inherit; color: inherit; }
+.history-transfer-dialog button:disabled { opacity: .55; cursor: default; }
+.history-transfer-dialog button:focus-visible,.history-transfer-dialog input:focus-visible { outline: 2px solid #478b72; outline-offset: 2px; }
+.history-transfer-dialog footer { display: flex; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border-color,#ddd); }
+.history-transfer-dialog footer button { flex: 1; padding: 8px 12px; border: 1px solid var(--border-color,#ddd); background: var(--primary-bg,#f5f5f5); }
+.history-transfer-dialog footer [data-submit] { background: #276e55; color: white; border-color: #276e55; }
+.history-transfer-body [data-downloads] button { display: block; width: 100%; padding: 12px; margin-bottom: 10px; text-align: left; white-space: normal; border: 1px solid var(--border-color,#ddd); background: var(--primary-bg,#f5f5f5); }
+.history-transfer-body .history-transfer-notice { margin: 12px 0 0; color: var(--text-primary,#222); }

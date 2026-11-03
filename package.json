@@ -6,6 +6,7 @@
   "scripts": {
     "build": "npm run build:bundles && npm run build:index",
     "check:structure": "npm run check:bundles && npm run check:index",
+    "test:sms": "node --test tests/sms.test.js",
     "build:index": "node scripts/build-index.js",
     "check:index": "node scripts/build-index.js --check",
     "build:bundles": "node scripts/build-script-bundles.js",
@@ -29,6 +30,10 @@
   "license": "MIT",
   "dependencies": {
     "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "dexie": "4.0.11",
+    "fake-indexeddb": "6.0.1"
   },
   "engines": {
     "node": ">=18.0.0",

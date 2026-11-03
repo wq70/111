@@ -302,3 +302,126 @@ test('用户链路：取消预览保留旧记忆；请求中取消后无保存�
     assert.match(f.notices.at(-1)[0], /取消/);
   }
 });
+
+test('按时间线发送，失败组显示完整原因，重试只请求该组并保留已有结果', async () => {
+  const f = fixture();
+  const old = f.add('E', '旧记录');
+  const main = f.add('E', '默认时间线记录', { clockVersion: 1, timelineId: 'main', timelineName: '默认时间线' });
+  const side = f.add('E', '平行时间线记录', { clockVersion: 1, timelineId: 'side', timelineName: '平行时间线' });
+  const batches = [];
+  f.context.showChoiceModal = async () => 'all';
+  f.manager.generateConsolidation = async (_, group) => {
+    const ids = Array.from(group.originals, fragment => fragment.id);
+    batches.push(ids);
+    if (batches.length === 2 || batches.length === 4) {
+      throw new Error('整合输出不完整，请缩小范围或检查聊天模型的输出长度设置');
+    }
+    return f.parse(group, [{ sourceIds: ids, category: 'E', content: group.originals[0].content + '已整理' }]);
+  };
+  let preview = 0;
+  modalFixture(f, nodes => {
+    if (!['整合完成，请确认', '部分记忆需要处理'].includes(nodes('title').textContent)) return;
+    preview++;
+    assert.match(nodes('body').innerHTML, /旧记录已整理/);
+    assert.match(nodes('body').innerHTML, /平行时间线记录已整理/);
+    assert.equal(f.writes.length, 0);
+    if (preview < 3) {
+      assert.match(nodes('body').innerHTML, /默认时间线 · 整理失败/);
+      assert.match(nodes('body').innerHTML, /整合输出不完整，请缩小范围或检查聊天模型的输出长度设置/);
+      nodes(preview === 1 ? 'vm-group-retry-1' : 'vm-group-keep-1').onclick();
+    } else nodes('custom-modal-confirm').onclick();
+  });
+  await f.context.openVectorConsolidation(f.chat);
+  assert.deepEqual(batches, [[old], [main], [side], [main]]);
+  assert.equal(f.writes.length, 1);
+  assert.equal(f.manager.getFragment(f.chat, main).content, '默认时间线记录');
+  assert.equal(f.manager.getFragment(f.chat, main).embedding, null);
+});
+
+test('预览核对新旧原文后明确选择旧日期，确认时才归入目标时间线并合并', async () => {
+  const f = fixture();
+  const old = f.add('E', '一起看了场电影', { memoryTime: 1712908800000 });
+  const current = f.add('E', '一起看了场电影', {
+    clockVersion: 1, timelineId: 'main', timelineName: '默认时间线', memoryTime: 1712995200000
+  });
+  f.context.showChoiceModal = async () => 'all';
+  f.manager.generateConsolidation = async (_, group) => f.parse(group, [{ sourceIds: [group.originals[0].id], keep: true }]);
+  let previews = 0;
+  modalFixture(f, nodes => {
+    assert.equal(f.writes.length, 0);
+    if (nodes('title').textContent === '确认是同一条记忆') {
+      assert.match(nodes('body').innerHTML, /旧版记忆/);
+      assert.match(nodes('body').innerHTML, /默认时间线/);
+      nodes('vm-pair-date').value = '1';
+      nodes('vm-pair-content').value = '一起去电影院看了电影';
+      nodes('custom-modal-confirm').onclick();
+    } else if (nodes('title').textContent === '整合完成，请确认') {
+      previews++;
+      if (previews === 1) nodes('vm-pair-suggestion-0').onclick();
+      else {
+        assert.match(nodes('body').innerHTML, /2 条 → 1 条/);
+        nodes('custom-modal-confirm').onclick();
+      }
+    }
+  });
+  await f.context.openVectorConsolidation(f.chat);
+  assert.equal(previews, 2);
+  assert.equal(f.writes.length, 1);
+  const result = f.manager.getFragment(f.chat, current);
+  assert.equal(result.timelineId, 'main');
+  assert.equal(result.memoryTime, 1712908800000);
+  assert.equal(result.content, '一起去电影院看了电影');
+  assert.deepEqual(Array.from(result.consolidationSources, source => source.id), [old, current]);
+  assert.equal(f.manager.getFragment(f.chat, old), null);
+});
+
+test('模型自行输出跨版本合并会被拒绝，用户也不能将两条新版时间线合并', () => {
+  const f = fixture();
+  const old = f.add('E', '记录');
+  const current = f.add('E', '记录', { clockVersion: 1, timelineId: 'main' });
+  const other = f.add('E', '记录', { clockVersion: 1, timelineId: 'other' });
+  const snapshot = f.manager.captureConsolidation(f.chat);
+  assert.throws(() => f.parse(snapshot, [{ sourceIds: [old, current], category: 'E', content: '记录',
+    approval: { targetId: current, dateId: null } }, { sourceIds: [other], keep: true }]), /不同时间线/);
+  const [main, side] = f.parse(snapshot, [{ sourceIds: [current], keep: true }, { sourceIds: [other], keep: true },
+    { sourceIds: [old], keep: true }]);
+  assert.throws(() => f.manager.confirmConsolidationPair(snapshot, main, side, null, '记录'), /旧版记忆/);
+});
+
+test('1970 年以前的新版事件也不能跨天合并', () => {
+  const f = fixture();
+  const fields = { clockVersion: 1, timelineId: 'main' };
+  const one = f.add('E', '电影经历', { ...fields, memoryTime: Date.UTC(1960, 0, 1) });
+  const two = f.add('E', '电影经历', { ...fields, memoryTime: Date.UTC(1960, 0, 2) });
+  assert.throws(() => f.parse(f.manager.captureConsolidation(f.chat),
+    [{ sourceIds: [one, two], category: 'E', content: '电影经历' }]), /不同发生日期/);
+});
+
+test('撤销恢复源条目及关联，保留后续新增与改写，持久化失败可重试', async () => {
+  let fail = false;
+  const f = fixture({ put: () => { if (fail) throw new Error('保存失败'); } });
+  const first = f.add('R', '原记录一'), second = f.add('R', '原记录二');
+  const third = f.add('R', '另外的记录');
+  const linked = f.add('C', '核心原文', { linkedMemories: [second] });
+  const snapshot = f.manager.captureConsolidation(f.chat);
+  await f.manager.saveConsolidation(f.chat, snapshot, f.parse(snapshot, [
+    { sourceIds: [first, second], category: 'R', content: '合并后的记录' },
+    { sourceIds: [third], category: 'R', content: '整理后的另一条记录' }
+  ]));
+  const added = f.add('R', '之后新增的记忆');
+  f.manager.editFragment(f.chat, third, { content: '之后修改的记忆' });
+  f.manager.editFragment(f.chat, linked, { content: '改过的核心原文' });
+  const before = copy(f.chat.variableMemory);
+  fail = true;
+  await assert.rejects(f.manager.undoConsolidation(f.chat), /保存失败/);
+  assert.deepEqual(copy(f.chat.variableMemory), before);
+  fail = false;
+  await f.manager.undoConsolidation(f.chat);
+  assert.equal(f.manager.getFragment(f.chat, first).content, '原记录一');
+  assert.equal(f.manager.getFragment(f.chat, second).content, '原记录二');
+  assert.equal(f.manager.getFragment(f.chat, third).content, '之后修改的记忆');
+  assert.equal(f.manager.getFragment(f.chat, added).content, '之后新增的记忆');
+  assert.equal(f.manager.getFragment(f.chat, linked).content, '改过的核心原文');
+  assert.deepEqual(Array.from(f.manager.getFragment(f.chat, linked).linkedMemories), [second]);
+  assert.equal(f.chat.variableMemory.consolidationUndo, undefined);
+});

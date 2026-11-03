@@ -23,15 +23,21 @@
       const commentItem = target.closest('.comment-item');
       if (commentItem) {
         const postId = parseInt(commentItem.dataset.postId);
-        const commenterOriginalName = commentItem.dataset.commenterOriginalName;
-        const commenterDisplayName = commentItem.dataset.commenterDisplayName;
+        const post = await db.qzonePosts.get(postId);
+        const person = await window.CharacterIdentity.resolveComment(post, Number(commentItem.dataset.commentIndex));
+        if (!person) return;
+        const cachedPost = qzonePostsCache.find(item => item.id === postId);
+        if (cachedPost) cachedPost.comments = post.comments;
+        const commenterOriginalName = person.originalName || person.name;
+        const commenterDisplayName = window.CharacterIdentity.display(commenterOriginalName, person.id);
 
-        if (!commenterOriginalName || !commenterDisplayName || commenterOriginalName === state.qzoneSettings.nickname) {
+        if (person.id === 'user') {
           clearQzoneReplyContext(commentItem.closest('.qzone-post-container'));
           return;
         }
         currentQzoneReplyContext = {
           postId,
+          replyToId: person.id,
           replyToName: commenterOriginalName,
           replyToDisplayName: commenterDisplayName
         };
@@ -93,18 +99,19 @@
           if (!post) return;
           if (!post.likes) post.likes = [];
           const userOriginalName = state.qzoneSettings.nickname;
-          const userLikeIndex = post.likes.indexOf(userOriginalName);
-          if (userLikeIndex > -1) {
-            post.likes.splice(userLikeIndex, 1);
+          if (window.CharacterIdentity.likedBy(post, 'user')) {
+            post.likeActors = (post.likeActors || []).filter(actor => actor.id !== 'user');
+            post.likes = post.likes.filter(name => !window.CharacterIdentity.isUserComment({ commenterName: name }));
           } else {
-            post.likes.push(userOriginalName);
+            window.CharacterIdentity.addLike(post, 'user', userOriginalName);
             icon.classList.add('animate-like');
             icon.addEventListener('animationend', () => icon.classList.remove('animate-like'), {
               once: true
             });
           }
           await db.qzonePosts.update(postId, {
-            likes: post.likes
+            likes: post.likes,
+            likeActors: post.likeActors || []
           });
           await updateSinglePostInDOM(postId);
         }
@@ -144,10 +151,12 @@
         if (!post.comments) post.comments = [];
 
         const newComment = {
+          commenterId: 'user',
           commenterName: state.qzoneSettings.nickname,
           text: commentText,
           timestamp: Date.now(),
-          replyTo: (currentQzoneReplyContext && currentQzoneReplyContext.postId === postId) ? currentQzoneReplyContext.replyToName : null
+          replyTo: (currentQzoneReplyContext && currentQzoneReplyContext.postId === postId) ? currentQzoneReplyContext.replyToName : null,
+          replyToId: (currentQzoneReplyContext && currentQzoneReplyContext.postId === postId) ? currentQzoneReplyContext.replyToId : null
         };
 
         post.comments.push(newComment);
@@ -157,12 +166,7 @@
 
         let postSummary = (post.publicText || post.content || '').substring(0, 30);
         const userNickname = state.qzoneSettings.nickname;
-        const notifiedAiIds = new Set();
-        if (post.authorId !== 'user') notifiedAiIds.add(post.authorId);
-        if (newComment.replyTo && newComment.replyTo !== userNickname) {
-          const repliedToChat = Object.values(state.chats).find(c => c.originalName === newComment.replyTo);
-          if (repliedToChat) notifiedAiIds.add(repliedToChat.id);
-        }
+        const notifiedAiIds = window.CharacterIdentity.notificationIds(post, newComment);
         for (const aiId of notifiedAiIds) {
           const chat = state.chats[aiId];
           if (chat && !chat.isGroup) {

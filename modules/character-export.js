@@ -470,12 +470,17 @@
 
     try {
       const formatOptions = [
+        { text: '按日期分段备份 (JSON，可合并导入)', value: 'history_parts' },
         { text: '完整备份 (JSON)', value: 'json' },
         { text: '纯文本记录 (TXT)', value: 'txt' },
         { text: '纪念信件 (HTML)', value: 'html' }
       ];
       const format = await showChoiceModal('选择导出格式', formatOptions);
       if (!format) return;
+      if (format === 'history_parts') {
+        window.ChatHistoryTransfer.openExport(chat);
+        return;
+      }
 
       const safeName = chat.name.replace(/[\\/:*?"<>|]/g, '_');
       const dateStr = new Date().toISOString().split('T')[0];
@@ -490,7 +495,8 @@
         const backupData = {
           type: 'EPhoneSingleChat',
           version: 1,
-          chatData: chatDataCopy
+          chatData: chatDataCopy,
+          videoAttachments: window.ChatVideo ? await window.ChatVideo.exportMedia([chat.id]) : []
         };
 
         const blob = new Blob(
@@ -749,51 +755,8 @@
 
   async function importSingleChat(file) {
     if (!file || !state.activeChatId) return;
-    const currentChatId = state.activeChatId;
-    const currentChat = state.chats[currentChatId];
-
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-
-
-      if (data.type !== 'EPhoneSingleChat' || !data.chatData) {
-        throw new Error("文件格式不正确，这不是一个有效的单聊备份文件。");
-      }
-
-
-      const confirmed = await showCustomConfirm(
-        '严重警告！',
-        `这将用备份文件中的数据【完全覆盖】当前与"${currentChat.name}"的聊天记录和设置。此操作不可撤销！<br><br><strong>确定要继续吗？</strong>`, {
-        confirmButtonClass: 'btn-danger',
-        confirmText: '确认覆盖'
-      }
-      );
-
-      if (!confirmed) return;
-
-
-      const importedChatData = data.chatData;
-
-
-      importedChatData.id = currentChatId;
-
-
-      await db.chats.put(importedChatData);
-      state.chats[currentChatId] = importedChatData;
-
-
-      await showCustomAlert('导入成功', '聊天记录已成功覆盖！正在刷新界面...');
-
-
-      renderChatInterface(currentChatId);
-      renderChatList();
-      document.getElementById('chat-settings-btn').click();
-
-    } catch (error) {
-      console.error("导入单个聊天时出错:", error);
-      await showCustomAlert('导入失败', `文件解析或应用失败: ${error.message}`);
-    }
+    // Both new history parts and legacy JSON backups now merge messages without replacing settings.
+    await window.ChatHistoryTransfer.openImport(file, state.activeChatId);
   }
 
   // ========== 全局暴露 ==========

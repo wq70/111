@@ -111,6 +111,7 @@
         - 格式: '[{"type": "group_call_response", "name": "角色A的本名", "decision": "join"}, {"type": "group_call_response", "name": "角色B的本名", "decision": "decline"}]'
         # 群成员列表及人设
         ${chat.members.map(m => `- ${m.groupNickname} (本名: ${m.originalName}): ${m.persona}`).join('\n')}
+        ${window.CharacterIdentity.buildContext(chat)}
         现在，请为所有AI角色做出决策。`;
         } else {
           callDecisionPrompt = `
@@ -185,8 +186,9 @@
               break;
             }
             if (msgData.type === 'group_call_response') {
+              if (!await window.CharacterIdentity.prepare(chat, msgData, state.activeChatId === chat.id)) continue;
               if (msgData.decision === 'join') {
-                const member = chat.members.find(m => m.originalName === msgData.name);
+                const member = window.CharacterIdentity.member(chat, msgData);
                 if (member && !videoCallState.participants.some(p => p.id === member.id)) {
                   videoCallState.participants.push(member);
                 }
@@ -257,6 +259,7 @@
         - 格式: '[{"type": "group_voice_response", "name": "角色A的本名", "decision": "join"}, {"type": "group_voice_response", "name": "角色B的本名", "decision": "decline"}]'
         # 群成员列表及人设
         ${chat.members.map(m => `- ${m.groupNickname} (本名: ${m.originalName}): ${m.persona}`).join('\n')}
+        ${window.CharacterIdentity.buildContext(chat)}
         现在，请为所有AI角色做出决策。`;
         } else {
           callDecisionPrompt = `
@@ -362,8 +365,9 @@
             }
 
             if (msgData.type === 'group_voice_response') {
+              if (!await window.CharacterIdentity.prepare(chat, msgData, state.activeChatId === chat.id)) continue;
               if (msgData.decision === 'join') {
-                const member = chat.members.find(m => m.originalName === msgData.name);
+                const member = window.CharacterIdentity.member(chat, msgData);
                 if (member && !voiceCallState.participants.some(p => p.id === member.id)) {
                   voiceCallState.participants.push(member);
                 }
@@ -695,6 +699,9 @@ ${linkedContents}
         !m.isExcluded && m.type !== 'thought_chain_block' && m.type !== 'mcp_activity'
       ).slice(-maxMemory);
       const filteredHistory = await filterHistoryWithDoNotSendRules(historySlice, chatId);
+      if (window.ChatVideo && !options.candidateContent) {
+        await window.ChatVideo.prepare(chat, filteredHistory, { preview: isPreview, signal: options.signal });
+      }
       let sharedContext = '';
       const lastAiTurnIndex = chat.history.findLastIndex(msg => msg.role === 'assistant');
       const recentUserMessages = chat.history.slice(lastAiTurnIndex + 1);
@@ -729,7 +736,7 @@ ${linkedContents}
 
       if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
 
-        const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== chatId);
+        const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
 
         if (idsToMount.length > 0) {
           const linkedChatsWithTimestamps = idsToMount.map(id => {
@@ -810,7 +817,7 @@ ${linkedContents}
         let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
-          const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== chatId);
+          const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
           if (idsToMount.length > 0) {
             const linkedChatsWithTimestamps = idsToMount.map(id => {
               const linkedChat = state.chats[id];
@@ -859,6 +866,9 @@ ${linkedContents}
         // 构建用于向量检索的查询词（如果有）
         const queryTextForVector = filteredHistory.slice(-5).map(m => typeof m.content === 'string' ? m.content : '').join(' ');
 
+        if (window.GroupMemory?.independent(chat)) {
+          longTermMemoryContext = await window.GroupMemory.context(chat, queryTextForVector);
+        } else {
         for (const member of chat.members) {
           const memberChat = state.chats[member.id];
           if (memberChat) {
@@ -885,6 +895,9 @@ ${linkedContents}
           longTermMemoryContext += '- (暂无)';
         }
 
+
+        
+        }
 
         let timeContextText = '';
         let longTimeNoSee = false;
@@ -938,7 +951,7 @@ ${linkedContents}
               contactsText = `TA的好友包括: ${friendChats.map(f => f.name).join('、 ')}`;
             }
           }
-          return `- **${member.groupNickname}** (本名: ${member.originalName}): ${member.persona} [社交背景: ${contactsText}]`;
+          return `- **${member.groupNickname}** (本名: ${member.originalName}, actorId: ${JSON.stringify(String(member.id))}): ${member.persona} [社交背景: ${contactsText}]`;
         }).join('\n');
 
           const myNickname = chat.settings.myNickname || '我';
@@ -1189,11 +1202,11 @@ ${linkedContents}
             }
           }
 
-          const sender = msg.role === 'user' ? myNickname : msg.senderName;
+          const sender = msg.role === 'user' ? myNickname : `${getDisplayNameInGroup(chat, msg.senderName, msg.senderId)}${msg.senderId ? ` [角色ID: ${msg.senderId}]` : ''}`;
           let prefix = `(Timestamp: ${msg.timestamp}) ${sender}`;
 
           if (msg.quote) {
-            const quotedSenderDisplayName = getDisplayNameInGroup(chat, msg.quote.senderName);
+            const quotedSenderDisplayName = getDisplayNameInGroup(chat, msg.quote.senderName, msg.quote.senderId);
             const quotedContent = String(msg.quote.content || '').substring(0, 50);
             prefix += ` (回复 ${quotedSenderDisplayName} 的消息: "${quotedContent}...")`;
           }
@@ -1207,23 +1220,7 @@ ${linkedContents}
           else if (msg.type === 'openaiimag') content = `[${sender} 分享了一张GPT图片，prompt: ${msg.prompt}]`;
           else if (msg.type === 'voice_message') content = `[${sender} 发送了一条语音，内容是：'${msg.content}']`;
           else if (msg.type === 'transfer') {
-            // --- 修复开始：明确转账状态和方向 ---
-            let currencySuffix = '';
-            if (msg.currency && msg.currency !== 'CNY') {
-                currencySuffix = `(币种: \${msg.currency})`;
-            }
-            let statusText = '';
-            if (msg.status === 'accepted') statusText = ' (✅已收款)';
-            else if (msg.status === 'declined') statusText = ' (❌已拒收)';
-            else statusText = ' (⏳等待对方确认)';
-
-            if (msg.isRefund) {
-              // 如果是退款，明确告诉AI这是“退回”的钱，不是新给的
-              content = `[系统提示：\${msg.senderName} 将之前的转账退还给了 \${msg.receiverName} (金额: \${msg.amount}\${currencySuffix})，此交易已结束。]`;
-            } else {
-              content = `[\${msg.senderName} 向 \${msg.receiverName} 转账 \${msg.amount}\${currencySuffix}, 备注: \${msg.note}\${statusText}]`;
-            }
-            // --- 修复结束 ---
+            content = window.formatChatTransferEvent(chat, msg);
           }
           else if (msg.type === 'location_share') {
             content = `[${sender} 分享了Ta的位置：'${msg.content}']`;
@@ -1266,7 +1263,7 @@ ${linkedContents}
             }
             content = instructionText;
           } else if (msg.type === 'gift') {
-            const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName);
+            const sender = msg.role === 'user' ? myNickname : getDisplayNameInGroup(chat, msg.senderName, msg.senderId);
             const itemsSummary = msg.items.map(item => `${item.name} x${item.quantity}`).join('、 ');
 
             let recipientSummary = '';
@@ -1335,7 +1332,7 @@ ${linkedContents}
 
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
 
-          const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== chatId);
+          const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
 
           if (idsToMount.length > 0) {
 
@@ -1562,6 +1559,7 @@ ${enabledEntries}
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;
             if (msg.isHidden) return null;
+            if (msg.type === 'transfer') return { role: 'user', content: `(Timestamp: ${msg.timestamp}) ${window.formatChatTransferEvent(chat, msg)}` };
 
 
 
@@ -1628,14 +1626,6 @@ ${enabledEntries}
                 role: 'user',
                 content: `${prefix}[你发送了一条语音消息，内容是：'${msg.content}']`
               };
-              if (msg.type === 'transfer') {
-                let cur = '';
-                if (msg.currency && msg.currency !== 'CNY') cur = ` (币种: \${msg.currency})`;
-                return {
-                  role: 'user',
-                  content: `\${prefix}[系统提示：你于时间戳 \${msg.timestamp} 向对方发起了转账: \${msg.amount}\${cur}, 备注: \${msg.note}。等待对方处理。]`
-                };
-              }
               if (msg.type === 'couple_invite' || msg.type === 'couple_invite_response') return null;
               if (msg.type === 'waimai_request') return {
                 role: 'user',
@@ -1668,10 +1658,6 @@ ${enabledEntries}
               if (msg.type === 'sticker') {
 
                 assistantMsgObject.meaning = msg.meaning;
-              } else if (msg.type === 'transfer') {
-                assistantMsgObject.amount = msg.amount;
-                if (msg.currency) assistantMsgObject.currency = msg.currency;
-                assistantMsgObject.note = msg.note;
               } else if (msg.type === 'waimai_request') {
                 assistantMsgObject.productInfo = msg.productInfo;
                 assistantMsgObject.amount = msg.amount;
@@ -1698,7 +1684,7 @@ ${enabledEntries}
         } else {
           let nameHistoryContext = '';
           if (chat.nameHistory && chat.nameHistory.length > 0) {
-            nameHistoryContext = `\n- **你的曾用名**: [${chat.nameHistory.join(', ')}]。当在对话历史中看到这些名字时，它们都指的是【你】自己。`;
+            nameHistoryContext = `\n- 此聊天用过的备注：${JSON.stringify(chat.nameHistory)}。这些是显示标签。`;
           }
 
           let userProfileContext = '';
@@ -1798,14 +1784,10 @@ ${enabledEntries}
               if (post.comments && post.comments.length > 0) {
                 for (const comment of post.comments) {
                   if (typeof comment === 'object' && comment.commenterName) {
-                    const commenterDisplayName = getDisplayNameByOriginalName(comment.commenterName);
+                    const commenterDisplayName = window.CharacterIdentity.commentContext(comment, chat.id);
                     let commentText = comment.meaning ? `[表情: '${comment.meaning}']` : comment.text;
 
-                    if (comment.commenterName === aiOriginalName) {
-                      postsContext += `  - 你评论说: ${commentText}\n`;
-                    } else {
-                      postsContext += `  - 评论: ${commenterDisplayName} (本名: ${comment.commenterName}): ${commentText}\n`;
-                    }
+                    postsContext += `  - 评论: ${commenterDisplayName}: ${commentText}\n`;
                   }
                 }
               }
@@ -1866,14 +1848,14 @@ ${enabledEntries}
           // 遍历所有聊天，找出 "是群聊" 且 "成员中包含当前AI" 的群
           const memberGroups = Object.values(state.chats).filter(c =>
             c.isGroup &&
-            c.members.some(m => m.originalName === myOriginalName)
+            c.members.some(m => String(m.id) === String(chat.id))
           );
 
           if (memberGroups.length > 0) {
             memberGroups.forEach(group => {
 
               const otherMembers = group.members
-                .filter(m => m.originalName !== myOriginalName && m.originalName !== userOriginalName)
+                .filter(m => String(m.id) !== String(chat.id) && m.id !== 'user')
                 .map(m => m.groupNickname)
                 .join('、 ');
 
@@ -1937,6 +1919,7 @@ ${enabledEntries}
 
             // 筛选逻辑：
             const relevantTasks = chat.todoList.filter(t => {
+              if (t.owner === 'char') return false;
               // 1. 今天的任务：全读
               if (t.date === todayStr) return true;
 
@@ -2415,6 +2398,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;
+            if (msg.type === 'transfer') return { role: 'user', content: `(Timestamp: ${msg.timestamp}) ${window.formatChatTransferEvent(chat, msg)}` };
             // 处理系统消息（旁白和系统通知）
             if (msg.role === 'system' && !msg.isHidden) {
               if (msg.type === 'narration') {
@@ -2438,7 +2422,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
               return {
                 role: 'user',
-                content: msg.content
+                content: window.formatLegacyTransferNotice(chat, msg.content)
               };
             } else if (msg.isHidden) {
               return null;
@@ -2516,10 +2500,6 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                   content: `${prefix}[分享了一个Reddit帖子]\n标题: ${rData.title}\n来自: ${rData.subreddit}\n内容摘要: ${rData.selftext || '[链接/图片]'}`
                 };
               }
-              if (msg.type === 'transfer') return {
-                role: 'user',
-                content: `${prefix}[系统提示：你于时间戳 ${msg.timestamp} 向对方发起了转账: ${msg.amount}元, 备注: ${msg.note}。等待对方处理。]`
-              };
               if (msg.type === 'couple_invite') {
                 const ciStatus = msg.status === 'accepted' ? '对方已接受' : msg.status === 'rejected' ? '对方已拒绝' : '等待对方确认';
                 return {
@@ -2562,9 +2542,6 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
               if (msg.type === 'sticker') {
 
                 assistantMsgObject.meaning = msg.meaning;
-              } else if (msg.type === 'transfer') {
-                assistantMsgObject.amount = msg.amount;
-                assistantMsgObject.note = msg.note;
               } else if (msg.type === 'waimai_request') {
                 assistantMsgObject.productInfo = msg.productInfo;
                 assistantMsgObject.amount = msg.amount;
@@ -2617,6 +2594,15 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
       // 在自定义提示词处理完成后注入运行时事实，线上/线下模式都保留来源。
       systemPrompt += window.RemarkNames.buildContext(chat, filteredHistory);
+      if (chat.settings.enableNarratorMode || chat.settings.isOfflineMode) {
+        const names = window.RemarkNames.participantNames(chat);
+        systemPrompt += `\n旁白用第三人称本名（玩家：${JSON.stringify(names.user)}${chat.isGroup ? '' : `，角色：${JSON.stringify(names.character)}`}），避免用“用户”“我”“你”指代当事人。按已发生的事件准确写清谁做了什么。`;
+      }
+      const characterTodoContext = !isPreview && !options.candidateContent
+        ? window.CharacterTodos.chatContext(chat)
+        : { date: '', prompt: '' };
+      systemPrompt += characterTodoContext.prompt;
+      systemPrompt += window.CharacterIdentity.buildContext(chat);
 
       // ========== 识图API预处理 ==========
       // 如果配置了独立的识图API，先用识图API识别图片，再把描述文本替代图片发给主API
@@ -2680,6 +2666,8 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
         systemPrompt += window.languagePolicy.buildEnforcementPrompt(chat);
       }
       let isGemini = proxyUrl === GEMINI_API_URL;
+      // 信息关闭时返回空串，不增加任何短信能力提示词或专属上下文。
+      if (window.SmsEngine && !chat.isGroup) systemPrompt += await window.SmsEngine.qqContext(chat);
       let geminiConfig = options.candidateContent ? null : toGeminiRequestData(model, apiKey, systemPrompt, messagesPayload)
 
       // 创建新的 AbortController
@@ -2981,13 +2969,14 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
       lastRawAiResponse = aiResponseContent;
       lastResponseTimestamps = [];
       chat.history = chat.history.filter(msg => !msg.isTemporary);
-      const messagesArray = parseAiResponse(aiResponseContent);
+      const parsedMessages = parseAiResponse(aiResponseContent);
+      const messagesArray = parsedMessages.filter(message => message?.type !== 'character_todo');
       if (replyGuardianTaskId && window.ReplyTaskStore) {
         window.ReplyTaskStore.setStage(replyGuardianTaskId, 'applying', '正在写入聊天').catch(() => {});
       }
 
       let consolidatedMessages = [];
-      if (chat.settings.isOfflineMode && !messagesArray.some(message => message?.speakerType === 'pet')) {
+      if (chat.settings.isOfflineMode && !chat.isGroup && !messagesArray.some(message => message?.speakerType === 'pet')) {
 
         let offlineBuffer = {
           content: [],
@@ -3106,7 +3095,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           msgData.type = 'voice_message';
           msgData.content = msgData.content.replace('[V]', '').trim();
         }
-        if (chat.isGroup && msgData.name && msgData.name === chat.name) {
+        if (chat.isGroup && !msgData.actorId && msgData.name && msgData.name === chat.name) {
           console.error(`AI幻觉已被拦截！试图使用群名 ("${chat.name}") 作为角色名。消息内容:`, msgData);
           continue;
         }
@@ -3169,8 +3158,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
         }
 
         if (msgData.type === 'group_call_response') {
+          if (!await window.CharacterIdentity.prepare(chat, msgData, isViewingThisChat)) continue;
           if (msgData.decision === 'join') {
-            const member = chat.members.find(m => m.originalName === msgData.name);
+            const member = window.CharacterIdentity.member(chat, msgData);
             if (member && !videoCallState.participants.some(p => p.id === member.id)) {
               videoCallState.participants.push(member);
             }
@@ -3179,14 +3169,14 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           continue;
         }
 
-        if (chat.isGroup && msgData.name && msgData.name === chat.name) {
+        if (chat.isGroup && !msgData.actorId && msgData.name && msgData.name === chat.name) {
           console.error(`AI幻觉已被拦截！试图使用群名 ("${chat.name}") 作为角色名。消息内容:`, msgData);
           continue;
         }
 
-        if (chat.isGroup && !msgData.name && msgData.type !== 'narration') {
+        if (chat.isGroup && !msgData.name && !msgData.actorId && msgData.type !== 'narration') {
           if (chat.members && chat.members.length > 0) {
-            const fallbackName = lastThoughtChainName && chat.members.some(m => m.originalName === lastThoughtChainName) ? lastThoughtChainName : chat.members[0].originalName;
+            const fallbackName = lastThoughtChainName && window.CharacterIdentity.candidates(lastThoughtChainName, chat.members).length === 1 ? lastThoughtChainName : (chat.members.length === 1 ? chat.members[0].originalName : null);
             msgData.name = fallbackName;
             console.warn(`[群聊兜底] 消息缺少 name，已自动补全为: ${fallbackName}`, msgData);
           } else {
@@ -3195,15 +3185,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           }
         }
 
-        // 纠正AI可能返回群昵称而非本名的问题
-        if (chat.isGroup && msgData.name) {
-          const exactMember = chat.members.find(m => m.originalName === msgData.name);
-          if (!exactMember) {
-            const nicknameMember = chat.members.find(m => m.groupNickname === msgData.name);
-            if (nicknameMember) {
-              msgData.name = nicknameMember.originalName;
-            }
-          }
+        if (!await window.CharacterIdentity.prepare(chat, msgData, isViewingThisChat)) {
+          if (options.candidateContent) throw new Error('尚未确认发言角色，原回复已保留。');
+          continue;
         }
 
         let aiMessage = null;
@@ -3211,10 +3195,12 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
         let baseMessage = {
           role: 'assistant',
           senderName: msgData.name || chat.name,
+          senderId: msgData.actorId || null,
           timestamp: currentMessageTimestamp
         };
         if (window.CharacterBond && !chat.isGroup) {
           baseMessage = window.CharacterBond.decorateAssistantBase(baseMessage, msgData, chat);
+          baseMessage.senderId = baseMessage.actorId;
         }
 
         lastResponseTimestamps.push(currentMessageTimestamp);
@@ -3574,9 +3560,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                 recipientOriginalName === '我' ||
                 recipientOriginalName === '{{user}}') {
 
-              const privateChat = Object.values(state.chats).find(c =>
-                !c.isGroup && c.originalName === senderOriginalName
-              );
+              const privateChat = window.CharacterIdentity.privateChat(chat, msgData);
 
               if (privateChat) {
 
@@ -3591,6 +3575,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                   const privateMessage = {
                     role: 'assistant',
                     senderName: senderOriginalName,
+                    senderId: msgData.actorId,
                     content: contentString,
                     timestamp: messageTimestamp++
                   };
@@ -3643,17 +3628,13 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
             const targetGroupName = msgData.targetGroupName;
             const messagesToSend = Array.isArray(msgData.content) ? msgData.content : [String(msgData.content)];
 
-            if (!targetGroupName) {
+            if (!targetGroupName && !msgData.targetGroupId) {
               console.warn(`AI ${senderOriginalName} 尝试发送群聊消息，但未指定 targetGroupName。`);
               continue;
             }
 
             // 1. 查找目标群聊，并确保AI是该群的成员
-            const targetGroupChat = Object.values(state.chats).find(c =>
-              c.isGroup &&
-              c.name === targetGroupName &&
-              c.members.some(m => m.originalName === senderOriginalName)
-            );
+            const targetGroupChat = await window.CharacterIdentity.targetGroup(chat, msgData);
 
             if (targetGroupChat) {
               // 2. 找到了群聊，准备发送消息
@@ -3665,6 +3646,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                 const groupMessage = {
                   role: 'assistant',
                   senderName: senderOriginalName, // AI的本名
+                  senderId: msgData.actorId,
                   content: contentString,
                   timestamp: messageTimestamp++ // 使用主循环的时间戳
                 };
@@ -3680,7 +3662,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                   targetGroupChat.unreadCount = (targetGroupChat.unreadCount || 0) + newMessagesCount;
 
                   // 为了通知，获取AI在该群的群昵称
-                  const member = targetGroupChat.members.find(m => m.originalName === senderOriginalName);
+                  const member = window.CharacterIdentity.member(targetGroupChat, msgData);
                   const senderDisplayName = member ? member.groupNickname : senderOriginalName;
 
                   showNotification(targetGroupChat.id, `${senderDisplayName}: ${messagesToSend[0]}`);
@@ -3875,7 +3857,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                 chat.customThoughts = {};
               }
               for (const key in msgData) {
-                if (key !== 'type' && key !== 'heartfelt_voice' && key !== 'random_jottings') {
+                if (!['type', 'heartfelt_voice', 'random_jottings', 'actorId', 'senderId', 'name'].includes(key)) {
                   chat.customThoughts[key] = String(msgData[key]);
                 }
               }
@@ -3917,26 +3899,19 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
             }
             continue;
           case 'change_user_nickname':
-            if (!chat.isGroup && msgData.new_name) {
+            if (!chat.isGroup && typeof msgData.new_name === 'string') {
               const newNickname = msgData.new_name.trim();
-              if (newNickname) {
+              if (newNickname && newNickname !== chat.settings.myNickname) {
+                const names = window.RemarkNames.participantNames(chat);
                 chat.settings.myNickname = newNickname;
 
                 const systemMessage = {
                   role: 'system',
                   type: 'pat_message',
-                  content: `“${chat.name}” 将对你的称呼修改为 “${newNickname}”`,
+                  content: `${names.character}将对${names.user}的称呼改为“${newNickname}”。`,
                   timestamp: messageTimestamp++
                 };
                 chat.history.push(systemMessage);
-
-                const hiddenMemoryMessage = {
-                  role: 'system',
-                  content: `[系统提示：你刚刚成功将对用户的称呼修改为了“${newNickname}”。]`,
-                  timestamp: messageTimestamp++,
-                  isHidden: true
-                };
-                chat.history.push(hiddenMemoryMessage);
 
                 if (isViewingThisChat) {
                   appendMessage(systemMessage, chat);
@@ -4045,7 +4020,8 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
               hiddenContent: msgData.hiddenContent || '',
               image_prompt: msgData.image_prompt || '',
               timestamp: Date.now(),
-              authorId: chatId,
+              authorId: msgData.actorId,
+              authorOriginalName: msgData.name,
               authorGroupId: chat.groupId,
               visibleGroupIds: null
             };
@@ -4439,14 +4415,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
             if (postToComment) {
               if (!postToComment.comments) postToComment.comments = [];
 
-              // 防御：如果模型错误地填了用户的名字，强制纠正为角色本名
-              const userNickname = state.qzoneSettings?.nickname;
-              let commenterName = msgData.name || chat.originalName;
-              if (userNickname && commenterName === userNickname) {
-                console.warn(`[动态防御] 角色 "${chat.originalName}" 试图用用户名字 "${userNickname}" 评论，已纠正`);
-                commenterName = chat.originalName;
-              }
+              const commenterName = msgData.name;
               const createCommentObject = (text, meaning = null, replyTo = null) => ({
+                ...window.CharacterIdentity.commentFields(msgData),
                 commenterName,
                 text: processMentions(text, chat),
                 meaning,
@@ -4487,10 +4458,10 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
             const postToLike = await db.qzonePosts.get(parseInt(msgData.postId));
             if (postToLike) {
               if (!postToLike.likes) postToLike.likes = [];
-              if (!postToLike.likes.includes(chat.name)) {
-                postToLike.likes.push(chat.name);
+              if (window.CharacterIdentity.addLike(postToLike, msgData.actorId, msgData.name)) {
                 await db.qzonePosts.update(postToLike.id, {
-                  likes: postToLike.likes
+                  likes: postToLike.likes,
+                  likeActors: postToLike.likeActors
                 });
                 updateUnreadIndicator(unreadPostsCount + 1);
                 if (isViewingThisChat && document.getElementById('qzone-screen').classList.contains('active')) {
@@ -4505,7 +4476,8 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
               const newPost = {
                 type: 'repost',
                 timestamp: Date.now(),
-                authorId: chatId,
+                authorId: msgData.actorId,
+                authorOriginalName: msgData.name,
                 authorGroupId: chat.groupId,
                 repostComment: msgData.comment || '',
                 originalPost: originalPost,
@@ -4560,7 +4532,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
           case 'pat_user':
             let patterName;
             if (chat.isGroup) {
-              const member = chat.members.find(m => m.originalName === msgData.name);
+              const member = window.CharacterIdentity.member(chat, msgData);
               patterName = member ? member.groupNickname : msgData.name;
             } else {
               patterName = chat.name;
@@ -4623,7 +4595,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
                   let changerName;
                   if (chat.isGroup) {
-                    const member = chat.members.find(m => m.originalName === msgData.name);
+                    const member = window.CharacterIdentity.member(chat, msgData);
                     changerName = member ? member.groupNickname : msgData.name;
                   } else {
                     changerName = chat.name;
@@ -4672,6 +4644,10 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
               await db.memories.add(newCountdown);
               console.log(`AI "${chat.name}" 创建了一个新约定:`, msgData.title);
             }
+            continue;
+          case 'share_sms_number':
+          case 'send_sms':
+            if (!isPreview && window.SmsEngine) await window.SmsEngine.qqAction(chat, msgData);
             continue;
           case 'block_user':
             if (!chat.isGroup) {
@@ -4843,11 +4819,10 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                 packetToOpen.claimedBy[msgData.name] = claimedAmountAI;
 
 
-                const claimerMember = chat.members.find(m => m.originalName === msgData.name);
-                const claimerDisplayName = claimerMember ? claimerMember.groupNickname : msgData.name;
-
-
-                const senderDisplayName = getDisplayNameInGroup(chat, packetToOpen.senderName);
+                const claimerDisplayName = msgData.name;
+                const senderDisplayName = packetToOpen.role === 'user'
+                  ? window.RemarkNames.participantNames(chat).user
+                  : packetToOpen.senderName;
 
                 const aiClaimedMessage = {
                   role: 'system',
@@ -4857,7 +4832,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                 };
                 chat.history.push(aiClaimedMessage);
 
-                let hiddenContentForAI = `[系统提示：你 (${claimerDisplayName}) 成功抢到了 ${claimedAmountAI.toFixed(2)} 元。`;
+                let hiddenContentForAI = `[系统提示：${claimerDisplayName}领取了${senderDisplayName}的红包，金额 ${claimedAmountAI.toFixed(2)} 元。`;
                 if ((packetToOpen.unclaimedAmounts && packetToOpen.unclaimedAmounts.length === 0) || (Object.keys(packetToOpen.claimedBy).length >= packetToOpen.count)) {
                   packetToOpen.isFullyClaimed = true;
                   const finishedMessage = {
@@ -4882,8 +4857,9 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
                     });
                   }
                   if (luckyKing.name) {
-                    const luckyKingMember = chat.members.find(m => m.originalName === luckyKing.name);
-                    const luckyKingDisplayName = luckyKingMember ? luckyKingMember.groupNickname : luckyKing.name;
+                    const luckyKingDisplayName = luckyKing.name === (state.qzoneSettings.nickname || '{{user}}')
+                      ? window.RemarkNames.participantNames(chat).user
+                      : luckyKing.name;
                     hiddenContentForAI += ` 红包已被领完，手气王是 ${luckyKingDisplayName}！`;
                   } else {
                     hiddenContentForAI += ` 红包已被领完。`;
@@ -4988,7 +4964,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
               chat.name = newName;
 
-              const changerMember = chat.members.find(m => m.originalName === msgData.name);
+              const changerMember = window.CharacterIdentity.member(chat, msgData);
               const changerDisplayName = changerMember ? changerMember.groupNickname : msgData.name;
 
               const systemMessage = {
@@ -5027,7 +5003,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
               if (foundAvatar) {
                 chat.settings.groupAvatar = foundAvatar.url;
 
-                const changerMember = chat.members.find(m => m.originalName === msgData.name);
+                const changerMember = window.CharacterIdentity.member(chat, msgData);
                 const changerDisplayName = changerMember ? changerMember.groupNickname : msgData.name;
 
                 const systemMessage = {
@@ -5100,7 +5076,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
                 if (chat.isGroup) {
 
-                  quotedSenderDisplayName = getDisplayNameInGroup(chat, originalMessage.senderName);
+                  quotedSenderDisplayName = getDisplayNameInGroup(chat, originalMessage.senderName, originalMessage.senderId);
                 } else {
 
                   quotedSenderDisplayName = chat.name;
@@ -5110,6 +5086,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
               const quoteContext = {
                 timestamp: originalMessage.timestamp,
                 senderName: quotedSenderDisplayName,
+                senderId: originalMessage.role === 'user' ? 'user' : originalMessage.senderId,
 
                 content: String(originalMessage.content || '').substring(0, 50)
               };
@@ -5779,7 +5756,22 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
         await triggerAiResponse({ chatId });
         return;
       }
-      await db.chats.put(chat);
+      const previousTodos = chat.todoList;
+      const previousAutoDate = chat.characterTodoAutoDate;
+      const generatedTodoCount = window.CharacterTodos.add(chat, characterTodoContext.date, parsedMessages, 'auto');
+      const savedTodos = chat.todoList;
+      try {
+        await db.chats.put(chat);
+      } catch (error) {
+        if (generatedTodoCount && chat.todoList === savedTodos) {
+          chat.todoList = previousTodos;
+          chat.characterTodoAutoDate = previousAutoDate;
+        }
+        throw error;
+      }
+      if (generatedTodoCount && state.activeChatId === chatId && document.getElementById('todo-list-screen')?.classList.contains('active')) {
+        await window.renderTodoList();
+      }
       if (window.GenerationAdjustments) await window.GenerationAdjustments.consume(generationGuidance);
       if (options.onCommitted) options.onCommitted();
       if (replyGuardianTaskId && window.ReplyTaskStore) {

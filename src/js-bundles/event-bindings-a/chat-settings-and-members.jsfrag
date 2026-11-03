@@ -85,6 +85,7 @@
       const customCssInput = document.getElementById('custom-css-input');
       customCssInput.value = chat.settings.customCss || '';
       updateSettingsPreview();
+      window.GroupMemoryUI?.load(chat);
       document.getElementById('auto-memory-toggle').checked = chat.settings.enableAutoMemory || false;
       document.getElementById('auto-memory-interval').value = chat.settings.autoMemoryInterval || 20;
       document.getElementById('diary-mode-toggle').checked = chat.settings.enableDiaryMode || false;
@@ -548,6 +549,8 @@
 
       const newName = document.getElementById('chat-name-input').value.trim();
       if (!newName) return alert('备注名/群名不能为空！');
+      try { await window.GroupMemoryUI?.save(chat); }
+      catch (error) { showToast(error.message, 'error'); return; }
       if (!chat.isGroup && window.CharacterBond) {
         window.CharacterBond.setSwitches(
           chat,
@@ -791,6 +794,8 @@
         const newOriginalName = document.getElementById('ai-original-name-input').value.trim();
         if (!newOriginalName) return alert('对方本名不能为空！');
         chat.originalName = newOriginalName;
+        window.CharacterIdentity?.saveSettings(chat);
+        window.CharacterTodos.saveSettings(chat);
         chat.settings.aiPersona = document.getElementById('ai-persona').value;
         
         // 保存动态年龄设置

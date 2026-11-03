@@ -111,6 +111,7 @@
         - 格式: '[{"type": "group_call_response", "name": "角色A的本名", "decision": "join"}, {"type": "group_call_response", "name": "角色B的本名", "decision": "decline"}]'
         # 群成员列表及人设
         ${chat.members.map(m => `- ${m.groupNickname} (本名: ${m.originalName}): ${m.persona}`).join('\n')}
+        ${window.CharacterIdentity.buildContext(chat)}
         现在，请为所有AI角色做出决策。`;
         } else {
           callDecisionPrompt = `
@@ -185,8 +186,9 @@
               break;
             }
             if (msgData.type === 'group_call_response') {
+              if (!await window.CharacterIdentity.prepare(chat, msgData, state.activeChatId === chat.id)) continue;
               if (msgData.decision === 'join') {
-                const member = chat.members.find(m => m.originalName === msgData.name);
+                const member = window.CharacterIdentity.member(chat, msgData);
                 if (member && !videoCallState.participants.some(p => p.id === member.id)) {
                   videoCallState.participants.push(member);
                 }
@@ -257,6 +259,7 @@
         - 格式: '[{"type": "group_voice_response", "name": "角色A的本名", "decision": "join"}, {"type": "group_voice_response", "name": "角色B的本名", "decision": "decline"}]'
         # 群成员列表及人设
         ${chat.members.map(m => `- ${m.groupNickname} (本名: ${m.originalName}): ${m.persona}`).join('\n')}
+        ${window.CharacterIdentity.buildContext(chat)}
         现在，请为所有AI角色做出决策。`;
         } else {
           callDecisionPrompt = `
@@ -362,8 +365,9 @@
             }
 
             if (msgData.type === 'group_voice_response') {
+              if (!await window.CharacterIdentity.prepare(chat, msgData, state.activeChatId === chat.id)) continue;
               if (msgData.decision === 'join') {
-                const member = chat.members.find(m => m.originalName === msgData.name);
+                const member = window.CharacterIdentity.member(chat, msgData);
                 if (member && !voiceCallState.participants.some(p => p.id === member.id)) {
                   voiceCallState.participants.push(member);
                 }
@@ -695,6 +699,9 @@ ${linkedContents}
         !m.isExcluded && m.type !== 'thought_chain_block' && m.type !== 'mcp_activity'
       ).slice(-maxMemory);
       const filteredHistory = await filterHistoryWithDoNotSendRules(historySlice, chatId);
+      if (window.ChatVideo && !options.candidateContent) {
+        await window.ChatVideo.prepare(chat, filteredHistory, { preview: isPreview, signal: options.signal });
+      }
       let sharedContext = '';
       const lastAiTurnIndex = chat.history.findLastIndex(msg => msg.role === 'assistant');
       const recentUserMessages = chat.history.slice(lastAiTurnIndex + 1);
@@ -729,7 +736,7 @@ ${linkedContents}
 
       if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
 
-        const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== chatId);
+        const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
 
         if (idsToMount.length > 0) {
           const linkedChatsWithTimestamps = idsToMount.map(id => {
@@ -810,7 +817,7 @@ ${linkedContents}
         let linkedMemoryContext = '';
         const memoryCount = chat.settings.linkedMemoryCount || 10;
         if (chat.settings.linkedMemoryChatIds && chat.settings.linkedMemoryChatIds.length > 0) {
-          const idsToMount = chat.settings.linkedMemoryChatIds.filter(id => id !== chatId);
+          const idsToMount = (window.GroupMemory ? window.GroupMemory.mountIds(chat) : chat.settings.linkedMemoryChatIds.filter(id => id !== chatId));
           if (idsToMount.length > 0) {
             const linkedChatsWithTimestamps = idsToMount.map(id => {
               const linkedChat = state.chats[id];

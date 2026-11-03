@@ -728,20 +728,11 @@
 
 
 
-          if (deletedComment && deletedComment.commenterName === state.qzoneSettings.nickname) {
+          if (deletedComment && window.CharacterIdentity.isUserComment(deletedComment)) {
             console.log("用户删除了自己的评论，开始清理AI记忆...");
 
 
-            const aiToNotifyIds = new Set();
-            if (post.authorId !== 'user') {
-              aiToNotifyIds.add(post.authorId);
-            }
-            if (deletedComment.replyTo) {
-              const repliedToChat = Object.values(state.chats).find(c => c.originalName === deletedComment.replyTo);
-              if (repliedToChat) {
-                aiToNotifyIds.add(repliedToChat.id);
-              }
-            }
+            const aiToNotifyIds = window.CharacterIdentity.notificationIds(post, deletedComment);
 
 
             const postSummary = (post.publicText || post.content || '').substring(0, 30);

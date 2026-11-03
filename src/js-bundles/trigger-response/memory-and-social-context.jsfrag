@@ -15,7 +15,7 @@
         } else {
           let nameHistoryContext = '';
           if (chat.nameHistory && chat.nameHistory.length > 0) {
-            nameHistoryContext = `\n- **你的曾用名**: [${chat.nameHistory.join(', ')}]。当在对话历史中看到这些名字时，它们都指的是【你】自己。`;
+            nameHistoryContext = `\n- 此聊天用过的备注：${JSON.stringify(chat.nameHistory)}。这些是显示标签。`;
           }
 
           let userProfileContext = '';
@@ -115,14 +115,10 @@
               if (post.comments && post.comments.length > 0) {
                 for (const comment of post.comments) {
                   if (typeof comment === 'object' && comment.commenterName) {
-                    const commenterDisplayName = getDisplayNameByOriginalName(comment.commenterName);
+                    const commenterDisplayName = window.CharacterIdentity.commentContext(comment, chat.id);
                     let commentText = comment.meaning ? `[表情: '${comment.meaning}']` : comment.text;
 
-                    if (comment.commenterName === aiOriginalName) {
-                      postsContext += `  - 你评论说: ${commentText}\n`;
-                    } else {
-                      postsContext += `  - 评论: ${commenterDisplayName} (本名: ${comment.commenterName}): ${commentText}\n`;
-                    }
+                    postsContext += `  - 评论: ${commenterDisplayName}: ${commentText}\n`;
                   }
                 }
               }
@@ -183,14 +179,14 @@
           // 遍历所有聊天，找出 "是群聊" 且 "成员中包含当前AI" 的群
           const memberGroups = Object.values(state.chats).filter(c =>
             c.isGroup &&
-            c.members.some(m => m.originalName === myOriginalName)
+            c.members.some(m => String(m.id) === String(chat.id))
           );
 
           if (memberGroups.length > 0) {
             memberGroups.forEach(group => {
 
               const otherMembers = group.members
-                .filter(m => m.originalName !== myOriginalName && m.originalName !== userOriginalName)
+                .filter(m => String(m.id) !== String(chat.id) && m.id !== 'user')
                 .map(m => m.groupNickname)
                 .join('、 ');
 
@@ -254,6 +250,7 @@
 
             // 筛选逻辑：
             const relevantTasks = chat.todoList.filter(t => {
+              if (t.owner === 'char') return false;
               // 1. 今天的任务：全读
               if (t.date === todayStr) return true;
 
@@ -732,6 +729,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
           messagesPayload = filteredHistory.map(msg => {
             if (window.RemarkNames.getEvent(msg, chat)) return null;
+            if (msg.type === 'transfer') return { role: 'user', content: `(Timestamp: ${msg.timestamp}) ${window.formatChatTransferEvent(chat, msg)}` };
             // 处理系统消息（旁白和系统通知）
             if (msg.role === 'system' && !msg.isHidden) {
               if (msg.type === 'narration') {
@@ -755,7 +753,7 @@ ${await renderMacroPrompt(getActiveThoughtsPrompt(), 'thoughts')}
 
               return {
                 role: 'user',
-                content: msg.content
+                content: window.formatLegacyTransferNotice(chat, msg.content)
               };
             } else if (msg.isHidden) {
               return null;

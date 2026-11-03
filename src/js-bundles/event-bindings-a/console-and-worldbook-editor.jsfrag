@@ -469,6 +469,8 @@
       document.getElementById('ai-avatar-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('assign-group-section').style.display = isGroup ? 'none' : 'block';
       document.getElementById('ai-original-name-group').style.display = isGroup ? 'none' : 'block';
+      window.CharacterIdentity?.renderSettings(chat);
+      window.CharacterTodos.renderSettings(chat);
       document.getElementById('ai-voice-id-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('inject-thought-group').style.display = isGroup ? 'none' : 'block';
       document.getElementById('todo-list-setting-group').style.display = isGroup ? 'none' : 'flex';

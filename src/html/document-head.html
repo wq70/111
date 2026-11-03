@@ -54,6 +54,7 @@
   <link rel="stylesheet" href="css/phone/cphone-polish.css?v=0.0.36">
   <link rel="stylesheet" href="css/chat/quick-replies-and-exclusions.css?v=0.0.36">
   <link rel="stylesheet" href="css/media/watch-together.css?v=0.0.36">
+  <link rel="stylesheet" href="css/media/video-messages.css?v=20261102">
   <link rel="stylesheet" href="css/games/truth-game.css?v=0.0.36">
   <link rel="stylesheet" href="css/games/draw-and-guess.css?v=0.0.36">
   <link rel="stylesheet" href="css/tools/mobile-console.css?v=0.0.36">
@@ -66,17 +67,21 @@
   <link rel="stylesheet" href="css/ui/custom-widget-studio.css?v=2">
   <link rel="stylesheet" href="css/douban.css?v=0.0.36">
   <link rel="stylesheet" href="css/douban-menu.css?v=0.0.36">
+  <link rel="stylesheet" href="css/douban-transfer.css?v=20261102">
+  <link rel="stylesheet" href="css/chat-history-transfer.css?v=20261103">
   <link rel="stylesheet" href="update-notification.css?v=0.0.36">
   <link rel="stylesheet" href="css/memory/structured-memory.css?v=0.0.36">
   <link rel="stylesheet" href="css/memory/vector-memory.css?v=20261001-memory">
   <link rel="stylesheet" href="css/memory/world-memory-time.css?v=20261001-world-time">
   <link rel="stylesheet" href="css/memory/normal-memory.css?v=20261001-normal-memory">
+  <link rel="stylesheet" href="css/memory/group-memory.css">
   <link rel="stylesheet" href="css/online/app.css?v=0.0.36">
   <link rel="stylesheet" href="css/mcp/app.css?v=0.0.37-ios-safe-area">
   <link rel="stylesheet" href="css/health/period-tracker.css?v=0.0.36">
   <link rel="stylesheet" href="css/productivity/focus-timer.css?v=0.0.41-focus">
   <link rel="stylesheet" href="css/core/extra.css?v=0.0.36">
   <link rel="stylesheet" href="css/settings/prompt-entries.css?v=0.0.43">
+  <link rel="stylesheet" href="css/settings/preference-controls.css?v=20261102">
   <meta name="theme-color" content="#000000">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="manifest" href="manifest.json?v=0.0.36-pwa2">
@@ -95,7 +100,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js" defer></script>
-  <script src="update-notification.js?v=20261101-release" defer></script>
+  <script src="update-notification.js?v=20261103-release" defer></script>
   <script src="modules/memory/thought-chain-manager.js?v=0.0.36" defer></script>
   <script src="modules/online/manager.js?v=0.0.36" defer></script>
   <script src="modules/online/integration.js?v=0.0.36" defer></script>
@@ -122,21 +127,22 @@
   <script src="modules/ui-modals.js?v=20261003-memory-editor" defer></script>
   <script src="modules/ui-loaders.js?v=0.0.41-richtext" defer></script>
   <!-- 第三层：核心聊天功能 -->
+  <script src="modules/character/identity.js" defer></script>
   <script src="modules/chat-list.js?v=fonts-20261001" defer></script>
   <script src="modules/chat/interface-core.js?v=fonts-20261001" defer></script>
   <script src="modules/chat/language-policy.js?v=0.0.38" defer></script>
-  <script src="modules/chat/message-element.js?v=elevenlabs-20261001" defer></script>
+  <script src="modules/chat/message-element.js?v=20261103-char-todos" defer></script>
   <script src="modules/chat/message-lifecycle.js?v=20261001-world-time" defer></script>
   <script src="modules/chat/interface-settings.js?v=0.0.36-perf1" defer></script>
-  <script src="modules/chat-input.js?v=0.0.36" defer></script>
+  <script src="modules/chat-input.js?v=20261103-char-todos" defer></script>
   <script src="modules/social/character-bond.js?v=0.0.42" defer></script>
-  <script src="modules/chat/remark-names.js?v=20261001" defer></script>
+  <script src="modules/chat/remark-names.js?v=20261103-char-todos" defer></script>
   <!-- 第四层：AI 核心 -->
   <script src="modules/ai/context-and-uploads.js?v=20261001-world-time" defer></script>
   <script src="modules/ai/response-parser.js?v=0.0.36" defer></script>
   <script src="modules/ai/spectator-group.js?v=20261001-normal-memory" defer></script>
   <script src="modules/ai/mcp-chat-orchestrator.js?v=0.0.36" defer></script>
-  <script src="modules/ai/trigger-response.js?v=20261002-role-time-zone" defer></script>
+  <script src="modules/ai/trigger-response.js?v=20261103-char-todos" defer></script>
   <script src="modules/ai/generation-adjustments.js?v=20261001" defer></script>
   <script src="modules/ai/model-communication.js?v=20261001" defer></script>
   <script src="modules/ai/response-actions.js?v=20261002-role-time-zone" defer></script>
@@ -154,6 +160,8 @@
   <script src="modules/memory/variable-memory-summary.js?v=20261001-normal-memory" defer></script>
   <script src="modules/memory/normal-memory.js?v=20261001-normal-memory" defer></script>
   <script src="modules/memory/normal-memory-view.js?v=20261001-normal-memory" defer></script>
+  <script src="modules/memory/group-memory.js" defer></script>
+  <script src="modules/memory/group-memory-ui.js" defer></script>
   <script src="modules/memory/legacy-memory-conversion.js?v=20261001-memory" defer></script>
   <script src="modules/memory/structured-memory-conversion.js?v=20261001-memory" defer></script>
   <script src="modules/memory/structured-summary-menu.js?v=20261001-memory" defer></script>
@@ -191,7 +199,8 @@
   <script src="modules/settings/preset-management.js?v=0.0.36" defer></script>
   <script src="modules/settings/preset-preview-and-exports.js?v=0.0.36" defer></script>
   <script src="modules/settings/secondary-api-presets.js?v=0.0.36" defer></script>
-  <script src="modules/chat-settings-presets.js?v=0.0.36" defer></script>
+  <script src="modules/ui/choice-picker.js?v=20261102" defer></script>
+  <script src="modules/chat-settings-presets.js?v=20261102" defer></script>
   <script src="modules/finance/shopping/catalog-and-cart.js?v=0.0.36" defer></script>
   <script src="modules/finance/shopping/checkout.js?v=0.0.36" defer></script>
   <script src="modules/finance/shopping/product-management.js?v=0.0.36" defer></script>
@@ -201,7 +210,7 @@
   <script src="modules/rendering-rule-runtime.js?v=20260930-rules" defer></script>
   <script src="modules/rendering-rules.js?v=20260930-rules" defer></script>
   <script src="modules/rendering-rule-workbench.js?v=20260930-rules" defer></script>
-  <script src="modules/red-packet-poll.js?v=0.0.36" defer></script>
+  <script src="modules/red-packet-poll.js?v=20261103-char-todos" defer></script>
   <script src="modules/persona-library.js?v=0.0.36" defer></script>
   <script src="modules/avatar-library.js?v=0.0.36" defer></script>
   <script src="modules/gomoku.js?v=0.0.36" defer></script>
@@ -225,7 +234,7 @@
   <script src="modules/phone/cphone/customization.js?v=0.0.36-perf1" defer></script>
   <script src="modules/phone/cphone/reddit.js?v=0.0.36-perf1" defer></script>
   <script src="modules/phone/myphone/core-and-lock.js?v=0.0.36-perf1" defer></script>
-  <script src="modules/phone/myphone/contacts.js?v=0.0.36-perf1" defer></script>
+  <script src="modules/phone/myphone/contacts.js?v=20261103-char-todos" defer></script>
   <script src="modules/phone/myphone/qq.js?v=0.0.36-perf1" defer></script>
   <script src="modules/phone/myphone/apps-and-editors.js?v=0.0.36-perf1" defer></script>
   <script src="modules/games/werewolf/game-flow.js?v=0.0.36" defer></script>
@@ -238,6 +247,7 @@
   <script src="modules/social/douban/context-settings.js?v=0.0.36" defer></script>
   <script src="modules/social/douban/npc-and-groups.js?v=0.0.36" defer></script>
   <script src="modules/social/douban/management.js?v=0.0.36" defer></script>
+  <script src="modules/social/douban/transfer.js?v=20261102" defer></script>
   <!-- 第七层：其余功能 -->
   <link rel="stylesheet" href="css/settings/tts-settings.css?v=elevenlabs-20261001">
   <script src="modules/fish-tts-provider.js?v=fish-20261101" defer></script>
@@ -254,7 +264,8 @@
   <script src="modules/character/import/zip-and-confirmation.js?v=0.0.36" defer></script>
   <script src="modules/character/import/batch-import.js?v=0.0.36" defer></script>
   <script src="modules/character/import/parsers-and-create.js?v=0.0.36" defer></script>
-  <script src="modules/character-export.js?v=0.0.36" defer></script>
+  <script src="modules/data/chat-history-transfer.js?v=20261103" defer></script>
+  <script src="modules/character-export.js?v=20261103" defer></script>
   <script src="modules/data/cleanup-and-statistics.js?v=0.0.36" defer></script>
   <script src="modules/data/settings-storage.js" defer></script>
   <script src="modules/data/custom-fonts.js?v=fonts-20261003-url-compat" defer></script>
@@ -286,7 +297,10 @@
   <script src="modules/social/album.js?v=0.0.36" defer></script>
   <script src="modules/chat/group-manager.js?v=0.0.36" defer></script>
   <script src="modules/mail/mail-app.js?v=0.0.46-forward-mail-fix" defer></script>
-  <script src="modules/todo/todo-list.js?v=0.0.36" defer></script>
+  <link rel="stylesheet" href="css/sms.css?v=20261102">
+  <script src="modules/sms/core.js?v=20261102" defer></script>
+  <script src="modules/sms/app.js?v=20261102" defer></script>
+  <script src="modules/todo/todo-list.js?v=20261103-char-todos" defer></script>
   <script src="modules/chat/quick-replies.js?v=0.0.36" defer></script>
   <script src="modules/memory/manual-summary.js?v=0.0.36" defer></script>
   <script src="modules/phone/cphone/diary-editing.js?v=0.0.36" defer></script>
@@ -295,6 +309,7 @@
   <!-- 数据定义（无依赖） -->
   <script src="modules/init-avatar-frames.js?v=0.0.36" defer></script>
   <script src="modules/init-db-schema.js?v=0.0.41-focus" defer></script>
+  <script src="modules/media/video-messages.js?v=20261102" defer></script>
   <script src="modules/memory/world-memory-time.js?v=20261001-world-time" defer></script>
   <script src="modules/memory/world-memory-time-ui.js?v=20261001-world-time" defer></script>
   <script src="modules/mcp/manager.js?v=0.0.36" defer></script>
@@ -308,9 +323,9 @@
   <script src="modules/init-pin-city.js?v=0.0.36" defer></script>
   <!-- 事件绑定和功能（依赖 state, db） -->
   <script src="modules/settings/model-search.js" defer></script>
-  <script src="modules/init-event-bindingsA.js?v=20261002-role-time-preview" defer></script>
+  <script src="modules/init-event-bindingsA.js?v=20261103-char-todos" defer></script>
   <script src="modules/init-event-bindingsB.js?v=20261002-role-time-zone" defer></script>
-  <script src="modules/init-features.js?v=20261002-role-time-zone" defer></script>
+  <script src="modules/init-features.js?v=20261103-char-todos" defer></script>
   <!-- 主入口（最后加载，调用 init） -->
   <script src="modules/init-and-state.js?v=20261001-world-time" defer></script>
   <!-- 第九层：DOMContentLoaded 外部的独立模块 -->

@@ -179,6 +179,30 @@
     };
   }
 
+  function storyMode(story) {
+    return ['anthology', 'standalone'].includes(story.settings?.storyMode) ? story.settings.storyMode : 'serial';
+  }
+
+  // Build the complete request from this copy, so summaries cannot bypass isolation.
+  function prepareGenerationStory(original, mode, isReroll) {
+    const story = normalizeStory(clone(original));
+    if (storyMode(story) === 'serial') {
+      if (isReroll) {
+        const removed = story.chapters.pop();
+        story.storyBible.timeline = story.storyBible.timeline.filter(item => item.chapterId !== removed?.id);
+        story.storyBible.openThreads = story.storyBible.openThreads.filter(item => item.chapterId !== removed?.id);
+        refreshGlobalSummary(story);
+      }
+      return story;
+    }
+    // Extending is an explicit choice to read only the current short story.
+    story.chapters = mode === 'extend' && !isReroll ? story.chapters.slice(-1) : [];
+    story.storyBible.globalSummary = '';
+    story.storyBible.timeline = [];
+    story.storyBible.openThreads = [];
+    return story;
+  }
+
   function analyseChapter(chapter) {
     const text = String(chapter?.content || '');
     const paragraphs = splitParagraphs(text);
@@ -214,6 +238,8 @@
     analyseChapter,
     attachCommentAnchors,
     buildContinuityContext,
+    storyMode,
+    prepareGenerationStory,
     clone,
     ensureChapter,
     escapeHtml,

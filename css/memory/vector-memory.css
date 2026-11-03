@@ -403,10 +403,11 @@
 }
 
 /* 新入口独立放置，保留原工具栏按钮的排列和尺寸。 */
-.vm-consolidation-entry { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+.vm-consolidation-entry { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }
 .vm-consolidation-entry .vm-toolbar-btn { white-space: nowrap; }
 .vm-consolidation-body { text-align: left; color: var(--text-color, #333); }
-.vm-consolidation-preview { max-height: 30vh; overflow: auto; overflow-x: hidden; margin-bottom: 10px; }
+#custom-modal:has(.vm-consolidation-body) { width: min(560px, calc(100vw - 24px)); }
+.vm-consolidation-preview { max-height: 44vh; overflow: auto; overflow-x: hidden; margin-bottom: 10px; }
 .vm-consolidation-category { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
 .vm-consolidation-group + .vm-consolidation-group { margin-top: 10px; }
 .vm-consolidation-item { font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; padding: 6px 0; border-bottom: 1px solid var(--border-color, #eee); }
@@ -415,13 +416,37 @@
 #custom-modal .vm-consolidation-footer { flex-direction: row; gap: 0; }
 #custom-modal .vm-consolidation-footer button { flex: 1; min-width: 0; margin: 0; padding: 10px 4px; font-size: 13px; white-space: nowrap; }
 #custom-modal .vm-consolidation-footer button:disabled { opacity: .6; cursor: default; }
+.vm-memory-form { display: grid; gap: 10px; max-height: 55vh; overflow: auto; }
+.vm-memory-form label { display: grid; gap: 4px; margin: 4px 0; text-align: left; min-width: 0; }
+.vm-memory-form select, .vm-memory-form input, .vm-memory-form textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  background: var(--card-bg, #fff);
+}
+.vm-memory-form textarea { resize: vertical; }
+.vm-memory-form p, .vm-memory-status p { margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vm-memory-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.vm-memory-compare > div, .vm-memory-status { padding: 8px; border: 1px solid var(--border-color, #ddd); border-radius: 8px; }
+.vm-memory-status { margin-bottom: 8px; }
+.vm-memory-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.vm-memory-status button, .vm-consolidation-item button { white-space: normal; max-width: 100%; overflow-wrap: anywhere; }
+.vm-consolidation-body summary { cursor: pointer; }
+.vm-consolidation-body .vm-memory-error { color: #b42318; }
+.vm-memory-error:empty { display: none; }
 #vm-embedding-model-input,
 #vm-embedding-model-select {
   min-width: 0;
 }
 
 .vm-embedding-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 8px;
   min-width: 0;
@@ -431,9 +456,10 @@
   min-width: 0;
   padding: 7px 8px;
   font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-height: 36px;
+  line-height: 1.4;
 }
 .vm-embedding-status {
   margin-top: 6px;

@@ -108,6 +108,7 @@
             <img id="netease-profile-avatar" alt="网易云头像">
             <span id="netease-profile-name"></span>
           </div>
+          <button id="netease-account-retry-btn" class="music-account-secondary-btn" type="button" hidden>重试读取账号</button>
           <div id="netease-qr-area" class="music-account-qr-area" hidden>
             <img id="netease-qr-image" alt="网易云扫码登录二维码">
             <div id="netease-qr-message">请使用网易云音乐 App 扫码并确认</div>
@@ -118,6 +119,7 @@
         <section id="netease-playlists-section" class="music-account-card" hidden>
           <div class="music-account-section-title">我的网易云歌单</div>
           <div id="netease-playlists-loading" class="music-account-status">正在读取歌单…</div>
+          <button id="netease-playlists-retry-btn" class="music-account-secondary-btn" type="button" hidden>重试读取歌单</button>
           <div id="netease-playlists-list" class="music-account-playlists"></div>
         </section>
         <section class="music-account-card music-account-availability">
@@ -138,6 +140,14 @@
     <div class="modal-content">
       <div class="modal-header"> <span>豆瓣设置</span> </div>
       <div class="modal-body douban-settings-modal-body">
+        <div class="douban-setting-card">
+          <div class="douban-setting-card-title">豆瓣独立备份</div>
+          <div class="douban-setting-card-desc">按需选择帖子、评论、小组和设置，单独备份或迁移。</div>
+          <div class="douban-transfer-shortcuts">
+            <button type="button" data-douban-transfer="export">导出豆瓣</button>
+            <button type="button" data-douban-transfer="import">导入豆瓣</button>
+          </div>
+        </div>
         <!-- 帖子数量范围：上下两行布局，永不横向溢出 -->
         <div class="douban-setting-card">
           <div class="douban-setting-card-title">每次生成帖子数范围</div>

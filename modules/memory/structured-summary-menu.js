@@ -313,6 +313,7 @@ async function executeStructuredSummary(chat, messages, updateTimestamp = false)
 function openManualSummaryModal() {
   const chat = state.chats[state.activeChatId];
   if (!chat) return;
+    if (window.GroupMemory?.independent(chat)) return window.GroupMemoryUI.open(chat);
 
   // 日记模式：直接总结上次总结之后的所有消息
   if (chat.settings.enableDiaryMode) {

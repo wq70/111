@@ -1,0 +1,57 @@
+module.exports = String.raw`
+    (async()=>{
+      const check=(ok,message)=>{if(!ok)throw new Error(message);};
+      const until=async predicate=>{for(let i=0;i<100;i++){if(await predicate())return;await new Promise(resolve=>setTimeout(resolve,10));}throw new Error('等待界面完成超时');};
+      await previewReady;
+      let exported;
+      URL.createObjectURL=blob=>{exported=blob;return 'blob:preview';};URL.revokeObjectURL=()=>{};
+      HTMLAnchorElement.prototype.click=function(){};
+      let importFile;
+      const inputClick=HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click=function(){if(this.type==='file'){const dt=new DataTransfer();dt.items.add(importFile);this.files=dt.files;this.dispatchEvent(new Event('change'));}else inputClick.call(this);};
+      const getModal=()=>document.getElementById('douban-transfer-modal');
+      const choose=(key,value)=>{const box=getModal().querySelector('[data-category="'+key+'"]');box.checked=value;box.dispatchEvent(new Event('change',{bubbles:true}));};
+      const confirmation=()=>document.querySelector('#custom-modal-overlay.visible');
+      const setFile=data=>importFile=new File([JSON.stringify(data)],'豆瓣.json',{type:'application/json'});
+      await DoubanTransfer.openExport();let modal=getModal();
+      check(modal.querySelectorAll('[data-post-index]').length===2,'导出帖子数量错误');
+      const row=modal.querySelector('[data-post-index="0"]');row.click();
+      check(modal.querySelector('[data-all]').indeterminate,'未显示半选');
+      modal.querySelector('[data-all]').click();check(modal.querySelectorAll('[data-post-index]:checked').length===2,'全选失败');
+      modal.querySelector('[data-all]').click();modal.querySelector('[data-submit]').click();
+      check(modal.querySelector('[data-error]').textContent.includes('至少一篇'),'空选择缺少提示');
+      modal.querySelector('[data-post-index="0"]').click();choose('comments',false);
+      modal.querySelector('[data-submit]').click();await until(()=>!getModal());
+      const backup=JSON.parse(await exported.text());
+      check(backup.data.posts.length===1&&backup.data.posts[0].comments.length===0,'导出未遵守勾选范围');
+      check(Object.keys(backup.data).join()==='posts','默认携带了未勾选的个人资料');
+      setFile(backup);await DoubanTransfer.openImport();await until(()=>getModal());modal=getModal();
+      check(modal.querySelector('input[value="merge"]').checked,'默认不是追加并去重');
+      modal.querySelector('[data-submit]').click();await until(()=>confirmation());
+      document.getElementById('custom-modal-cancel').click();await until(()=>!modal.querySelector('[data-submit]').disabled);
+      check((await db.doubanPosts.toArray()).length===2,'取消确认后仍然写入');
+      modal.querySelector('[data-submit]').click();await until(()=>confirmation());document.getElementById('custom-modal-confirm').click();
+      await until(()=>!getModal());await until(()=>confirmation());document.getElementById('custom-modal-confirm').click();
+      check((await db.doubanPosts.toArray()).length===2,'自己导出再导入出现副本');
+      const foreign={type:'ephone-douban',version:1,data:{posts:[{id:1,timestamp:5,postTitle:'外部帖子',content:'外部正文',authorName:'外部作者',groupName:'外部组',comments:[]}]}};
+      for(let n=0;n<2;n++){
+        setFile(foreign);await DoubanTransfer.openImport();await until(()=>getModal());getModal().querySelector('[data-submit]').click();await until(()=>confirmation());document.getElementById('custom-modal-confirm').click();await until(()=>!getModal());await until(()=>confirmation());document.getElementById('custom-modal-confirm').click();
+      }
+      check((await db.doubanPosts.toArray()).length===3,'编号冲突或重复导入损坏帖子');
+      const prior=JSON.stringify(await db.doubanPosts.toArray());
+      foreign.data.profile={doubanUserNickname:'外部昵称'};setFile(foreign);await DoubanTransfer.openImport();await until(()=>getModal());modal=getModal();choose('profile',true);modal.querySelector('input[value="replace"]').click();
+      previewFailTable='globalSettings';modal.querySelector('[data-submit]').click();await until(()=>confirmation());
+      check(document.getElementById('custom-modal-title').textContent.includes('覆盖'),'覆盖缺少明确二次确认');document.getElementById('custom-modal-confirm').click();
+      await until(()=>modal.querySelector('[data-error]').textContent.includes('失败'));
+      check(JSON.stringify(await db.doubanPosts.toArray())===prior,'真实数据库未回滚清空与写入');check(state.globalSettings.doubanUserNickname==='小豆','失败后内存身份被修改');
+      previewFailTable=null;modal.querySelector('[data-submit]').click();await until(()=>confirmation());document.getElementById('custom-modal-confirm').click();await until(()=>!getModal());await until(()=>confirmation());document.getElementById('custom-modal-confirm').click();
+      check((await db.doubanPosts.toArray()).length===1&&state.globalSettings.doubanUserNickname==='外部昵称','覆盖恢复结果错误');
+      await DoubanTransfer.openExport();modal=getModal();
+      document.getElementById('phone-screen').style.setProperty('width','320px','important');document.getElementById('phone-screen').classList.add('dark-mode');
+      check(modal.querySelector('.modal-content').getBoundingClientRect().width<=320,'320px下横向溢出');
+      check(modal.querySelector('.modal-content').scrollWidth<=modal.querySelector('.modal-content').clientWidth+1,'长内容横向溢出');
+      check(getComputedStyle(modal.querySelector('.modal-content')).backgroundColor!=='rgb(255, 255, 255)','深色模式未适配');
+      modal.querySelector('[data-close]').click();
+      document.getElementById('test-result').hidden=false;document.getElementById('test-result').textContent='PASS · 多选全选、导出导入、取消、去重、覆盖、真实数据库回滚、320px深色模式';
+    })().catch(error=>{document.getElementById('test-result').hidden=false;document.getElementById('test-result').textContent=error.stack;});
+  `;

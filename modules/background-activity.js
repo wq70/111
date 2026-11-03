@@ -151,12 +151,14 @@
 
           if (generatedActions && generatedActions.length > 0) {
             for (const action of generatedActions) {
+              if (!await window.CharacterIdentity.prepare({ id: `npc_${npc.id}`, originalName: npc.name }, action)) continue;
               if (action.type === 'qzone_comment') {
 
                 const post = await db.qzonePosts.get(action.postId);
                 if (post) {
                   if (!post.comments) post.comments = [];
                   post.comments.push({
+                    ...window.CharacterIdentity.commentFields(action),
                     commenterName: npc.name,
                     text: action.commentText,
                     replyTo: action.replyTo || null,
@@ -250,7 +252,7 @@
       const commentsString = (post.comments || [])
         .map(c => {
           if (typeof c === 'object' && c.commenterName) {
-            const commenterDisplayName = getDisplayNameByOriginalName(c.commenterName);
+            const commenterDisplayName = window.CharacterIdentity.commentContext(c);
             return `- **${commenterDisplayName}**: ${c.text}`;
           }
           return `- ${c}`;
@@ -288,7 +290,7 @@ ${commentsString || '(暂无评论)'}
     }
 
 
-    const systemPrompt = `
+    const systemPrompt = window.CharacterIdentity.buildContext({ id: npcAuthorId, originalName: npc.name }) + `
 # 你的任务
 你是一个虚拟社区的AI。你的核心任务是扮演角色"${npc.name}"，并根据其人设，通过【发布新动态】或【评论/回复帖子】来参与社区互动。
 

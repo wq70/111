@@ -723,17 +723,19 @@
     }
   }
 
-  function getDisplayNameInGroup(groupChat, originalName) {
+  function getDisplayNameInGroup(groupChat, originalName, characterId) {
     if (!groupChat || !groupChat.isGroup || !originalName) {
       return originalName;
     }
 
+    if (window.CharacterIdentity && characterId != null) return window.CharacterIdentity.display(originalName, characterId, groupChat);
     const userOriginalName = state.qzoneSettings.nickname || '{{user}}';
     if (originalName === userOriginalName) {
       return groupChat.settings.myNickname || '我';
     }
 
-    const member = groupChat.members.find(m => m.originalName === originalName);
+    const matches = groupChat.members.filter(m => m.originalName === originalName || m.groupNickname === originalName);
+    const member = matches.length === 1 ? matches[0] : null;
     return member ? member.groupNickname : originalName;
   }
 

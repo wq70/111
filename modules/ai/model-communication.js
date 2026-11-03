@@ -135,11 +135,13 @@
     $('[data-scope]').value = session.scope || 'once';
     if (editPreferenceId) $('[data-scope]').value = (await db.generationPreferences.get(editPreferenceId))?.scope || 'chat';
     setBusy(!!controller);
+    window.ChoicePicker?.enhance(root);
   }
   function setBusy(value) {
     root.querySelectorAll('button').forEach(b => { b.disabled = value && !['close', 'stop'].includes(b.dataset.action); });
     root.querySelectorAll('select, textarea, input').forEach(el => { el.disabled = value; });
     const stop = $('[data-action="stop"]'); if (stop) stop.disabled = !value;
+    window.ChoicePicker?.enhance(root);
   }
   async function run(label, operation, canStop = true) {
     if (controller) throw new Error('正在请求中，请等待或停止。');

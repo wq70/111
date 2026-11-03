@@ -47,7 +47,7 @@ window.openTokenBreakdown = async function() {
     const linkedChatIds = Array.from(document.querySelectorAll('#linked-chats-checkboxes-container input:checked')).map(cb => cb.value);
     for (const linkedId of linkedChatIds) {
       const linkedChat = state.chats[linkedId];
-      if (linkedChat && linkedChat.history.length > 0) {
+      if (linkedChat && (!window.GroupMemory || window.GroupMemory.canMount(chat, linkedChat)) && linkedChat.history.length > 0) {
         linkedStr += linkedChat.history.slice(-linkedMemoryCount).map(msg => String(msg.content)).join('\n');
       }
     }

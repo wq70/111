@@ -41,7 +41,7 @@
     const refresh = () => {
       element('fields').hidden = !element('enabled').checked;
       element('status').textContent = element('enabled').checked
-        ? '供“跟随全局设置”的角色使用。点击右上角“完成”保存；不会自动重建旧记忆。'
+        ? '供“跟随全局设置”的角色使用。点击右上角“完成”保存；更换接口或模型时可选择沿用已有向量，或保留旧套后手动重建。'
         : '未启用全局向量接口，现有角色继续按原设置使用。';
     };
     refresh();
